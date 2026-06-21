@@ -1,0 +1,138 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { db } from "@/lib/db";
+import type {
+  AppSettings,
+  Category,
+  Checkin,
+  Metric,
+  MetricLog,
+  Session,
+  Suggestion,
+  Task,
+} from "@/lib/types";
+
+const keys = {
+  categories: ["categories"],
+  tasks: ["tasks"],
+  sessions: ["sessions"],
+  metrics: ["metrics"],
+  metricLogs: ["metricLogs"],
+  checkins: ["checkins"],
+  settings: ["settings"],
+  suggestions: (date: string) => ["suggestions", date],
+};
+
+// ---- reads ----
+export const useCategories = () =>
+  useQuery({ queryKey: keys.categories, queryFn: () => db.listCategories() });
+export const useTasks = () => useQuery({ queryKey: keys.tasks, queryFn: () => db.listTasks() });
+export const useSessions = () =>
+  useQuery({ queryKey: keys.sessions, queryFn: () => db.listSessions() });
+export const useMetrics = () => useQuery({ queryKey: keys.metrics, queryFn: () => db.listMetrics() });
+export const useMetricLogs = () =>
+  useQuery({ queryKey: keys.metricLogs, queryFn: () => db.listMetricLogs() });
+export const useCheckins = () =>
+  useQuery({ queryKey: keys.checkins, queryFn: () => db.listCheckins() });
+export const useCheckin = (date: string) =>
+  useQuery({
+    queryKey: [...keys.checkins, date],
+    queryFn: async () => (await db.getCheckin(date)) ?? null,
+  });
+export const useSettings = () =>
+  useQuery({ queryKey: keys.settings, queryFn: () => db.getSettings() });
+export const useSuggestions = (date: string) =>
+  useQuery({ queryKey: keys.suggestions(date), queryFn: () => db.listSuggestions(date) });
+
+// ---- helper to wire a mutation that invalidates one or more keys ----
+function useInvalidatingMutation<TArgs, TResult>(
+  fn: (args: TArgs) => Promise<TResult>,
+  invalidate: unknown[][],
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => invalidate.forEach((k) => qc.invalidateQueries({ queryKey: k })),
+  });
+}
+
+// ---- categories ----
+export const useCreateCategory = () =>
+  useInvalidatingMutation((i: Omit<Category, "id" | "order">) => db.createCategory(i), [keys.categories]);
+export const useUpdateCategory = () =>
+  useInvalidatingMutation(
+    (a: { id: string; patch: Partial<Category> }) => db.updateCategory(a.id, a.patch),
+    [keys.categories],
+  );
+export const useRemoveCategory = () =>
+  useInvalidatingMutation((id: string) => db.removeCategory(id), [keys.categories]);
+export const useReorderCategories = () =>
+  useInvalidatingMutation((ids: string[]) => db.reorderCategories(ids), [keys.categories]);
+
+// ---- tasks ----
+export const useCreateTask = () =>
+  useInvalidatingMutation(
+    (i: Parameters<typeof db.createTask>[0]) => db.createTask(i),
+    [keys.tasks],
+  );
+export const useUpdateTask = () =>
+  useInvalidatingMutation(
+    (a: { id: string; patch: Partial<Task> }) => db.updateTask(a.id, a.patch),
+    [keys.tasks],
+  );
+export const useRemoveTask = () =>
+  useInvalidatingMutation((id: string) => db.removeTask(id), [keys.tasks]);
+
+// ---- sessions ----
+export const useCreateSession = () =>
+  useInvalidatingMutation((i: Omit<Session, "id" | "created_at">) => db.createSession(i), [
+    keys.sessions,
+  ]);
+export const useUpdateSession = () =>
+  useInvalidatingMutation(
+    (a: { id: string; patch: Partial<Session> }) => db.updateSession(a.id, a.patch),
+    [keys.sessions],
+  );
+export const useRemoveSession = () =>
+  useInvalidatingMutation((id: string) => db.removeSession(id), [keys.sessions]);
+
+// ---- metrics + logs ----
+export const useCreateMetric = () =>
+  useInvalidatingMutation((i: Omit<Metric, "id">) => db.createMetric(i), [keys.metrics]);
+export const useRemoveMetric = () =>
+  useInvalidatingMutation((id: string) => db.removeMetric(id), [keys.metrics, keys.metricLogs]);
+export const useCreateMetricLog = () =>
+  useInvalidatingMutation((i: Omit<MetricLog, "id" | "created_at">) => db.createMetricLog(i), [
+    keys.metricLogs,
+  ]);
+
+// ---- checkins ----
+export const useUpsertCheckin = () =>
+  useInvalidatingMutation((i: Omit<Checkin, "id" | "created_at">) => db.upsertCheckin(i), [
+    keys.checkins,
+  ]);
+
+// ---- suggestions ----
+export const useSaveSuggestions = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (a: { date: string; items: Omit<Suggestion, "id" | "created_at">[] }) =>
+      db.saveSuggestions(a.date, a.items),
+    onSuccess: (_d, a) => qc.invalidateQueries({ queryKey: keys.suggestions(a.date) }),
+  });
+};
+export const useUpdateSuggestion = (date: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (a: { id: string; patch: Partial<Suggestion> }) =>
+      db.updateSuggestion(a.id, a.patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.suggestions(date) }),
+  });
+};
+
+// ---- settings ----
+export const useSaveSettings = () =>
+  useInvalidatingMutation((patch: Partial<AppSettings>) => db.saveSettings(patch), [keys.settings]);
+
+export { keys as queryKeys };
