@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { useQueryClient } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 
 // Auth is only required when we're running against Supabase. Local mode
@@ -17,6 +18,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState("");
   const [sending, setSending] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!needsAuth) return;
@@ -24,9 +26,12 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     sb.auth.getSession().then(({ data }) => setSession(data.session));
     const {
       data: { subscription },
-    } = sb.auth.onAuthStateChange((_e, s) => setSession(s));
+    } = sb.auth.onAuthStateChange((_e, s) => {
+      queryClient.clear();
+      setSession(s);
+    });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [queryClient]);
 
   // Loading state while we check for an existing session.
   if (session === "loading") {
