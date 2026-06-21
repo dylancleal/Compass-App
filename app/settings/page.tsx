@@ -11,7 +11,7 @@ import {
   useUpdateCategory,
 } from "@/lib/queries";
 import { PALETTE, PALETTE_KEYS, accentOf } from "@/lib/palette";
-import { isSupabaseConfigured } from "@/lib/supabaseClient";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Category, DayIndex } from "@/lib/types";
 import { Button } from "@/components/ui";
 
@@ -243,6 +243,16 @@ export default function SettingsPage() {
           />
           <Row label="Google Calendar" status="Phase 2" on={false} note="Read your commitments into the plan." />
           <Row label="OnTrack (Deakin)" status="Phase 3" on={false} note="Pull uni tasks & deadlines." />
+          {isSupabaseConfigured() && (
+            <div className="border-t border-[var(--border)] pt-3">
+              <button
+                onClick={() => getSupabase()?.auth.signOut()}
+                className="text-xs text-red-500 underline"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>
