@@ -112,4 +112,5 @@ export interface AppSettings {
   greetingName: string;
   weeklySchedule: WeeklySchedule;
   plannerWeights: PlannerWeights;
+  weeklyTargets?: Record<string, number>; // category_id → sessions/week goal
 }

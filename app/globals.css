@@ -69,10 +69,40 @@ body {
   pointer-events: none;
 }
 
+/* full-screen confetti rain — fired once when the whole day's plan is done */
+@keyframes confetti-rain {
+  0% { transform: translateY(-24px) translateX(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(106vh) translateX(var(--drift)) rotate(var(--rot)); opacity: 0.85; }
+}
+.confetti-rain-piece {
+  position: absolute;
+  top: -24px;
+  border-radius: 2px;
+  animation: confetti-rain linear forwards;
+}
+
+@keyframes celebrate-pop {
+  0% { transform: scale(0.92) translateY(-8px); opacity: 0; }
+  60% { transform: scale(1.02); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.animate-celebrate { animation: celebrate-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* expand/collapse — animates height via grid-template-rows */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s ease;
+}
+.collapsible.open { grid-template-rows: 1fr; }
+.collapsible > div { overflow: hidden; }
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-pop, .animate-fade-slide, .animate-check, .confetti-piece {
+  .animate-pop, .animate-fade-slide, .animate-check, .confetti-piece,
+  .confetti-rain-piece, .animate-celebrate {
     animation: none;
   }
+  .collapsible { transition: none; }
 }
 
 /* utility */
