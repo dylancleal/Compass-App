@@ -25,12 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
       <body className="min-h-full">
         <Providers>
-          <div className="flex min-h-dvh">
-            <Nav />
-            <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-24 pt-6 md:pb-10">
-              {children}
-            </main>
-          </div>
+          <Nav />
+          <main className="mx-auto w-full max-w-2xl px-4 pt-20 pb-10">
+            {children}
+          </main>
         </Providers>
       </body>
     </html>
