@@ -34,7 +34,14 @@ export default function Nav() {
         href="/"
         className="flex shrink-0 items-center gap-1.5 text-sm font-bold tracking-tight"
       >
-        🧭 Compass
+        <span
+          className="grid h-6 w-6 place-items-center rounded-full text-[13px]"
+          style={{ background: "var(--primary-soft)" }}
+          aria-hidden
+        >
+          🧭
+        </span>
+        Compass
       </Link>
 
       {/* Divider */}
@@ -53,8 +60,8 @@ export default function Nav() {
               href={it.href}
               className="shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-all"
               style={{
-                background: active ? "var(--foreground)" : "transparent",
-                color: active ? "var(--background)" : "var(--muted)",
+                background: active ? "var(--primary)" : "transparent",
+                color: active ? "#fffdf9" : "var(--muted)",
               }}
             >
               {it.label}

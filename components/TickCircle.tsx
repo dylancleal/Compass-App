@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 
-const CONFETTI_COLORS = ["#34d399", "#60a5fa", "#fbbf24", "#f472b6", "#a78bfa"];
+const CONFETTI_COLORS = ["#5b8a72", "#a8c3b5", "#d98e63", "#c9b46b", "#7faf97"];
 
 // A satisfying circular check (SPEC §3.2): colour pulse + a small confetti
 // burst when you complete something. Calm, not loud.
@@ -44,7 +44,7 @@ export default function TickCircle({
       style={{
         width: size,
         height: size,
-        borderColor: checked ? accent : "#cbd5e1",
+        borderColor: checked ? accent : "#c7cfc3",
         background: checked ? accent : "transparent",
       }}
     >

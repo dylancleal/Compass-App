@@ -11,9 +11,9 @@ function dueTone(task: Task): { label: string; color: string } | null {
   if (!task.due_date) return null;
   // Affirming framing (SPEC §3.1): never shame. "Let's find time" not "overdue".
   const today = todayKey();
-  if (task.due_date < today) return { label: "let's find time for this", color: "#b45309" };
-  if (task.due_date === today) return { label: "due today", color: "#0f766e" };
-  return { label: prettyDate(task.due_date), color: "#64748b" };
+  if (task.due_date < today) return { label: "let's find time for this", color: "#9a6a1f" };
+  if (task.due_date === today) return { label: "due today", color: "#2f6357" };
+  return { label: prettyDate(task.due_date), color: "#7d7c6e" };
 }
 
 export default function TaskList({

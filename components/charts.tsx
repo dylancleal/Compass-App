@@ -14,7 +14,15 @@ import {
   YAxis,
 } from "recharts";
 
-const axis = { fontSize: 11, fill: "#94a3b8" } as const;
+const axis = { fontSize: 11, fill: "var(--muted)" } as const;
+const GRID = "var(--border)";
+const tooltipStyle = {
+  borderRadius: 12,
+  border: "1px solid var(--border)",
+  background: "var(--surface)",
+  color: "var(--foreground)",
+  fontSize: 12,
+} as const;
 
 export function LineTrend({
   data,
@@ -30,11 +38,11 @@ export function LineTrend({
   return (
     <ResponsiveContainer width="100%" height={180}>
       <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-        <CartesianGrid stroke="#eef0f4" vertical={false} />
+        <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="date" tick={axis} tickLine={false} axisLine={false} />
         <YAxis tick={axis} tickLine={false} axisLine={false} width={40} />
         <Tooltip
-          contentStyle={{ borderRadius: 12, border: "1px solid #e8eaef", fontSize: 12 }}
+          contentStyle={tooltipStyle}
           formatter={(v) => [`${v}${unit}`, ""] as [string, string]}
         />
         <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2.5} dot={{ r: 3 }} />
@@ -60,10 +68,10 @@ export function AreaTrend({
             <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid stroke="#eef0f4" vertical={false} />
+        <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="date" tick={axis} tickLine={false} axisLine={false} />
         <YAxis tick={axis} tickLine={false} axisLine={false} width={40} />
-        <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e8eaef", fontSize: 12 }} />
+        <Tooltip contentStyle={tooltipStyle} />
         <Area type="monotone" dataKey="value" stroke={color} strokeWidth={2.5} fill={`url(#grad-${color})`} />
       </AreaChart>
     </ResponsiveContainer>
@@ -80,10 +88,10 @@ export function BarTrend({
   return (
     <ResponsiveContainer width="100%" height={160}>
       <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -24 }}>
-        <CartesianGrid stroke="#eef0f4" vertical={false} />
+        <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="week" tick={axis} tickLine={false} axisLine={false} />
         <YAxis tick={axis} tickLine={false} axisLine={false} width={32} allowDecimals={false} />
-        <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e8eaef", fontSize: 12 }} />
+        <Tooltip contentStyle={tooltipStyle} />
         <Bar dataKey="count" fill={color} radius={[6, 6, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>

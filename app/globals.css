@@ -1,12 +1,53 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Eucalyptus — a warm, biophilic wellbeing palette.
+
+   Grounded in colour/UX research: green carries "health + balance + progress"
+   meaning; warm sand neutrals (never pure white/black) borrow Headspace's
+   approachability; soft organic forms lower cognitive load. See AGENTS notes.
+   ───────────────────────────────────────────────────────────────────────── */
+
 :root {
-  --background: #f7f8fa; /* calm off-white */
-  --surface: #ffffff;
-  --foreground: #1f2937; /* slate-800 */
-  --muted: #6b7280; /* slate-500 */
-  --border: #e8eaef;
-  --ring: rgba(100, 116, 139, 0.18);
+  --background: #f4f1ea; /* warm sand canvas */
+  --surface: #fffdf9; /* warm card white (never pure #fff) */
+  --foreground: #2e3a33; /* warm green-ink (never pure #000) */
+  --muted: #6e7a70; /* warm sage-gray */
+  --border: #e7e1d5; /* soft sand border */
+  --ring: rgba(91, 138, 114, 0.22);
+
+  /* brand accents */
+  --primary: #3e6b54; /* deep eucalyptus */
+  --primary-mid: #5b8a72; /* eucalyptus */
+  --primary-soft: #eaf2ec; /* mist tint */
+  --mist: #a8c3b5;
+  --accent: #d98e63; /* warm apricot / clay */
+  --accent-soft: #f7ece2;
+
+  /* decorative blob tints — biophilic depth behind all content */
+  --blob-a: rgba(168, 195, 181, 0.45); /* mist green */
+  --blob-b: rgba(232, 168, 124, 0.24); /* apricot */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1a211c; /* deep forest charcoal */
+    --surface: #222b25;
+    --foreground: #e8ede7; /* soft sage white */
+    --muted: #94a096;
+    --border: #313b33;
+    --ring: rgba(111, 165, 136, 0.32);
+
+    --primary: #6fa588; /* lighter eucalyptus reads on dark */
+    --primary-mid: #5b8a72;
+    --primary-soft: #2a3830;
+    --mist: #3c5447;
+    --accent: #e0a079;
+    --accent-soft: #33291f;
+
+    --blob-a: rgba(111, 165, 136, 0.18);
+    --blob-b: rgba(224, 160, 121, 0.11);
+  }
 }
 
 @theme inline {
@@ -15,17 +56,54 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
 }
 
 html {
   -webkit-text-size-adjust: 100%;
+  background: var(--background);
 }
 
 body {
-  background: var(--background);
+  background: transparent;
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Biophilic depth — soft organic forms drifting behind all content. Fixed and
+   low-opacity so they add warmth and life without ever hurting legibility. */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  border-radius: 50%;
+  filter: blur(64px);
+  pointer-events: none;
+  animation: blob-drift 26s ease-in-out infinite alternate;
+}
+body::before {
+  width: 460px;
+  height: 460px;
+  top: -170px;
+  right: -130px;
+  background: var(--blob-a);
+}
+body::after {
+  width: 380px;
+  height: 380px;
+  bottom: -150px;
+  left: -130px;
+  background: var(--blob-b);
+  animation-delay: -13s;
+}
+
+@keyframes blob-drift {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(26px, 32px) scale(1.08); }
 }
 
 /* ---- motion: satisfying, tasteful interactions (SPEC §3.2) ---- */
@@ -88,6 +166,13 @@ body {
 }
 .animate-celebrate { animation: celebrate-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 
+/* a gentle, living pulse for the "start here" next-action ring */
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 0 var(--ring); }
+  50% { box-shadow: 0 0 0 5px var(--ring); }
+}
+.animate-breathe { animation: breathe 3.4s ease-in-out infinite; }
+
 /* expand/collapse — animates height via grid-template-rows */
 .collapsible {
   display: grid;
@@ -99,9 +184,10 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-pop, .animate-fade-slide, .animate-check, .confetti-piece,
-  .confetti-rain-piece, .animate-celebrate {
+  .confetti-rain-piece, .animate-celebrate, .animate-breathe {
     animation: none;
   }
+  body::before, body::after { animation: none; }
   .collapsible { transition: none; }
 }
 
@@ -109,7 +195,7 @@ body {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 3px rgba(46, 58, 51, 0.05);
 }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
