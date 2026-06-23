@@ -2,7 +2,7 @@
 // App data lives in localStorage, so this only needs to keep the shell cached
 // for fast loads and basic offline use.
 
-const CACHE = "compass-shell-v1";
+const CACHE = "compass-shell-v2";
 const SHELL = ["/", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
