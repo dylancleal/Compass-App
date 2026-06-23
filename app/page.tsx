@@ -9,6 +9,7 @@ import type { Category } from "@/lib/types";
 import Plan from "@/components/Plan";
 import TaskList from "@/components/TaskList";
 import LogSheet from "@/components/LogSheet";
+import { GoalsOverview } from "@/components/GoalCard";
 
 const MENTAL_EMOJI = ["", "😞", "😕", "😐", "🙂", "😄"];
 const CAP_LABEL: Record<string, string> = { light: "Light day", medium: "Medium day", big: "Big day" };
@@ -61,6 +62,19 @@ export default function TodayPage() {
 
       {/* Personalised plan */}
       <Plan />
+
+      {/* Weekly goals — glanceable here, tap through to Trends for detail */}
+      {activeCats.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-[var(--muted)]">This week&apos;s goals</h2>
+            <Link href="/trends" className="text-xs text-[var(--muted)] underline">
+              details
+            </Link>
+          </div>
+          <GoalsOverview categories={activeCats} showHeader={false} />
+        </section>
+      )}
 
       {/* Quick log */}
       <section className="space-y-2">

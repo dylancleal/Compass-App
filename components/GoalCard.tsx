@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSaveSettings, useSessions, useSettings } from "@/lib/queries";
 import { todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
@@ -105,8 +106,15 @@ export function GoalCard({ category }: { category: Category }) {
   );
 }
 
-// Compact multi-area summary — used on the Overview tab.
-export function GoalsOverview({ categories }: { categories: Category[] }) {
+// Compact multi-area summary. Each row links to that area's full Trends panel.
+// Used on the Today page and the Trends Overview tab.
+export function GoalsOverview({
+  categories,
+  showHeader = true,
+}: {
+  categories: Category[];
+  showHeader?: boolean;
+}) {
   const { data: settings } = useSettings();
   const { data: sessions = [] } = useSessions();
   const today = todayKey();
@@ -115,8 +123,10 @@ export function GoalsOverview({ categories }: { categories: Category[] }) {
 
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-      <p className="mb-3 text-xs font-medium text-[var(--muted)]">This week&apos;s goals</p>
-      <div className="space-y-3">
+      {showHeader && (
+        <p className="mb-3 text-xs font-medium text-[var(--muted)]">This week&apos;s goals</p>
+      )}
+      <div className="space-y-1">
         {categories.map((cat) => {
           const target = targetFor(settings, cat);
           const { accent } = accentOf(cat.color);
@@ -124,7 +134,11 @@ export function GoalsOverview({ categories }: { categories: Category[] }) {
           const meta = STATUS_META[status];
           const pct = target > 0 ? Math.min(100, (done / target) * 100) : 0;
           return (
-            <div key={cat.id} className="flex items-center gap-3">
+            <Link
+              key={cat.id}
+              href={`/trends?area=${cat.id}`}
+              className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-[var(--background)]"
+            >
               <span className="w-24 shrink-0 truncate text-xs text-[var(--muted)]">
                 {cat.icon} {cat.name}
               </span>
@@ -142,7 +156,7 @@ export function GoalsOverview({ categories }: { categories: Category[] }) {
               <span className="w-12 shrink-0 text-right text-xs font-medium" style={{ color: meta.color }}>
                 {done}/{target}
               </span>
-            </div>
+            </Link>
           );
         })}
       </div>

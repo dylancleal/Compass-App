@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   useCategories,
   useCheckins,
@@ -559,6 +560,14 @@ function Tab({ label, active, color, onClick }: { label: string; active: boolean
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function TrendsPage() {
+  return (
+    <Suspense fallback={null}>
+      <TrendsContent />
+    </Suspense>
+  );
+}
+
+function TrendsContent() {
   const { data: categories = [] } = useCategories();
   const { data: sessions = [] } = useSessions();
   const { data: tasks = [] } = useTasks();
@@ -566,8 +575,22 @@ export default function TrendsPage() {
   const { data: metrics = [] } = useMetrics();
   const { data: logs = [] } = useMetricLogs();
 
-  const [selected, setSelected] = useState("overview");
+  const searchParams = useSearchParams();
+  const [selected, setSelected] = useState(() => searchParams.get("area") ?? "overview");
   const activeCats = categories.filter((c) => c.active);
+
+  // Deep link: ?area=<id> from elsewhere in the app jumps straight to that tab.
+  useEffect(() => {
+    const area = searchParams.get("area");
+    if (area) setSelected(area);
+  }, [searchParams]);
+
+  // Fall back to Overview if the linked area no longer exists.
+  useEffect(() => {
+    if (selected !== "overview" && categories.length > 0 && !categories.find((c) => c.id === selected)) {
+      setSelected("overview");
+    }
+  }, [categories, selected]);
   const selectedCat = activeCats.find((c) => c.id === selected);
   const checkinData = checkins.map((c) => ({ date: c.date, mental: c.mental }));
 
