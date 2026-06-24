@@ -36,9 +36,9 @@ export default function TodayPage() {
         <Link
           href="/checkin"
           className="card animate-pop block p-5"
-          style={{ background: "#ecfdf5", borderColor: "#bbf7d0" }}
+          style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
         >
-          <p className="text-lg font-semibold" style={{ color: "#065f46" }}>
+          <p className="text-lg font-semibold" style={{ color: "var(--primary)" }}>
             Ready for a quick check-in? 🌿
           </p>
           <p className="mt-1 text-sm text-[var(--muted)]">
@@ -105,7 +105,7 @@ export default function TodayPage() {
           </Link>
         </div>
         <TaskList
-          accent="#10b981"
+          accent="#5b8a72"
           showAdd={false}
           hideCompleted
           emptyText="No open tasks — beautifully clear. ✨"

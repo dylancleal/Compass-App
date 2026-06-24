@@ -11,10 +11,10 @@ import { Button, Pill } from "@/components/ui";
 
 function untilLabel(due: string): { text: string; color: string } {
   const d = daysBetween(todayKey(), due);
-  if (d < 0) return { text: "let's find time for this", color: "#b45309" };
-  if (d === 0) return { text: "due today", color: "#0f766e" };
-  if (d <= 3) return { text: `in ${d} day${d === 1 ? "" : "s"}`, color: "#b45309" };
-  return { text: `in ${d} days`, color: "#64748b" };
+  if (d < 0) return { text: "let's find time for this", color: "#9a6a1f" };
+  if (d === 0) return { text: "due today", color: "#2f6357" };
+  if (d <= 3) return { text: `in ${d} day${d === 1 ? "" : "s"}`, color: "#9a6a1f" };
+  return { text: `in ${d} days`, color: "#7d7c6e" };
 }
 
 export default function UniPage() {

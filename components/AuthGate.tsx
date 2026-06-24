@@ -63,7 +63,13 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     <div className="grid min-h-dvh place-items-center bg-[var(--background)] p-4">
       <div className="card w-full max-w-sm space-y-5 p-6">
         <div className="space-y-1">
-          <p className="text-2xl">🧭</p>
+          <span
+            className="mb-1 grid h-11 w-11 place-items-center rounded-2xl text-2xl"
+            style={{ background: "var(--primary-soft)" }}
+            aria-hidden
+          >
+            🧭
+          </span>
           <h1 className="text-xl font-bold">Welcome to Compass</h1>
           <p className="text-sm text-[var(--muted)]">
             Sign in with a magic link — no password needed.
@@ -71,7 +77,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         </div>
 
         {sent ? (
-          <div className="space-y-1.5 rounded-xl p-4 text-sm" style={{ background: "#ecfdf5", color: "#065f46" }}>
+          <div className="space-y-1.5 rounded-xl p-4 text-sm" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
             <p className="font-semibold">Check your email ✉️</p>
             <p>
               A sign-in link is on its way to <strong>{email}</strong>. Click it and
@@ -93,14 +99,14 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               onKeyDown={(e) => e.key === "Enter" && sendLink()}
               placeholder="your@email.com"
               autoFocus
-              className="w-full rounded-xl border border-[var(--border)] px-3 py-2.5 text-sm outline-none focus:border-emerald-400"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]"
             />
             {err && <p className="text-xs text-red-500">{err}</p>}
             <button
               onClick={sendLink}
               disabled={!email.includes("@") || sending}
               className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
-              style={{ background: "#10b981" }}
+              style={{ background: "var(--primary)" }}
             >
               {sending ? "Sending…" : "Send magic link"}
             </button>

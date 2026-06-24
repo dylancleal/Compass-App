@@ -147,7 +147,7 @@ export default function SettingsPage() {
           />
           <Button
             variant="soft"
-            color="#334155"
+            color="#3e6b54"
             disabled={!newName.trim()}
             onClick={() => {
               createCat.mutate({ name: newName.trim(), color: "slate", icon: "⭐", active: true });
@@ -178,8 +178,8 @@ export default function SettingsPage() {
                       onClick={() => toggleDay(row.key, i as DayIndex)}
                       className="h-8 w-8 rounded-full text-xs font-semibold transition-colors"
                       style={{
-                        background: on ? "#10b981" : "var(--background)",
-                        color: on ? "#fff" : "var(--muted)",
+                        background: on ? "var(--primary)" : "var(--background)",
+                        color: on ? "#fffdf9" : "var(--muted)",
                       }}
                     >
                       {d}
@@ -268,7 +268,7 @@ function Row({ label, status, on, note }: { label: string; status: string; on: b
       </div>
       <span
         className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium"
-        style={{ background: on ? "#10b98122" : "var(--background)", color: on ? "#065f46" : "var(--muted)" }}
+        style={{ background: on ? "var(--primary-soft)" : "var(--background)", color: on ? "var(--primary)" : "var(--muted)" }}
       >
         {status}
       </span>

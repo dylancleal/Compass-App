@@ -18,7 +18,7 @@ import type { Suggestion, Category } from "@/lib/types";
 import { Button, Pill } from "./ui";
 import TickCircle from "./TickCircle";
 
-const RAIN_COLORS = ["#34d399", "#60a5fa", "#fbbf24", "#f472b6", "#a78bfa", "#22d3ee"];
+const RAIN_COLORS = ["#5b8a72", "#a8c3b5", "#d98e63", "#c9b46b", "#7faf97", "#3e6b54"];
 
 export default function Plan() {
   const today = todayKey();
@@ -55,6 +55,10 @@ export default function Plan() {
   const actionable = visible.filter((s) => s.est_minutes !== 0);
   const doneCount = actionable.filter((s) => s.status === "accepted").length;
   const allDone = actionable.length > 0 && doneCount === actionable.length;
+
+  // Fogg's B=MAP: surface exactly one obvious next action so the plan never
+  // reads as an equally-weighted wall. The first not-yet-done session leads.
+  const nextId = actionable.find((s) => s.status !== "accepted")?.id;
 
   // Fire the celebration only on the transition into "all done", never on load.
   const [celebrating, setCelebrating] = useState(false);
@@ -98,7 +102,7 @@ export default function Plan() {
       {allDone && (
         <div
           className="animate-celebrate rounded-2xl p-4 text-center"
-          style={{ background: "linear-gradient(135deg, #34d399, #10b981)", color: "#fff" }}
+          style={{ background: "linear-gradient(135deg, #5b8a72, #3e6b54)", color: "#fffdf9" }}
         >
           <p className="text-base font-bold">Day complete 🎉</p>
           <p className="text-xs opacity-90">
@@ -116,7 +120,7 @@ export default function Plan() {
       <div className="space-y-2">
         {visible.map((s) => {
           const cat = categories.find((c) => c.id === s.category_id);
-          const accent = cat ? accentOf(cat.color).accent : "#10b981";
+          const accent = cat ? accentOf(cat.color).accent : "#5b8a72";
           return s.est_minutes === 0 ? (
             <Affirmation key={s.id} suggestion={s} />
           ) : (
@@ -125,6 +129,7 @@ export default function Plan() {
               suggestion={s}
               category={cat}
               accent={accent}
+              isNext={s.id === nextId}
               onToggle={(n) =>
                 update.mutate({ id: s.id, patch: { status: n ? "accepted" : "pending" } })
               }
@@ -157,6 +162,7 @@ function SuggestionCard({
   suggestion: s,
   category: cat,
   accent,
+  isNext = false,
   onToggle,
   onSnooze,
   onDismiss,
@@ -164,12 +170,14 @@ function SuggestionCard({
   suggestion: Suggestion;
   category?: Category;
   accent: string;
+  isNext?: boolean;
   onToggle: (next: boolean) => void;
   onSnooze: () => void;
   onDismiss: () => void;
 }) {
   const accepted = s.status === "accepted";
   const [open, setOpen] = useState(false);
+  const highlight = isNext && !accepted;
 
   // The suggestion text packs a header (and maybe a "Task:" line) followed by
   // "· " bullet steps. Split so the headline stays, the steps tuck away.
@@ -181,9 +189,23 @@ function SuggestionCard({
 
   return (
     <div
-      className="card animate-pop p-4"
-      style={{ borderLeft: `3px solid ${accent}`, opacity: accepted ? 0.72 : 1 }}
+      className={`card animate-pop p-4 ${highlight ? "animate-breathe" : ""}`}
+      style={{
+        borderLeft: `3px solid ${accent}`,
+        opacity: accepted ? 0.72 : 1,
+        ...(highlight
+          ? { borderColor: accent, boxShadow: `0 0 0 1.5px ${accent}55` }
+          : {}),
+      }}
     >
+      {highlight && (
+        <div
+          className="mb-2.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          style={{ background: accent + "1f", color: accent }}
+        >
+          <span aria-hidden>🌿</span> Start here
+        </div>
+      )}
       <div className="flex items-start gap-3">
         <div className="pt-0.5">
           <TickCircle checked={accepted} accent={accent} onChange={onToggle} />
@@ -203,7 +225,7 @@ function SuggestionCard({
                 {cat.icon} {cat.name}
               </Pill>
             )}
-            {s.est_minutes ? <Pill color="#64748b">~{s.est_minutes} min</Pill> : null}
+            {s.est_minutes ? <Pill color="#7d7c6e">~{s.est_minutes} min</Pill> : null}
           </div>
 
           {steps.length > 0 && (

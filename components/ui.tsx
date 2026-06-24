@@ -7,7 +7,7 @@ export function ProgressRing({
   size = 64,
   stroke = 7,
   color,
-  track = "#eef0f4",
+  track = "#e7e1d5",
   children,
 }: {
   value: number; // 0..1
@@ -126,7 +126,7 @@ export function Button({
   children,
   onClick,
   variant = "primary",
-  color = "#334155",
+  color = "#3e6b54",
   type = "button",
   disabled,
   className = "",

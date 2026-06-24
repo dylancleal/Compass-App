@@ -11,8 +11,8 @@ const MENTAL = [
   { v: 1, emoji: "😞", color: "#f87171", label: "Rough" },
   { v: 2, emoji: "😕", color: "#fb923c", label: "Low" },
   { v: 3, emoji: "😐", color: "#fbbf24", label: "Okay" },
-  { v: 4, emoji: "🙂", color: "#34d399", label: "Good" },
-  { v: 5, emoji: "😄", color: "#10b981", label: "Great" },
+  { v: 4, emoji: "🙂", color: "#7faf97", label: "Good" },
+  { v: 5, emoji: "😄", color: "#5b8a72", label: "Great" },
 ];
 
 const CAPACITIES: { v: Capacity; title: string; sub: string; emoji: string }[] = [
@@ -101,7 +101,7 @@ export default function CheckinPage() {
   const [note, setNote] = useState<string>((existing?.extra?.note as string) ?? "");
   const [extra, setExtra] = useState<Record<string, unknown>>(existing?.extra ?? {});
 
-  const accent = "#10b981";
+  const accent = "#5b8a72";
 
   const steps = useMemo(() => {
     const s = ["mental", "uni", "capacity"];
