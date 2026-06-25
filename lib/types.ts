@@ -93,6 +93,40 @@ export interface Suggestion {
   created_at: string;
 }
 
+// ── Calendar (Phase 1) ────────────────────────────────────────────────────
+// A planned span of time. Distinct from Task (a to-do with a deadline) and
+// Session (a logged, completed activity). See docs/calendar-phase1-spec.md.
+export type CalendarSource = "manual" | "compass" | "google" | "microsoft" | "apple";
+export type BlockStatus = "planned" | "done" | "skipped";
+
+export interface CalendarBlock {
+  id: ID;
+  category_id?: ID; // null for external imports
+  task_id?: ID; // block advances this task
+  title: string;
+  start_at: string; // ISO datetime (UTC instant), rendered in local time
+  end_at: string; // ISO datetime
+  all_day?: boolean;
+  source: CalendarSource;
+  external_id?: string; // provider event id (dedupe key, Phase 2)
+  external_calendar_id?: string;
+  busy: boolean; // true = counts against free time
+  status: BlockStatus;
+  notes?: string;
+  created_at: string;
+}
+
+export interface CalendarConnection {
+  id: ID;
+  provider: "google" | "microsoft" | "apple" | "ics";
+  label: string;
+  ics_url?: string; // Phase 2
+  color?: string;
+  enabled: boolean;
+  last_synced_at?: string;
+  created_at: string;
+}
+
 export type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6; // Sun..Sat
 
 export interface WeeklySchedule {
