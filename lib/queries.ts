@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { db } from "@/lib/db";
 import type {
   AppSettings,
+  CalendarBlock,
+  CalendarConnection,
   Category,
   Checkin,
   Metric,
@@ -22,6 +24,8 @@ const keys = {
   checkins: ["checkins"],
   settings: ["settings"],
   suggestions: (date: string) => ["suggestions", date],
+  calendarBlocks: ["calendarBlocks"],
+  calendarConnections: ["calendarConnections"],
 };
 
 // ---- reads ----
@@ -134,5 +138,41 @@ export const useUpdateSuggestion = (date: string) => {
 // ---- settings ----
 export const useSaveSettings = () =>
   useInvalidatingMutation((patch: Partial<AppSettings>) => db.saveSettings(patch), [keys.settings]);
+
+// ---- calendar blocks ----
+export const useCalendarBlocks = (rangeStart: string, rangeEnd: string) =>
+  useQuery({
+    queryKey: [...keys.calendarBlocks, rangeStart, rangeEnd],
+    queryFn: () => db.listCalendarBlocks(rangeStart, rangeEnd),
+    enabled: !!rangeStart && !!rangeEnd,
+  });
+export const useCreateCalendarBlock = () =>
+  useInvalidatingMutation(
+    (i: Omit<CalendarBlock, "id" | "created_at">) => db.createCalendarBlock(i),
+    [keys.calendarBlocks],
+  );
+export const useUpdateCalendarBlock = () =>
+  useInvalidatingMutation(
+    (a: { id: string; patch: Partial<CalendarBlock> }) => db.updateCalendarBlock(a.id, a.patch),
+    [keys.calendarBlocks],
+  );
+export const useRemoveCalendarBlock = () =>
+  useInvalidatingMutation((id: string) => db.removeCalendarBlock(id), [keys.calendarBlocks]);
+
+// ---- calendar connections ----
+export const useCalendarConnections = () =>
+  useQuery({ queryKey: keys.calendarConnections, queryFn: () => db.listCalendarConnections() });
+export const useCreateCalendarConnection = () =>
+  useInvalidatingMutation(
+    (i: Omit<CalendarConnection, "id" | "created_at">) => db.createCalendarConnection(i),
+    [keys.calendarConnections],
+  );
+export const useUpdateCalendarConnection = () =>
+  useInvalidatingMutation(
+    (a: { id: string; patch: Partial<CalendarConnection> }) => db.updateCalendarConnection(a.id, a.patch),
+    [keys.calendarConnections],
+  );
+export const useRemoveCalendarConnection = () =>
+  useInvalidatingMutation((id: string) => db.removeCalendarConnection(id), [keys.calendarConnections]);
 
 export { keys as queryKeys };

@@ -1,5 +1,7 @@
 import type {
   AppSettings,
+  CalendarBlock,
+  CalendarConnection,
   Category,
   Checkin,
   Metric,
@@ -173,5 +175,42 @@ export class SupabaseDB implements CompassDB {
     const next = { ...current, ...patch };
     await sb().from("settings").upsert({ data: next });
     return next;
+  }
+
+  async listCalendarBlocks(rangeStart: string, rangeEnd: string): Promise<CalendarBlock[]> {
+    const { data } = await sb()
+      .from("calendar_blocks")
+      .select("*")
+      .gte("start_at", rangeStart)
+      .lte("start_at", rangeEnd)
+      .order("start_at");
+    return (data ?? []) as CalendarBlock[];
+  }
+  async createCalendarBlock(input: Omit<CalendarBlock, "id" | "created_at">): Promise<CalendarBlock> {
+    const { data } = await sb().from("calendar_blocks").insert(input).select().single();
+    return data as CalendarBlock;
+  }
+  async updateCalendarBlock(id: string, patch: Partial<CalendarBlock>): Promise<CalendarBlock> {
+    const { data } = await sb().from("calendar_blocks").update(patch).eq("id", id).select().single();
+    return data as CalendarBlock;
+  }
+  async removeCalendarBlock(id: string): Promise<void> {
+    await sb().from("calendar_blocks").delete().eq("id", id);
+  }
+
+  async listCalendarConnections(): Promise<CalendarConnection[]> {
+    const { data } = await sb().from("calendar_connections").select("*").order("created_at");
+    return (data ?? []) as CalendarConnection[];
+  }
+  async createCalendarConnection(input: Omit<CalendarConnection, "id" | "created_at">): Promise<CalendarConnection> {
+    const { data } = await sb().from("calendar_connections").insert(input).select().single();
+    return data as CalendarConnection;
+  }
+  async updateCalendarConnection(id: string, patch: Partial<CalendarConnection>): Promise<CalendarConnection> {
+    const { data } = await sb().from("calendar_connections").update(patch).eq("id", id).select().single();
+    return data as CalendarConnection;
+  }
+  async removeCalendarConnection(id: string): Promise<void> {
+    await sb().from("calendar_connections").delete().eq("id", id);
   }
 }
