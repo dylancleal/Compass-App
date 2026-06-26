@@ -14,6 +14,7 @@ import { PALETTE, PALETTE_KEYS, accentOf } from "@/lib/palette";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Category, DayIndex } from "@/lib/types";
 import { Button } from "@/components/ui";
+import ConnectionsPanel from "@/components/calendar/ConnectionsPanel";
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const SCHEDULE_ROWS: { key: "gym" | "tennis" | "study"; label: string }[] = [
@@ -227,6 +228,14 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      {/* Calendar connections */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-[var(--muted)]">Calendar connections</h2>
+        <div className="card p-4">
+          <ConnectionsPanel />
+        </div>
+      </section>
+
       {/* Integrations */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-[var(--muted)]">Sync & integrations</h2>
@@ -241,8 +250,7 @@ export default function SettingsPage() {
                 : "Running locally on this device. Add Supabase keys to sync — see README."
             }
           />
-          <Row label="Google Calendar" status="Phase 2" on={false} note="Read your commitments into the plan." />
-          <Row label="OnTrack (Deakin)" status="Phase 3" on={false} note="Pull uni tasks & deadlines." />
+          <Row label="OnTrack (Deakin)" status="Phase 3" on={false} note="Pull uni tasks & deadlines automatically." />
           {isSupabaseConfigured() && (
             <div className="border-t border-[var(--border)] pt-3">
               <button
