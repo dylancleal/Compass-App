@@ -1,5 +1,7 @@
 import type {
   AppSettings,
+  CalendarBlock,
+  CalendarConnection,
   Category,
   Checkin,
   Metric,
@@ -55,6 +57,19 @@ export interface CompassDB {
   // settings
   getSettings(): Promise<AppSettings>;
   saveSettings(patch: Partial<AppSettings>): Promise<AppSettings>;
+
+  // calendar blocks
+  listCalendarBlocks(rangeStart: string, rangeEnd: string): Promise<CalendarBlock[]>;
+  createCalendarBlock(input: Omit<CalendarBlock, "id" | "created_at">): Promise<CalendarBlock>;
+  updateCalendarBlock(id: string, patch: Partial<CalendarBlock>): Promise<CalendarBlock>;
+  removeCalendarBlock(id: string): Promise<void>;
+  syncCalendarBlocks(blocks: Omit<CalendarBlock, "id" | "created_at">[], connectionId: string): Promise<{ synced: number }>;
+
+  // calendar connections (CRUD; sync is Phase 2)
+  listCalendarConnections(): Promise<CalendarConnection[]>;
+  createCalendarConnection(input: Omit<CalendarConnection, "id" | "created_at">): Promise<CalendarConnection>;
+  updateCalendarConnection(id: string, patch: Partial<CalendarConnection>): Promise<CalendarConnection>;
+  removeCalendarConnection(id: string): Promise<void>;
 
   // maintenance
   ensureSeeded(): Promise<void>;

@@ -37,11 +37,11 @@ function ScaleRow({
             key={m.v}
             type="button"
             onClick={() => onChange(m.v)}
-            className="flex flex-1 flex-col items-center gap-1 rounded-2xl border py-3 transition-all"
+            className="flex flex-1 flex-col items-center gap-1 rounded-2xl border py-3 transition-all hover:scale-[1.05] hover:opacity-100"
             style={{
               borderColor: active ? m.color : "var(--border)",
               background: active ? m.color + "22" : "var(--surface)",
-              transform: active ? "scale(1.05)" : "scale(1)",
+              transform: active ? "scale(1.05)" : undefined,
             }}
           >
             <span className="text-2xl">{m.emoji}</span>
@@ -73,7 +73,7 @@ function Choice({
             key={o.v}
             type="button"
             onClick={() => onChange(o.v)}
-            className="rounded-full px-4 py-2 text-sm font-medium transition-all"
+            className="rounded-full px-4 py-2 text-sm font-medium transition-all hover:scale-[1.05] hover:opacity-100"
             style={{ background: active ? color : color + "1a", color: active ? "#fff" : color }}
           >
             {o.label}
@@ -187,7 +187,7 @@ export default function CheckinPage() {
                     key={c.v}
                     type="button"
                     onClick={() => setCapacity(c.v)}
-                    className="flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all"
+                    className="flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all hover:scale-[1.02] hover:opacity-100 hover:shadow-sm"
                     style={{
                       borderColor: active ? accent : "var(--border)",
                       background: active ? accent + "14" : "var(--surface)",

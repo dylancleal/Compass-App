@@ -95,10 +95,10 @@ export default function SettingsPage() {
                       className="min-w-0 flex-1 rounded-lg border border-[var(--border)] px-2 py-1.5 text-sm font-medium"
                       style={{ color: accent.text }}
                     />
-                    <button onClick={() => move(cat, -1)} className="px-1 text-[var(--muted)]" aria-label="Move up">
+                    <button onClick={() => move(cat, -1)} className="px-1 text-[var(--muted)] hover:scale-125 hover:text-[var(--foreground)] hover:opacity-100" aria-label="Move up">
                       ↑
                     </button>
-                    <button onClick={() => move(cat, 1)} className="px-1 text-[var(--muted)]" aria-label="Move down">
+                    <button onClick={() => move(cat, 1)} className="px-1 text-[var(--muted)] hover:scale-125 hover:text-[var(--foreground)] hover:opacity-100" aria-label="Move down">
                       ↓
                     </button>
                     <button
@@ -106,7 +106,7 @@ export default function SettingsPage() {
                         if (confirm(`Remove ${cat.name}? Its tasks and logs stay in storage.`))
                           removeCat.mutate(cat.id);
                       }}
-                      className="px-1 text-[var(--muted)]"
+                      className="px-1 text-[var(--muted)] hover:scale-110 hover:text-[#c06b5a] hover:opacity-100"
                       aria-label="Delete area"
                     >
                       ✕
@@ -118,7 +118,7 @@ export default function SettingsPage() {
                         key={key}
                         onClick={() => updateCat.mutate({ id: cat.id, patch: { color: key } })}
                         aria-label={PALETTE[key].label}
-                        className="h-6 w-6 rounded-full border-2 transition-transform"
+                        className="h-6 w-6 rounded-full border-2 transition-transform hover:scale-125 hover:opacity-100"
                         style={{
                           background: PALETTE[key].accent,
                           borderColor: cat.color === key ? "var(--foreground)" : "transparent",
@@ -176,7 +176,7 @@ export default function SettingsPage() {
                     <button
                       key={i}
                       onClick={() => toggleDay(row.key, i as DayIndex)}
-                      className="h-8 w-8 rounded-full text-xs font-semibold transition-colors"
+                      className="h-8 w-8 rounded-full text-xs font-semibold transition-all hover:scale-110 hover:opacity-100"
                       style={{
                         background: on ? "var(--primary)" : "var(--background)",
                         color: on ? "#fffdf9" : "var(--muted)",
@@ -247,7 +247,7 @@ export default function SettingsPage() {
             <div className="border-t border-[var(--border)] pt-3">
               <button
                 onClick={() => getSupabase()?.auth.signOut()}
-                className="text-xs text-red-500 underline"
+                className="text-xs text-red-500 underline hover:text-red-700 hover:opacity-100"
               >
                 Sign out
               </button>

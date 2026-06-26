@@ -98,7 +98,7 @@ export default function UniPage() {
 
       <p className="text-center text-xs text-[var(--muted)]">
         Backwards planning, time-estimation learning and study-technique tips arrive in Phase 3.{" "}
-        <Link href="/categories" className="underline">
+        <Link href="/categories" className="underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105">
           See all areas
         </Link>
       </p>

@@ -545,7 +545,7 @@ function Tab({ label, active, color, onClick }: { label: string; active: boolean
   return (
     <button
       onClick={onClick}
-      className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-all"
+      className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-all hover:scale-[1.05] hover:opacity-100"
       style={{
         background: active ? color : "var(--surface)",
         color: active ? "#fff" : "var(--muted)",

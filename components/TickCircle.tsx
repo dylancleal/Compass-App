@@ -40,7 +40,7 @@ export default function TickCircle({
       aria-pressed={checked}
       aria-label={label ?? (checked ? "Mark not done" : "Mark done")}
       onClick={toggle}
-      className="relative grid place-items-center rounded-full border-2 transition-colors"
+      className="relative grid place-items-center rounded-full border-2 transition-all hover:scale-110 hover:opacity-100"
       style={{
         width: size,
         height: size,

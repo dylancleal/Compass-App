@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const ITEMS = [
   { href: "/", label: "Today" },
+  { href: "/calendar", label: "Calendar" },
   { href: "/categories", label: "Areas" },
   { href: "/uni", label: "Uni" },
   { href: "/trends", label: "Trends" },
@@ -58,7 +59,11 @@ export default function Nav() {
             <Link
               key={it.href}
               href={it.href}
-              className="shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-all"
+              className={`shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-all duration-150 ${
+                active
+                  ? "hover:brightness-110 hover:scale-[1.04]"
+                  : "hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] hover:scale-[1.04]"
+              }`}
               style={{
                 background: active ? "var(--primary)" : "transparent",
                 color: active ? "#fffdf9" : "var(--muted)",

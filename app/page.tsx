@@ -35,7 +35,7 @@ export default function TodayPage() {
       {!checkin ? (
         <Link
           href="/checkin"
-          className="card animate-pop block p-5"
+          className="card animate-pop block p-5 transition-all duration-150 hover:scale-[1.01] hover:brightness-[1.03] hover:shadow-md active:scale-[0.99]"
           style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
         >
           <p className="text-lg font-semibold" style={{ color: "var(--primary)" }}>
@@ -54,7 +54,7 @@ export default function TodayPage() {
               Mind {checkin.mental}/5 · Uni readiness {checkin.uni_readiness}/5
             </p>
           </div>
-          <Link href="/checkin" className="text-xs text-[var(--muted)] underline">
+          <Link href="/checkin" className="text-xs text-[var(--muted)] underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105">
             redo
           </Link>
         </div>
@@ -68,7 +68,7 @@ export default function TodayPage() {
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--muted)]">This week&apos;s goals</h2>
-            <Link href="/trends" className="text-xs text-[var(--muted)] underline">
+            <Link href="/trends" className="text-xs text-[var(--muted)] underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105">
               details
             </Link>
           </div>
@@ -86,7 +86,7 @@ export default function TodayPage() {
               <button
                 key={c.id}
                 onClick={() => setLogCat(c)}
-                className="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium"
+                className="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium hover:scale-[1.05] hover:opacity-100 hover:shadow-sm"
                 style={{ background: accent.soft, color: accent.text }}
               >
                 <span>{c.icon}</span> {c.name}
@@ -100,7 +100,7 @@ export default function TodayPage() {
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-[var(--muted)]">Quick-tick</h2>
-          <Link href="/categories" className="text-xs text-[var(--muted)] underline">
+          <Link href="/categories" className="text-xs text-[var(--muted)] underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105">
             all areas
           </Link>
         </div>

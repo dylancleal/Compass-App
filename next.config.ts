@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // node-ical uses BigInt at module init time, which Turbopack can't bundle.
+  // Exclude it so it's required natively at runtime instead.
+  serverExternalPackages: ["node-ical"],
 };
 
 export default nextConfig;

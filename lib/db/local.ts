@@ -1,5 +1,7 @@
 import type {
   AppSettings,
+  CalendarBlock,
+  CalendarConnection,
   Category,
   Checkin,
   Metric,
@@ -27,6 +29,8 @@ const KEYS = {
   suggestions: PREFIX + "suggestions",
   settings: PREFIX + "settings",
   seeded: PREFIX + "seeded",
+  calendarBlocks: PREFIX + "calendarBlocks",
+  calendarConnections: PREFIX + "calendarConnections",
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -200,6 +204,63 @@ export class LocalDB implements CompassDB {
     const next = all.map((s) => (s.id === id ? { ...s, ...patch } : s));
     write(KEYS.suggestions, next);
     return next.find((s) => s.id === id)!;
+  }
+
+  // calendar blocks
+  async listCalendarBlocks(rangeStart: string, rangeEnd: string): Promise<CalendarBlock[]> {
+    return read<CalendarBlock[]>(KEYS.calendarBlocks, []).filter(
+      (b) => b.start_at >= rangeStart && b.start_at <= rangeEnd,
+    );
+  }
+  async createCalendarBlock(input: Omit<CalendarBlock, "id" | "created_at">): Promise<CalendarBlock> {
+    const all = read<CalendarBlock[]>(KEYS.calendarBlocks, []);
+    const b: CalendarBlock = { ...input, id: uid(), created_at: new Date().toISOString() };
+    write(KEYS.calendarBlocks, [...all, b]);
+    return b;
+  }
+  async updateCalendarBlock(id: string, patch: Partial<CalendarBlock>): Promise<CalendarBlock> {
+    const all = read<CalendarBlock[]>(KEYS.calendarBlocks, []);
+    const next = all.map((b) => (b.id === id ? { ...b, ...patch } : b));
+    write(KEYS.calendarBlocks, next);
+    return next.find((b) => b.id === id)!;
+  }
+  async removeCalendarBlock(id: string): Promise<void> {
+    write(KEYS.calendarBlocks, read<CalendarBlock[]>(KEYS.calendarBlocks, []).filter((b) => b.id !== id));
+  }
+  async syncCalendarBlocks(
+    incoming: Omit<CalendarBlock, "id" | "created_at">[],
+    connectionId: string,
+  ): Promise<{ synced: number }> {
+    const all = read<CalendarBlock[]>(KEYS.calendarBlocks, []);
+    const existing = all.filter((b) => b.external_calendar_id === connectionId);
+    const unchanged = all.filter((b) => b.external_calendar_id !== connectionId);
+    const now = new Date().toISOString();
+    const merged: CalendarBlock[] = incoming.map((b) => {
+      const found = existing.find((e) => e.external_id === b.external_id);
+      return found ? { ...found, ...b } : { ...b, id: uid(), created_at: now };
+    });
+    write(KEYS.calendarBlocks, [...unchanged, ...merged]);
+    return { synced: merged.length };
+  }
+
+  // calendar connections
+  async listCalendarConnections(): Promise<CalendarConnection[]> {
+    return read<CalendarConnection[]>(KEYS.calendarConnections, []);
+  }
+  async createCalendarConnection(input: Omit<CalendarConnection, "id" | "created_at">): Promise<CalendarConnection> {
+    const all = read<CalendarConnection[]>(KEYS.calendarConnections, []);
+    const c: CalendarConnection = { ...input, id: uid(), created_at: new Date().toISOString() };
+    write(KEYS.calendarConnections, [...all, c]);
+    return c;
+  }
+  async updateCalendarConnection(id: string, patch: Partial<CalendarConnection>): Promise<CalendarConnection> {
+    const all = read<CalendarConnection[]>(KEYS.calendarConnections, []);
+    const next = all.map((c) => (c.id === id ? { ...c, ...patch } : c));
+    write(KEYS.calendarConnections, next);
+    return next.find((c) => c.id === id)!;
+  }
+  async removeCalendarConnection(id: string): Promise<void> {
+    write(KEYS.calendarConnections, read<CalendarConnection[]>(KEYS.calendarConnections, []).filter((c) => c.id !== id));
   }
 
   // settings
