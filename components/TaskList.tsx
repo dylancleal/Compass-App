@@ -110,7 +110,7 @@ export default function TaskList({
             </div>
             <button
               onClick={() => removeTask.mutate(task.id)}
-              className="text-[var(--muted)] opacity-0 transition-opacity group-hover:opacity-100"
+              className="text-[var(--muted)] opacity-0 transition-all group-hover:opacity-100 hover:scale-110 hover:text-[#c06b5a] hover:opacity-100"
               aria-label="Delete task"
             >
               ✕
@@ -131,7 +131,7 @@ export default function TaskList({
             />
             <button
               onClick={() => setShowMore((s) => !s)}
-              className="text-xs text-[var(--muted)]"
+              className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] hover:opacity-100"
               type="button"
             >
               {showMore ? "less" : "more"}
@@ -139,7 +139,7 @@ export default function TaskList({
             <button
               onClick={add}
               disabled={!title.trim()}
-              className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
+              className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40 hover:brightness-110 hover:scale-[1.03] hover:opacity-100"
               style={{ background: accent }}
             >
               Add

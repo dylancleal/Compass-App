@@ -61,14 +61,14 @@ export default function BlockChip({
       {isGhost && !short && (
         <div className="mt-0.5 flex gap-1">
           <button
-            className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white"
+            className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white hover:scale-105 hover:brightness-110 hover:opacity-100"
             style={{ background: accent.accent }}
             onClick={(e) => { e.stopPropagation(); onConfirm?.(); }}
           >
             Add
           </button>
           <button
-            className="rounded px-1.5 py-0.5 text-[10px] font-medium opacity-60"
+            className="rounded px-1.5 py-0.5 text-[10px] font-medium opacity-60 hover:opacity-100 hover:scale-105"
             style={{ color: accent.text }}
             onClick={(e) => { e.stopPropagation(); onDismiss?.(); }}
           >

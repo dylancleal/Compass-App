@@ -95,7 +95,7 @@ export function ScalePicker({
             key={v}
             type="button"
             onClick={() => onChange(v)}
-            className="flex-1 rounded-xl border py-3 text-sm font-medium transition-all"
+            className="flex-1 rounded-xl border py-3 text-sm font-medium transition-all hover:scale-[1.04] hover:opacity-100"
             style={{
               borderColor: active ? color : "var(--border)",
               background: active ? color : "var(--surface)",
@@ -140,7 +140,7 @@ export function Button({
   className?: string;
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all disabled:opacity-50";
+    "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all disabled:opacity-50 hover:scale-[1.03] hover:brightness-110 hover:opacity-100 active:scale-95";
   const style: React.CSSProperties =
     variant === "primary"
       ? { background: color, color: "#fff" }

@@ -84,7 +84,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               you&apos;re in.
             </p>
             <button
-              className="mt-1 text-xs underline"
+              className="mt-1 text-xs underline hover:text-[var(--primary)] hover:opacity-100"
               onClick={() => { setSent(false); setEmail(""); }}
             >
               Try a different email

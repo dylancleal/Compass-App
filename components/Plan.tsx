@@ -93,7 +93,7 @@ export default function Plan() {
               {doneCount}/{actionable.length} done
             </span>
           )}
-          <button onClick={regenerate} className="text-xs text-[var(--muted)] underline">
+          <button onClick={regenerate} className="text-xs text-[var(--muted)] underline hover:text-[var(--foreground)] hover:opacity-100">
             refresh
           </button>
         </div>
@@ -233,7 +233,7 @@ function SuggestionCard({
               <button
                 onClick={() => setOpen((o) => !o)}
                 aria-expanded={open}
-                className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
+                className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all hover:brightness-95 hover:opacity-100"
                 style={{ background: accent + "14", color: accent }}
               >
                 <span className="flex items-center gap-1.5">
@@ -280,10 +280,10 @@ function SuggestionCard({
 
         {!accepted && (
           <div className="flex flex-col gap-1">
-            <button onClick={onSnooze} className="text-xs text-[var(--muted)]" title="Snooze">
+            <button onClick={onSnooze} className="text-xs text-[var(--muted)] hover:scale-125 hover:opacity-100" title="Snooze">
               💤
             </button>
-            <button onClick={onDismiss} className="text-xs text-[var(--muted)]" title="Not today">
+            <button onClick={onDismiss} className="text-xs text-[var(--muted)] hover:scale-125 hover:text-[#c06b5a] hover:opacity-100" title="Not today">
               ✕
             </button>
           </div>

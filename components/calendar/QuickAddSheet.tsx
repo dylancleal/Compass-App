@@ -101,7 +101,7 @@ export default function QuickAddSheet({
                   setCategoryId(active ? "" : cat.id);
                   setTaskId("");
                 }}
-                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-all"
+                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-all hover:scale-[1.05] hover:opacity-100"
                 style={{
                   background: active ? accent.soft : "var(--surface)",
                   color: active ? accent.text : "var(--muted)",

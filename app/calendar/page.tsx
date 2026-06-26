@@ -228,7 +228,7 @@ function CalendarInner() {
             )}
             <div className="flex gap-2 pt-1">
               <button
-                className="rounded-xl px-3 py-2 text-sm font-medium"
+                className="rounded-xl px-3 py-2 text-sm font-medium hover:scale-[1.03] hover:brightness-95 hover:opacity-100"
                 style={{ background: "#f8ece8", color: "#c06b5a" }}
                 onClick={() => {
                   removeBlock.mutate(selectedBlock.id);
@@ -238,7 +238,7 @@ function CalendarInner() {
                 Delete
               </button>
               <button
-                className="ml-auto rounded-xl px-3 py-2 text-sm font-medium"
+                className="ml-auto rounded-xl px-3 py-2 text-sm font-medium hover:text-[var(--foreground)] hover:opacity-100"
                 style={{ color: "var(--muted)" }}
                 onClick={() => setSelectedBlock(null)}
               >

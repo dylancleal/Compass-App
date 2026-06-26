@@ -181,7 +181,7 @@ export default function LogSheet({
                   key={v}
                   type="button"
                   onClick={() => setEnergy(v)}
-                  className="flex flex-1 flex-col items-center gap-1 rounded-xl border py-2.5 transition-all"
+                  className="flex flex-1 flex-col items-center gap-1 rounded-xl border py-2.5 transition-all hover:scale-[1.06] hover:opacity-100"
                   style={{
                     borderColor: energy === v ? accent : "var(--border)",
                     background: energy === v ? accent + "22" : "var(--surface)",
@@ -203,7 +203,7 @@ export default function LogSheet({
                   key={o.v}
                   type="button"
                   onClick={() => setDurationFeel(o.v)}
-                  className="flex w-full items-center gap-3 rounded-xl border p-3 text-sm transition-all"
+                  className="flex w-full items-center gap-3 rounded-xl border p-3 text-sm transition-all hover:scale-[1.02] hover:shadow-sm hover:opacity-100"
                   style={{
                     borderColor: durationFeel === o.v ? accent : "var(--border)",
                     background: durationFeel === o.v ? accent + "18" : "var(--surface)",
@@ -232,7 +232,7 @@ export default function LogSheet({
                     key={o.v}
                     type="button"
                     onClick={() => setSkillConfidence(o.v)}
-                    className="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-all"
+                    className="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-all hover:scale-[1.02] hover:shadow-sm hover:opacity-100"
                     style={{
                       borderColor: skillConfidence === o.v ? accent : "var(--border)",
                       background: skillConfidence === o.v ? accent + "18" : "var(--surface)",
@@ -302,7 +302,7 @@ export default function LogSheet({
                 key={t}
                 type="button"
                 onClick={() => setType(t)}
-                className="rounded-full px-3 py-1.5 text-sm font-medium transition-all"
+                className="rounded-full px-3 py-1.5 text-sm font-medium transition-all hover:scale-[1.05] hover:opacity-100"
                 style={{
                   background: type === t ? accent : accent + "1a",
                   color: type === t ? "#fff" : accent,
@@ -371,7 +371,7 @@ export default function LogSheet({
                       <button
                         type="button"
                         onClick={() => setValue(m.id, !valueFor(m))}
-                        className="rounded-lg px-4 py-2 text-sm font-medium"
+                        className="rounded-lg px-4 py-2 text-sm font-medium hover:scale-[1.04] hover:opacity-100"
                         style={{
                           background: valueFor(m) ? accent : accent + "1a",
                           color: valueFor(m) ? "#fff" : accent,
