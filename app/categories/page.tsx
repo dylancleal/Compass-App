@@ -54,7 +54,7 @@ export default function CategoriesPage() {
           })}
       </div>
 
-      <Link href="/settings" className="block text-center text-sm text-[var(--muted)] underline">
+      <Link href="/settings" className="block text-center text-sm text-[var(--muted)] underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105">
         Add or edit areas in Settings
       </Link>
     </div>

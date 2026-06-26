@@ -28,7 +28,7 @@ export default function CategoryDetail({ params }: { params: Promise<{ id: strin
     return (
       <div className="space-y-3">
         <p className="text-sm text-[var(--muted)]">This area isn&apos;t available.</p>
-        <Link href="/categories" className="underline">
+        <Link href="/categories" className="underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105">
           Back to areas
         </Link>
       </div>
@@ -44,7 +44,7 @@ export default function CategoryDetail({ params }: { params: Promise<{ id: strin
   return (
     <div className="space-y-6">
       <header className="flex items-center gap-3">
-        <Link href="/categories" className="text-[var(--muted)]">
+        <Link href="/categories" className="text-[var(--muted)] transition-all duration-150 hover:text-[var(--foreground)] hover:scale-110">
           ←
         </Link>
         <span
