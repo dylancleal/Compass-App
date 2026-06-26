@@ -105,14 +105,14 @@ function CalendarInner() {
         <div className="flex items-center gap-2">
           {/* View switcher */}
           <div
-            className="flex rounded-xl overflow-hidden"
+            className="flex overflow-hidden rounded-xl"
             style={{ border: "1px solid var(--border)" }}
           >
             {(["agenda", "week"] as View[]).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
-                className="px-3 py-1.5 text-xs font-medium capitalize transition-all"
+                className="cursor-pointer px-3 py-1.5 text-xs font-medium capitalize transition-all duration-150 hover:brightness-95 active:scale-95"
                 style={{
                   background: view === v ? "var(--primary)" : "var(--surface)",
                   color: view === v ? "#fffdf9" : "var(--muted)",
@@ -130,28 +130,28 @@ function CalendarInner() {
 
       {/* Week navigation (week view only) */}
       {view === "week" && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setWeekStart(addDays(weekStart, -7))}
-            className="rounded-lg px-2 py-1 text-sm"
+            className="cursor-pointer rounded-lg px-2.5 py-1.5 text-sm font-medium transition-all duration-150 hover:scale-105 hover:bg-[var(--primary-soft)] active:scale-95"
             style={{ color: "var(--muted)" }}
           >
             ←
           </button>
-          <span className="text-sm font-medium">
+          <span className="flex-1 text-center text-sm font-medium">
             {new Date(weekStart + "T12:00:00").toLocaleDateString(undefined, { month: "long", year: "numeric" })}
           </span>
           <button
             onClick={() => setWeekStart(addDays(weekStart, 7))}
-            className="rounded-lg px-2 py-1 text-sm"
+            className="cursor-pointer rounded-lg px-2.5 py-1.5 text-sm font-medium transition-all duration-150 hover:scale-105 hover:bg-[var(--primary-soft)] active:scale-95"
             style={{ color: "var(--muted)" }}
           >
             →
           </button>
           <button
             onClick={() => setWeekStart(startOfWeek(today))}
-            className="ml-auto rounded-lg px-2 py-1 text-xs"
-            style={{ color: "var(--primary)" }}
+            className="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-150 hover:scale-105 hover:brightness-110 active:scale-95"
+            style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
           >
             Today
           </button>

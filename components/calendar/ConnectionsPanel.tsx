@@ -60,16 +60,21 @@ function ConnectionRow({ conn }: { conn: CalendarConnection }) {
 
   return (
     <div
-      className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 hover:shadow-sm"
+      style={{
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+      }}
     >
-      <span className="text-xl shrink-0">{prov.icon}</span>
+      <span className="text-xl shrink-0 transition-transform duration-150 group-hover:scale-110">
+        {prov.icon}
+      </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{conn.label}</p>
         <p className="text-xs" style={{ color: "var(--muted)" }}>
           {conn.last_synced_at ? `Synced ${timeSince(conn.last_synced_at)}` : "Never synced"}
           {sync.isError && (
-            <span className="ml-1 text-[#c06b5a]">
+            <span className="ml-1" style={{ color: "#c06b5a" }}>
               · {sync.error instanceof Error ? sync.error.message : "Sync failed"}
             </span>
           )}
@@ -78,10 +83,10 @@ function ConnectionRow({ conn }: { conn: CalendarConnection }) {
 
       {/* Enable toggle */}
       <button
-        className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium transition-all"
+        className="shrink-0 cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-semibold transition-all duration-150 hover:scale-105 active:scale-95"
         style={{
-          background: conn.enabled ? "var(--primary-soft)" : "var(--border)",
-          color: conn.enabled ? "var(--primary)" : "var(--muted)",
+          background: conn.enabled ? "var(--primary)" : "var(--border)",
+          color: conn.enabled ? "#fffdf9" : "var(--muted)",
         }}
         onClick={() => update.mutate({ id: conn.id, patch: { enabled: !conn.enabled } })}
       >
@@ -91,8 +96,11 @@ function ConnectionRow({ conn }: { conn: CalendarConnection }) {
       {/* Sync now */}
       <button
         disabled={!conn.ics_url || isSyncing || !conn.enabled}
-        className="shrink-0 text-xs font-medium disabled:opacity-40 transition-opacity"
-        style={{ color: "var(--primary)" }}
+        className="shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs font-medium transition-all duration-150 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+        style={{
+          background: "var(--primary-soft)",
+          color: "var(--primary)",
+        }}
         onClick={() =>
           conn.ics_url &&
           sync.mutate({ id: conn.id, url: conn.ics_url, provider: conn.provider, label: conn.label })
@@ -103,9 +111,12 @@ function ConnectionRow({ conn }: { conn: CalendarConnection }) {
 
       {/* Remove */}
       <button
-        className="shrink-0 text-xs opacity-40 hover:opacity-80 transition-opacity"
-        style={{ color: "var(--muted)" }}
+        className="shrink-0 cursor-pointer rounded-lg p-1 text-sm transition-all duration-150 hover:scale-110 hover:text-[#c06b5a] active:scale-95"
+        style={{ color: "var(--muted)", opacity: 0.5 }}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
         onClick={() => remove.mutate(conn.id)}
+        aria-label="Remove connection"
       >
         ✕
       </button>
@@ -138,7 +149,6 @@ function AddConnectionSheet({
       ics_url: icsUrl.trim(),
       enabled: true,
     });
-    // Trigger an immediate sync after adding.
     sync.mutate({ id: conn.id, url: icsUrl.trim(), provider, label: label.trim() || prov.label });
     setLabel("");
     setIcsUrl("");
@@ -151,26 +161,32 @@ function AddConnectionSheet({
       <div className="space-y-4">
         {/* Provider picker */}
         <div className="grid grid-cols-2 gap-2">
-          {PROVIDERS.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setProvider(p.id)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-left transition-all"
-              style={{
-                background: provider === p.id ? "var(--primary-soft)" : "var(--surface)",
-                color: provider === p.id ? "var(--primary)" : "var(--foreground)",
-                border: `1px solid ${provider === p.id ? "var(--mist)" : "var(--border)"}`,
-              }}
-            >
-              <span>{p.icon}</span>
-              <span className="truncate">{p.label.split(" ")[0]}</span>
-            </button>
-          ))}
+          {PROVIDERS.map((p) => {
+            const active = provider === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => setProvider(p.id)}
+                className="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  background: active ? "var(--primary-soft)" : "var(--surface)",
+                  color: active ? "var(--primary)" : "var(--foreground)",
+                  border: `1.5px solid ${active ? "var(--mist)" : "var(--border)"}`,
+                  boxShadow: active ? "0 0 0 1px var(--mist)" : "none",
+                }}
+              >
+                <span className={`transition-transform duration-150 ${active ? "scale-110" : ""}`}>
+                  {p.icon}
+                </span>
+                <span className="truncate">{p.label.split(" ")[0]}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Instructions */}
         <div
-          className="rounded-xl px-3 py-2.5 text-xs leading-relaxed"
+          className="animate-fade-slide rounded-xl px-3 py-2.5 text-xs leading-relaxed"
           style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
         >
           {prov.instructions}
@@ -178,7 +194,7 @@ function AddConnectionSheet({
 
         {/* Label */}
         <input
-          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none transition-all duration-150 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]"
           placeholder={`Label (e.g. "${prov.label}")`}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
@@ -186,7 +202,7 @@ function AddConnectionSheet({
 
         {/* ICS URL */}
         <input
-          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]"
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none transition-all duration-150 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]"
           placeholder="Paste .ics URL here"
           value={icsUrl}
           onChange={(e) => setIcsUrl(e.target.value)}
@@ -195,10 +211,7 @@ function AddConnectionSheet({
         />
 
         <div className="flex gap-2 pt-1">
-          <Button
-            onClick={handleAdd}
-            disabled={!icsUrl.trim() || create.isPending}
-          >
+          <Button onClick={handleAdd} disabled={!icsUrl.trim() || create.isPending}>
             {create.isPending ? "Adding…" : "Add & sync"}
           </Button>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
@@ -216,19 +229,34 @@ export default function ConnectionsPanel() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">Connected calendars</p>
-        <Button variant="soft" onClick={() => setAddOpen(true)}>
-          + Add calendar
-        </Button>
+        {/* Solid primary button — clearly a CTA, not a greyed-out link */}
+        <button
+          onClick={() => setAddOpen(true)}
+          className="flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-[#fffdf9] transition-all duration-150 hover:scale-[1.03] hover:brightness-110 active:scale-[0.97]"
+          style={{ background: "var(--primary)" }}
+        >
+          <span className="text-base leading-none">+</span> Add calendar
+        </button>
       </div>
 
       {connections.length === 0 ? (
-        <div
-          className="rounded-2xl p-5 text-center text-sm"
-          style={{ border: "1px dashed var(--border)", color: "var(--muted)" }}
+        <button
+          onClick={() => setAddOpen(true)}
+          className="w-full cursor-pointer rounded-2xl p-5 text-center text-sm transition-all duration-150 hover:scale-[1.01] hover:shadow-sm active:scale-[0.99]"
+          style={{
+            border: "1.5px dashed var(--mist)",
+            color: "var(--muted)",
+            background: "transparent",
+          }}
         >
-          <p className="mb-1 text-base">📅</p>
-          <p>Connect Google, Outlook, or Apple Calendar to block off your busy time automatically.</p>
-        </div>
+          <p className="mb-1.5 text-2xl">📅</p>
+          <p className="font-medium" style={{ color: "var(--foreground)" }}>
+            Connect your calendars
+          </p>
+          <p className="mt-0.5 text-xs">
+            Google, Outlook, or Apple — tap to get started
+          </p>
+        </button>
       ) : (
         <div className="space-y-2">
           {connections.map((conn) => (
