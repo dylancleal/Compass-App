@@ -197,6 +197,22 @@ export class SupabaseDB implements CompassDB {
   async removeCalendarBlock(id: string): Promise<void> {
     await sb().from("calendar_blocks").delete().eq("id", id);
   }
+  async syncCalendarBlocks(
+    blocks: Omit<CalendarBlock, "id" | "created_at">[],
+    _connectionId: string,
+  ): Promise<{ synced: number }> {
+    if (blocks.length === 0) return { synced: 0 };
+    // Upsert using the partial unique index (user_id, external_calendar_id, external_id).
+    // ignoreDuplicates: false means existing rows get updated.
+    const { data } = await sb()
+      .from("calendar_blocks")
+      .upsert(blocks, {
+        onConflict: "user_id,external_calendar_id,external_id",
+        ignoreDuplicates: false,
+      })
+      .select("id");
+    return { synced: data?.length ?? blocks.length };
+  }
 
   async listCalendarConnections(): Promise<CalendarConnection[]> {
     const { data } = await sb().from("calendar_connections").select("*").order("created_at");

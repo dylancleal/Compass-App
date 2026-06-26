@@ -63,6 +63,7 @@ export interface CompassDB {
   createCalendarBlock(input: Omit<CalendarBlock, "id" | "created_at">): Promise<CalendarBlock>;
   updateCalendarBlock(id: string, patch: Partial<CalendarBlock>): Promise<CalendarBlock>;
   removeCalendarBlock(id: string): Promise<void>;
+  syncCalendarBlocks(blocks: Omit<CalendarBlock, "id" | "created_at">[], connectionId: string): Promise<{ synced: number }>;
 
   // calendar connections (CRUD; sync is Phase 2)
   listCalendarConnections(): Promise<CalendarConnection[]>;

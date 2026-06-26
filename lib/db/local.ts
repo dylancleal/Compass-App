@@ -227,6 +227,21 @@ export class LocalDB implements CompassDB {
   async removeCalendarBlock(id: string): Promise<void> {
     write(KEYS.calendarBlocks, read<CalendarBlock[]>(KEYS.calendarBlocks, []).filter((b) => b.id !== id));
   }
+  async syncCalendarBlocks(
+    incoming: Omit<CalendarBlock, "id" | "created_at">[],
+    connectionId: string,
+  ): Promise<{ synced: number }> {
+    const all = read<CalendarBlock[]>(KEYS.calendarBlocks, []);
+    const existing = all.filter((b) => b.external_calendar_id === connectionId);
+    const unchanged = all.filter((b) => b.external_calendar_id !== connectionId);
+    const now = new Date().toISOString();
+    const merged: CalendarBlock[] = incoming.map((b) => {
+      const found = existing.find((e) => e.external_id === b.external_id);
+      return found ? { ...found, ...b } : { ...b, id: uid(), created_at: now };
+    });
+    write(KEYS.calendarBlocks, [...unchanged, ...merged]);
+    return { synced: merged.length };
+  }
 
   // calendar connections
   async listCalendarConnections(): Promise<CalendarConnection[]> {

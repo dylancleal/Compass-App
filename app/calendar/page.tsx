@@ -1,13 +1,15 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   useCalendarBlocks,
+  useCalendarConnections,
   useCategories,
   useTasks,
   useCreateCalendarBlock,
   useRemoveCalendarBlock,
   useSuggestions,
+  useSyncCalendarConnection,
 } from "@/lib/queries";
 import { addDays, startOfWeek, todayKey } from "@/lib/date";
 import type { CalendarBlock, Task } from "@/lib/types";
@@ -16,7 +18,11 @@ import AgendaView from "@/components/calendar/AgendaView";
 import DeadlineRail from "@/components/calendar/DeadlineRail";
 import QuickAddSheet from "@/components/calendar/QuickAddSheet";
 import ProposedBlocks from "@/components/calendar/ProposedBlocks";
+import ConnectionsPanel from "@/components/calendar/ConnectionsPanel";
 import { Button } from "@/components/ui";
+
+// Auto-sync if a connection hasn't synced in the last 30 minutes.
+const STALE_MS = 30 * 60 * 1000;
 
 type View = "week" | "agenda";
 
@@ -40,8 +46,30 @@ function CalendarInner() {
   const { data: categories = [] } = useCategories();
   const { data: tasks = [] } = useTasks();
   const { data: suggestions = [] } = useSuggestions(today);
+  const { data: connections = [] } = useCalendarConnections();
   const createBlock = useCreateCalendarBlock();
   const removeBlock = useRemoveCalendarBlock();
+  const syncConnection = useSyncCalendarConnection();
+
+  // Auto-sync stale connections on page load.
+  useEffect(() => {
+    connections.forEach((conn) => {
+      if (!conn.enabled || !conn.ics_url) return;
+      const stale =
+        !conn.last_synced_at ||
+        Date.now() - new Date(conn.last_synced_at).getTime() > STALE_MS;
+      if (stale) {
+        syncConnection.mutate({
+          id: conn.id,
+          url: conn.ics_url,
+          provider: conn.provider,
+          label: conn.label,
+        });
+      }
+    });
+    // Only run when connections list first loads, not on every sync status change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connections.map((c) => c.id).join(",")]);
 
   const pendingSuggestions = suggestions.filter((s) => s.status === "pending");
 
@@ -233,12 +261,12 @@ function CalendarInner() {
         onSave={handleSaveBlock}
       />
 
-      {/* Calendar connections stub */}
+      {/* Calendar connections */}
       <div
-        className="rounded-2xl p-4 text-center text-sm"
-        style={{ border: "1px dashed var(--border)", color: "var(--muted)" }}
+        className="card rounded-2xl p-4"
+        style={{ borderTop: "1px solid var(--border)" }}
       >
-        📅 Google, Microsoft & Apple calendar sync coming soon
+        <ConnectionsPanel />
       </div>
     </div>
   );
