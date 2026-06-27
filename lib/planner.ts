@@ -8,7 +8,14 @@ import type {
   Task,
 } from "@/lib/types";
 import { addDays, dayIndex, daysBetween, todayKey } from "@/lib/date";
-import { getScienceForSession, getNextGymType, TENNIS_SKILLS } from "@/lib/science";
+import {
+  getScienceForSession,
+  getNextGymType,
+  TENNIS_SKILLS,
+  getGymSessionForExperience,
+  getTennisSessionForUTR,
+  getUTRSkillWeights,
+} from "@/lib/science";
 import { getPersonalStats, blendedDuration } from "@/lib/personalStats";
 
 // Transparent, rule-based "Personalised Day" engine (SPEC §6). It scores each
@@ -120,6 +127,22 @@ export function scoreCategories(input: PlannerInput): Scored[] {
       else if (SCHEDULED[cat.name]) readiness = (mental / 5) * 0.7 + (isScheduledToday(cat, input) ? 0.3 : 0);
       if (isScheduledToday(cat, input)) reasonBits.push("it's on today's schedule");
 
+      // Metadata weekly_goal: if the user is behind on their weekly target,
+      // boost neglect to surface the category sooner.
+      const meta = cat.metadata;
+      const weeklyGoal =
+        meta?.weekly_goal ?? meta?.tennis_weekly_goal ?? meta?.custom_weekly_goal;
+      if (weeklyGoal) {
+        const weekStart = addDays(input.date, -(dayIndex(input.date)));
+        const sessionsThisWeek = input.sessions.filter(
+          (s) => s.category_id === cat.id && s.date >= weekStart,
+        ).length;
+        const weeklyProgress = sessionsThisWeek / weeklyGoal;
+        if (weeklyProgress < 0.5) {
+          reasonBits.push(`${sessionsThisWeek}/${weeklyGoal} sessions this week`);
+        }
+      }
+
       let score =
         w.neglect * neglect + w.deadline * deadline + w.readiness * readiness;
 
@@ -146,8 +169,10 @@ export function scoreCategories(input: PlannerInput): Scored[] {
 function gymSuggestion(s: Scored, input: PlannerInput, lighter: boolean): DraftSuggestion {
   const catSessions = input.sessions.filter((sess) => sess.category_id === s.cat.id);
   const lastSession = [...catSessions].sort((a, b) => (b.date > a.date ? 1 : -1))[0];
-  const nextType = lighter ? "Recovery" : getNextGymType(lastSession?.type ?? "");
-  const science = getScienceForSession("Gym", nextType);
+  const experience = s.cat.metadata?.experience;
+  const { sessionType: nextType, science } = lighter
+    ? { sessionType: "Recovery", science: getScienceForSession("Gym", "Recovery") }
+    : getGymSessionForExperience(lastSession?.type ?? "", experience);
   const stats = getPersonalStats(catSessions, s.cat.id);
   const mental = input.checkin?.mental ?? 3;
   const est = blendedDuration(science.durationMin, stats, mental);
@@ -185,6 +210,9 @@ function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): Dra
   // inverse confidence (low confidence = needs more work).
   const skillScores: Record<string, { score: number; daysSince: number; lastConfidence: number | undefined }> = {};
 
+  const utr = s.cat.metadata?.utr;
+  const utrWeights = getUTRSkillWeights(utr);
+
   for (const skill of TENNIS_SKILLS) {
     const skillSessions = catSessions
       .filter((sess) => sess.type === skill)
@@ -202,11 +230,15 @@ function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): Dra
       ?.skill_confidence;
     const needsWork = lastConfidence ? 1 - (lastConfidence - 1) / 4 : 0.5;
 
-    skillScores[skill] = { score: neglect * 0.5 + needsWork * 0.5, daysSince, lastConfidence };
+    skillScores[skill] = {
+      score: (neglect * 0.5 + needsWork * 0.5) * (utrWeights[skill] ?? 1.0),
+      daysSince,
+      lastConfidence,
+    };
   }
 
   const [recommendedSkill, meta] = Object.entries(skillScores).sort((a, b) => b[1].score - a[1].score)[0];
-  const science = getScienceForSession("Tennis", recommendedSkill);
+  const science = getTennisSessionForUTR(recommendedSkill, utr);
   const est = blendedDuration(science.durationMin, stats, mental);
 
   const planLines = science.plan.map((p) => `· ${p}`).join("\n");
@@ -459,21 +491,35 @@ function suggestionText(s: Scored, input: PlannerInput, lighter: boolean): Draft
   let text: string;
   let est = block;
 
-  if (cat.name === "Job searching") {
+  const meta = cat.metadata;
+
+  if (cat.name === "Job searching" || meta?.applications_per_week) {
+    const target = meta?.applications_per_week;
     text = task ? `Move ${task.title} forward.` : "Send one application or follow up on a lead.";
+    if (meta?.role_type) text += ` (${meta.role_type} roles)`;
     est = 30;
-  } else if (cat.name === "Finances") {
-    text = task ? `Tick along ${task.title}.` : "A quick check-in on a savings goal.";
-    est = 15;
+  } else if (cat.name === "Finances" || meta?.review_frequency) {
+    const targetStr = meta?.savings_target ? ` — target: $${meta.savings_target}` : "";
+    text = task ? `Tick along ${task.title}.` : `A quick check-in on your savings${targetStr}.`;
+    est = meta?.review_frequency === "weekly" ? 20 : 15;
+  } else if (meta?.success_description) {
+    // Custom category with context: build from their description
+    text = task
+      ? `Work on ${task.title}.`
+      : `A session towards: ${meta.success_description.slice(0, 60)}${meta.success_description.length > 60 ? "…" : ""}`;
+    est = block;
   } else if (task) {
     text = `Spend a little time on ${task.title}.`;
   } else {
     text = `A small step in ${cat.name}.`;
   }
 
+  const successNote = meta?.success_description
+    ? ` Goal: ${meta.success_description.slice(0, 80)}${meta.success_description.length > 80 ? "…" : ""}`
+    : "";
   const reason = s.reasonBits.length
-    ? `Suggested because ${s.reasonBits.slice(0, 2).join(" and ")}.`
-    : `A balanced choice to keep ${cat.name} ticking along.`;
+    ? `Suggested because ${s.reasonBits.slice(0, 2).join(" and ")}.${successNote}`
+    : `A balanced choice to keep ${cat.name} ticking along.${successNote}`;
 
   return { date: input.date, category_id: cat.id, text, reason, est_minutes: est, status: "pending" };
 }

@@ -19,6 +19,28 @@ export type Capacity = "light" | "medium" | "big";
 
 export type SuggestionStatus = "pending" | "accepted" | "dismissed" | "snoozed";
 
+export interface CategoryMetadata {
+  // Gym
+  experience?: "beginner" | "intermediate" | "advanced";
+  weekly_goal?: number;
+  gym_focus?: "strength" | "cardio" | "both";
+  // Tennis
+  utr?: number; // 1–16 UTR scale
+  tennis_weekly_goal?: number;
+  tennis_focus?: "match_play" | "drilling" | "both";
+  // Finance
+  savings_target?: number;
+  review_frequency?: "weekly" | "monthly";
+  // Job searching
+  applications_per_week?: number;
+  role_type?: string;
+  // Uni / Study
+  enrolled_units?: string[];
+  // Generic / Custom
+  success_description?: string;
+  custom_weekly_goal?: number;
+}
+
 export interface Category {
   id: ID;
   name: string;
@@ -26,6 +48,7 @@ export interface Category {
   icon: string; // emoji
   order: number;
   active: boolean;
+  metadata?: CategoryMetadata;
 }
 
 export interface Task {
@@ -149,4 +172,5 @@ export interface AppSettings {
   weeklySchedule: WeeklySchedule;
   plannerWeights: PlannerWeights;
   weeklyTargets?: Record<string, number>; // category_id → sessions/week goal
+  onboarding_completed_at?: string; // ISO datetime — null means new user
 }

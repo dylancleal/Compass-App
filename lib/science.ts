@@ -303,3 +303,114 @@ export function getScienceForSession(
 export function getNextGymType(lastType: string): string {
   return GYM_ROTATION[lastType] ?? "Push";
 }
+
+// ─── Experience-aware gym session ────────────────────────────────────────────
+// Beginners always do Full Body — Push/Pull/Legs splits are inefficient before
+// baseline neuromuscular patterns are established. Intermediate = current PPL
+// rotation. Advanced gets the same splits with periodization language added.
+
+export function getGymSessionForExperience(
+  lastType: string,
+  experience: "beginner" | "intermediate" | "advanced" | undefined,
+): { sessionType: string; science: SessionStructure } {
+  if (!experience || experience === "intermediate") {
+    const sessionType = getNextGymType(lastType);
+    return { sessionType, science: GYM_SCIENCE[sessionType] ?? FALLBACK };
+  }
+
+  if (experience === "beginner") {
+    return {
+      sessionType: "Full body",
+      science: {
+        durationMin: 45,
+        plan: [
+          "Squat: 3 × 10 — goblet squat or bodyweight (depth and braced core over load)",
+          "Push: 3 × 10 — push-ups or light dumbbell press (full range, controlled descent)",
+          "Pull: 3 × 10 — lat pulldown or assisted pull-up (initiate with shoulder blades, not arms)",
+          "Hinge: 2 × 10 — Romanian deadlift with light dumbbells (hips back, flat back, slow)",
+          "Rest 90 s between sets — form is the goal, adding weight comes later",
+        ],
+        cite: "ACSM (2009). Med Sci Sports Exerc. Beginner resistance training guidelines.",
+        whyItWorks:
+          "Full-body sessions 2–3× per week is optimal for beginners — you build the neuromuscular patterns that transfer to every lift, and each muscle group gets stimulated frequently while you're still recovering well. The compound movements here are the ones you'll use for years. Only add weight when you can complete every rep cleanly.",
+      },
+    };
+  }
+
+  // Advanced: PPL rotation + periodization cues
+  const sessionType = getNextGymType(lastType);
+  const base = GYM_SCIENCE[sessionType] ?? FALLBACK;
+  return {
+    sessionType,
+    science: {
+      ...base,
+      durationMin: base.durationMin + 10,
+      plan: [
+        ...base.plan,
+        "Track total volume (sets × reps × load) and aim to beat it next session",
+        "Every 4th week: drop to 60% load, 2 sets per movement — planned deload",
+      ],
+      whyItWorks:
+        base.whyItWorks +
+        " At advanced level, progressive overload tracking and planned deload weeks are what separate consistent gains from stalling — the body adapts quickly and needs structured variation.",
+    },
+  };
+}
+
+// ─── UTR-aware tennis session ─────────────────────────────────────────────────
+// Low UTR (< 3): consistency is the ROI, not tactical complexity.
+// Mid UTR (3–8): current science, balanced technique + match time.
+// High UTR (9+): tactical depth, longer sessions, match play priority.
+
+export function getTennisSessionForUTR(
+  sessionType: string,
+  utr: number | undefined,
+): SessionStructure {
+  const base = TENNIS_SCIENCE[sessionType] ?? FALLBACK;
+  if (!utr) return base;
+
+  if (utr < 3) {
+    return {
+      ...base,
+      durationMin: Math.max(30, base.durationMin - 10),
+      plan: [
+        "Warm up: 5 min mini-tennis, soft hands, keep every ball in play",
+        ...base.plan.slice(0, 2),
+        "Finish: rally cross-court until you hit 15 in a row without a miss",
+      ],
+      whyItWorks:
+        "At this stage, consistency beats technique. Every drill should end with a 'keep it in play' constraint — that feedback loop builds court sense faster than technical coaching alone. Shorter sessions with high contact rates outperform long sessions with lots of standing around.",
+    };
+  }
+
+  if (utr >= 9) {
+    return {
+      ...base,
+      durationMin: base.durationMin + 15,
+      plan: [
+        ...base.plan,
+        "Add a pattern constraint: only DTL from the ad side, only CC from the deuce",
+        "Last 10 min: competitive points with a specific tactical objective (e.g. force backhand, approach on short ball)",
+      ],
+      whyItWorks:
+        base.whyItWorks +
+        " At your level, tactical intentionality separates training from playing. Each session needs a specific objective beyond just hitting — constrained practice produces the biggest gains in competitive UTR.",
+    };
+  }
+
+  return base;
+}
+
+// ─── Skill priority by UTR ────────────────────────────────────────────────────
+// Adjusts which skills the planner prioritises based on player level.
+// Low UTR: forehand/backhand consistency first. High UTR: serve + net game.
+
+export function getUTRSkillWeights(utr: number | undefined): Record<string, number> {
+  if (!utr || utr < 3) {
+    return { Forehand: 1.4, Backhand: 1.4, Serve: 0.8, Volleys: 0.4, Match: 0.2, Fitness: 0.8 };
+  }
+  if (utr >= 9) {
+    return { Forehand: 1.0, Backhand: 1.0, Serve: 1.4, Volleys: 1.3, Match: 1.5, Fitness: 1.1 };
+  }
+  return { Forehand: 1.0, Backhand: 1.0, Serve: 1.0, Volleys: 1.0, Match: 1.0, Fitness: 1.0 };
+}
