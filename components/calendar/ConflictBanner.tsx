@@ -5,7 +5,7 @@ import type { CalendarBlock } from "@/lib/types";
 import { useUpdateCalendarBlock } from "@/lib/queries";
 
 interface Props {
-  pairs: [CalendarBlock, CalendarBlock][];
+  groups: CalendarBlock[][];
   onRemove: (id: string) => void;
 }
 
@@ -21,8 +21,7 @@ function fmt(iso: string) {
 }
 
 function localDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-CA"); // yyyy-mm-dd in local tz
+  return new Date(iso).toLocaleDateString("en-CA");
 }
 
 function localTime(iso: string) {
@@ -127,11 +126,13 @@ function BlockRow({
   );
 }
 
-export default function ConflictBanner({ pairs, onRemove }: Props) {
+export default function ConflictBanner({ groups, onRemove }: Props) {
   const [adjustState, setAdjustState] = useState<AdjustState | null>(null);
   const update = useUpdateCalendarBlock();
 
-  if (pairs.length === 0) return null;
+  if (groups.length === 0) return null;
+
+  const totalBlocks = groups.reduce((n, g) => n + g.length, 0);
 
   function handleStartAdjust(block: CalendarBlock) {
     setAdjustState({
@@ -162,42 +163,35 @@ export default function ConflictBanner({ pairs, onRemove }: Props) {
       style={{ background: "#fef9ec", border: "1.5px solid #e8c84088" }}
     >
       <p className="text-sm font-semibold" style={{ color: "#8a6800" }}>
-        ⚠ {pairs.length} scheduling conflict{pairs.length !== 1 ? "s" : ""} — adjust or remove to resolve
+        ⚠ {totalBlocks} events have time conflicts — adjust or remove to resolve
       </p>
       <div className="space-y-2">
-        {pairs.map(([a, b], i) => (
+        {groups.map((group, gi) => (
           <div
-            key={`${a.id}-${b.id}-${i}`}
+            key={gi}
             className="rounded-xl px-3 py-2.5 space-y-2"
             style={{ background: "rgba(255,255,255,0.65)", border: "1px solid #e8c84044" }}
           >
-            <BlockRow
-              block={a}
-              onRemove={onRemove}
-              onStartAdjust={handleStartAdjust}
-              onAdjustField={handleAdjustField}
-              adjustState={adjustState}
-              onSave={handleSave}
-              onCancel={() => setAdjustState(null)}
-              isSaving={update.isPending}
-            />
-            <div className="flex items-center gap-2 py-0.5">
-              <div className="flex-1 border-t" style={{ borderColor: "#e8c84055" }} />
-              <span className="text-[10px] font-medium" style={{ color: "#8a6800", opacity: 0.7 }}>
-                overlaps
-              </span>
-              <div className="flex-1 border-t" style={{ borderColor: "#e8c84055" }} />
-            </div>
-            <BlockRow
-              block={b}
-              onRemove={onRemove}
-              onStartAdjust={handleStartAdjust}
-              onAdjustField={handleAdjustField}
-              adjustState={adjustState}
-              onSave={handleSave}
-              onCancel={() => setAdjustState(null)}
-              isSaving={update.isPending}
-            />
+            {group.map((block, bi) => (
+              <div key={block.id}>
+                <BlockRow
+                  block={block}
+                  onRemove={onRemove}
+                  onStartAdjust={handleStartAdjust}
+                  onAdjustField={handleAdjustField}
+                  adjustState={adjustState}
+                  onSave={handleSave}
+                  onCancel={() => setAdjustState(null)}
+                  isSaving={update.isPending}
+                />
+                {bi < group.length - 1 && (
+                  <div
+                    className="mt-2 border-t"
+                    style={{ borderColor: "#e8c84033" }}
+                  />
+                )}
+              </div>
+            ))}
           </div>
         ))}
       </div>

@@ -9,7 +9,7 @@ import {
   useMetrics,
   useSettings,
 } from "@/lib/queries";
-import { findConflictPairs } from "@/lib/schedule";
+import { findConflictPairs, findConflictGroups } from "@/lib/schedule";
 import { greeting, prettyDate, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import type { Category } from "@/lib/types";
@@ -49,6 +49,7 @@ export default function TodayPage() {
   );
 
   const conflictPairs = useMemo(() => findConflictPairs(allBlocks), [allBlocks]);
+  const conflictGroups = useMemo(() => findConflictGroups(conflictPairs), [conflictPairs]);
   const conflictIds = useMemo(
     () => new Set(conflictPairs.flatMap(([a, b]) => [a.id, b.id])),
     [conflictPairs],
@@ -62,13 +63,13 @@ export default function TodayPage() {
           <p className="text-sm text-[var(--muted)]">{prettyDate(today)}</p>
           <h1 className="text-2xl font-bold">{greeting(settings?.greetingName ?? "")}</h1>
         </div>
-        {conflictPairs.length > 0 && (
+        {conflictGroups.length > 0 && (
           <Link
             href="/calendar"
             className="mt-1 flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all duration-150 hover:scale-105 hover:brightness-95 active:scale-95"
             style={{ background: "#fef9ec", color: "#8a6800", border: "1px solid #e8c84088" }}
           >
-            ⚠ {conflictPairs.length} conflict{conflictPairs.length !== 1 ? "s" : ""}
+            ⚠ {conflictGroups.length} conflict{conflictGroups.length !== 1 ? "s" : ""}
           </Link>
         )}
       </header>

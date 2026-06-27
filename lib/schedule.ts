@@ -156,7 +156,6 @@ export function conflicts(
 }
 
 // Finds all pairs of busy, non-all-day, non-ghost blocks that overlap in time.
-// Used to surface scheduling conflicts in the calendar UI.
 export function findConflictPairs(blocks: CalendarBlock[]): [CalendarBlock, CalendarBlock][] {
   const pairs: [CalendarBlock, CalendarBlock][] = [];
   const busy = blocks.filter(
@@ -173,6 +172,50 @@ export function findConflictPairs(blocks: CalendarBlock[]): [CalendarBlock, Cale
     }
   }
   return pairs;
+}
+
+// Groups overlapping blocks into connected components so that three mutually-
+// overlapping events appear as one group rather than three separate pairs.
+export function findConflictGroups(
+  pairs: [CalendarBlock, CalendarBlock][],
+): CalendarBlock[][] {
+  if (pairs.length === 0) return [];
+
+  const adj = new Map<string, Set<string>>();
+  const byId = new Map<string, CalendarBlock>();
+
+  for (const [a, b] of pairs) {
+    byId.set(a.id, a);
+    byId.set(b.id, b);
+    if (!adj.has(a.id)) adj.set(a.id, new Set());
+    if (!adj.has(b.id)) adj.set(b.id, new Set());
+    adj.get(a.id)!.add(b.id);
+    adj.get(b.id)!.add(a.id);
+  }
+
+  const visited = new Set<string>();
+  const groups: CalendarBlock[][] = [];
+
+  for (const id of byId.keys()) {
+    if (visited.has(id)) continue;
+    const group: CalendarBlock[] = [];
+    const queue = [id];
+    visited.add(id);
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      group.push(byId.get(cur)!);
+      for (const neighbour of adj.get(cur) ?? []) {
+        if (!visited.has(neighbour)) {
+          visited.add(neighbour);
+          queue.push(neighbour);
+        }
+      }
+    }
+    group.sort((a, b) => a.start_at.localeCompare(b.start_at));
+    groups.push(group);
+  }
+
+  return groups;
 }
 
 // View helper: where a block sits within a rendered day column (percentages).

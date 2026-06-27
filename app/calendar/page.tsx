@@ -13,7 +13,7 @@ import {
   useGoogleSync,
 } from "@/lib/queries";
 import { addDays, startOfWeek, todayKey } from "@/lib/date";
-import { findConflictPairs } from "@/lib/schedule";
+import { findConflictPairs, findConflictGroups } from "@/lib/schedule";
 import type { CalendarBlock, Task } from "@/lib/types";
 import WeekGrid from "@/components/calendar/WeekGrid";
 import AgendaView from "@/components/calendar/AgendaView";
@@ -73,6 +73,7 @@ function CalendarInner() {
   }, [connections.map((c) => c.id).join(",")]);
 
   const conflictPairs = useMemo(() => findConflictPairs(blocks), [blocks]);
+  const conflictGroups = useMemo(() => findConflictGroups(conflictPairs), [conflictPairs]);
   const conflictIds = useMemo(
     () => new Set(conflictPairs.flatMap(([a, b]) => [a.id, b.id])),
     [conflictPairs],
@@ -175,9 +176,9 @@ function CalendarInner() {
       />
 
       {/* Conflict banner */}
-      {conflictPairs.length > 0 && (
+      {conflictGroups.length > 0 && (
         <ConflictBanner
-          pairs={conflictPairs}
+          groups={conflictGroups}
           onRemove={(id) => { removeBlock.mutate(id); }}
         />
       )}
