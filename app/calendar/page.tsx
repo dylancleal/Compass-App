@@ -31,7 +31,7 @@ type View = "week" | "agenda";
 
 function CalendarInner() {
   const today = todayKey();
-  const [view, setView] = useState<View>("agenda");
+  const [view, setView] = useState<View>("week");
   const [weekStart, setWeekStart] = useState(startOfWeek(today));
   const [addOpen, setAddOpen] = useState(false);
   const [prefillTask, setPrefillTask] = useState<Task | undefined>();
