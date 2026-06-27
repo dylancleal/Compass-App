@@ -155,6 +155,26 @@ export function conflicts(
     });
 }
 
+// Finds all pairs of busy, non-all-day, non-ghost blocks that overlap in time.
+// Used to surface scheduling conflicts in the calendar UI.
+export function findConflictPairs(blocks: CalendarBlock[]): [CalendarBlock, CalendarBlock][] {
+  const pairs: [CalendarBlock, CalendarBlock][] = [];
+  const busy = blocks.filter(
+    (b) => b.busy && !b.all_day && !(b.source === "compass" && b.status === "planned"),
+  );
+  const sorted = [...busy].sort((a, b) => a.start_at.localeCompare(b.start_at));
+
+  for (let i = 0; i < sorted.length; i++) {
+    const a = sorted[i];
+    for (let j = i + 1; j < sorted.length; j++) {
+      const b = sorted[j];
+      if (b.start_at >= a.end_at) break;
+      pairs.push([a, b]);
+    }
+  }
+  return pairs;
+}
+
 // View helper: where a block sits within a rendered day column (percentages).
 export function blockBox(b: CalendarBlock, day: Interval): { topPct: number; heightPct: number } {
   const s = Date.parse(b.start_at);

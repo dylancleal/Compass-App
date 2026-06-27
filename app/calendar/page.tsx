@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   useCalendarBlocks,
   useCalendarConnections,
@@ -13,12 +13,14 @@ import {
   useGoogleSync,
 } from "@/lib/queries";
 import { addDays, startOfWeek, todayKey } from "@/lib/date";
+import { findConflictPairs } from "@/lib/schedule";
 import type { CalendarBlock, Task } from "@/lib/types";
 import WeekGrid from "@/components/calendar/WeekGrid";
 import AgendaView from "@/components/calendar/AgendaView";
 import DeadlineRail from "@/components/calendar/DeadlineRail";
 import QuickAddSheet from "@/components/calendar/QuickAddSheet";
 import ProposedBlocks from "@/components/calendar/ProposedBlocks";
+import ConflictBanner from "@/components/calendar/ConflictBanner";
 import ConnectionsPanel from "@/components/calendar/ConnectionsPanel";
 import { Button } from "@/components/ui";
 
@@ -69,6 +71,12 @@ function CalendarInner() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connections.map((c) => c.id).join(",")]);
+
+  const conflictPairs = useMemo(() => findConflictPairs(blocks), [blocks]);
+  const conflictIds = useMemo(
+    () => new Set(conflictPairs.flatMap(([a, b]) => [a.id, b.id])),
+    [conflictPairs],
+  );
 
   const pendingSuggestions = suggestions.filter((s) => s.status === "pending");
 
@@ -166,6 +174,14 @@ function CalendarInner() {
         onSchedule={handleScheduleTask}
       />
 
+      {/* Conflict banner */}
+      {conflictPairs.length > 0 && (
+        <ConflictBanner
+          pairs={conflictPairs}
+          onRemove={(id) => { removeBlock.mutate(id); }}
+        />
+      )}
+
       {/* Planner proposals */}
       {pendingSuggestions.length > 0 && view === "agenda" && (
         <ProposedBlocks
@@ -188,6 +204,7 @@ function CalendarInner() {
             weekStart={weekStart}
             blocks={blocks}
             categories={categories}
+            conflictIds={conflictIds}
             onClickBlock={handleClickBlock}
             onClickSlot={handleClickSlot}
           />
@@ -198,6 +215,7 @@ function CalendarInner() {
           tasks={tasks}
           categories={categories}
           rangeStart={rangeStart}
+          conflictIds={conflictIds}
           onClickBlock={handleClickBlock}
         />
       )}

@@ -12,13 +12,14 @@ interface Props {
   weekStart: string; // Monday yyyy-mm-dd
   blocks: CalendarBlock[];
   categories: Category[];
+  conflictIds?: Set<string>;
   onClickBlock: (block: CalendarBlock) => void;
   onClickSlot: (dayKey: string, hour: number) => void;
 }
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export default function WeekGrid({ weekStart, blocks, categories, onClickBlock, onClickSlot }: Props) {
+export default function WeekGrid({ weekStart, blocks, categories, conflictIds, onClickBlock, onClickSlot }: Props) {
   const today = todayKey();
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -92,6 +93,7 @@ export default function WeekGrid({ weekStart, blocks, categories, onClickBlock, 
                       const cat = categories.find((c) => c.id === block.category_id);
                       const box = blockBox(block, dayInterval);
                       const isGhost = block.source === "compass" && block.status === "planned";
+                      const isConflict = conflictIds?.has(block.id) ?? false;
                       return (
                         <BlockChip
                           key={block.id}
@@ -100,6 +102,7 @@ export default function WeekGrid({ weekStart, blocks, categories, onClickBlock, 
                           topPct={box.topPct}
                           heightPct={box.heightPct}
                           isGhost={isGhost}
+                          isConflict={isConflict}
                           onClick={() => onClickBlock(block)}
                         />
                       );
