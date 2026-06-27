@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sheet, Button } from "@/components/ui";
 import type { CalendarConnection } from "@/lib/types";
 import {
@@ -9,20 +9,23 @@ import {
   useUpdateCalendarConnection,
   useRemoveCalendarConnection,
   useSyncCalendarConnection,
+  useGoogleSync,
 } from "@/lib/queries";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 
 const PROVIDERS = [
   {
     id: "google" as const,
     label: "Google Calendar",
     icon: "🗓️",
-    instructions:
-      "In Google Calendar, go to Settings → your calendar → 'Secret address in iCal format'. Copy that URL here.",
+    oauth: true,
+    instructions: null,
   },
   {
     id: "microsoft" as const,
     label: "Outlook / Microsoft",
     icon: "📅",
+    oauth: false,
     instructions:
       "In Outlook.com, go to Settings → Calendar → Shared calendars → 'Publish a calendar'. Choose your calendar, select 'Can view all details', and copy the ICS link.",
   },
@@ -30,6 +33,7 @@ const PROVIDERS = [
     id: "apple" as const,
     label: "Apple Calendar",
     icon: "🍎",
+    oauth: false,
     instructions:
       "In iCloud.com, open Calendar, click Share (📡) next to your calendar, enable 'Public Calendar', then copy the link shown.",
   },
@@ -37,6 +41,7 @@ const PROVIDERS = [
     id: "ics" as const,
     label: "Other / ICS URL",
     icon: "🔗",
+    oauth: false,
     instructions: "Paste any public or secret .ics / iCal URL.",
   },
 ];
@@ -51,63 +56,88 @@ function timeSince(iso: string) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-function ConnectionRow({ conn }: { conn: CalendarConnection }) {
+function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: string }) {
   const update = useUpdateCalendarConnection();
   const remove = useRemoveCalendarConnection();
-  const sync = useSyncCalendarConnection();
+  const icsSync = useSyncCalendarConnection();
+  const googleSync = useGoogleSync();
   const prov = PROVIDERS.find((p) => p.id === conn.provider) ?? PROVIDERS[3];
-  const isSyncing = sync.isPending;
+
+  const isOAuth = conn.provider === "google" && !conn.ics_url;
+  const isSyncing = isOAuth ? googleSync.isPending : icsSync.isPending;
+  const syncError = isOAuth ? googleSync.isError : icsSync.isError;
+  const syncErrorMsg = isOAuth
+    ? (googleSync.error instanceof Error ? googleSync.error.message : "")
+    : (icsSync.error instanceof Error ? icsSync.error.message : "");
+
+  function handleSync() {
+    if (isOAuth) {
+      googleSync.mutate(conn.id);
+    } else if (conn.ics_url) {
+      icsSync.mutate({ id: conn.id, url: conn.ics_url, provider: conn.provider, label: conn.label });
+    }
+  }
 
   return (
     <div
       className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 hover:shadow-sm"
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-      }}
+      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
-      <span className="text-xl shrink-0 transition-transform duration-150 group-hover:scale-110">
+      <span className="shrink-0 text-xl transition-transform duration-150 group-hover:scale-110">
         {prov.icon}
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{conn.label}</p>
         <p className="text-xs" style={{ color: "var(--muted)" }}>
-          {conn.last_synced_at ? `Synced ${timeSince(conn.last_synced_at)}` : "Never synced"}
-          {sync.isError && (
+          {conn.needs_reauth
+            ? "Access revoked — reconnect to resume syncing"
+            : conn.last_synced_at
+            ? `Synced ${timeSince(conn.last_synced_at)}`
+            : "Never synced"}
+          {syncError && !conn.needs_reauth && (
             <span className="ml-1" style={{ color: "#c06b5a" }}>
-              · {sync.error instanceof Error ? sync.error.message : "Sync failed"}
+              · {syncErrorMsg || "Sync failed"}
             </span>
           )}
         </p>
       </div>
 
-      {/* Enable toggle */}
-      <button
-        className="shrink-0 cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-semibold transition-all duration-150 hover:scale-105 active:scale-95"
-        style={{
-          background: conn.enabled ? "var(--primary)" : "var(--border)",
-          color: conn.enabled ? "#fffdf9" : "var(--muted)",
-        }}
-        onClick={() => update.mutate({ id: conn.id, patch: { enabled: !conn.enabled } })}
-      >
-        {conn.enabled ? "On" : "Off"}
-      </button>
+      {/* Reconnect button shown when OAuth token was revoked */}
+      {conn.needs_reauth && userId && (
+        <a
+          href={`/api/calendar/oauth/google/start?uid=${userId}`}
+          className="shrink-0 cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-semibold transition-all duration-150 hover:scale-105 active:scale-95"
+          style={{ background: "#f8ece8", color: "#c06b5a" }}
+        >
+          Reconnect
+        </a>
+      )}
 
-      {/* Sync now */}
-      <button
-        disabled={!conn.ics_url || isSyncing || !conn.enabled}
-        className="shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs font-medium transition-all duration-150 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-        style={{
-          background: "var(--primary-soft)",
-          color: "var(--primary)",
-        }}
-        onClick={() =>
-          conn.ics_url &&
-          sync.mutate({ id: conn.id, url: conn.ics_url, provider: conn.provider, label: conn.label })
-        }
-      >
-        {isSyncing ? "Syncing…" : "Sync"}
-      </button>
+      {/* Enable toggle */}
+      {!conn.needs_reauth && (
+        <button
+          className="shrink-0 cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-semibold transition-all duration-150 hover:scale-105 active:scale-95"
+          style={{
+            background: conn.enabled ? "var(--primary)" : "var(--border)",
+            color: conn.enabled ? "#fffdf9" : "var(--muted)",
+          }}
+          onClick={() => update.mutate({ id: conn.id, patch: { enabled: !conn.enabled } })}
+        >
+          {conn.enabled ? "On" : "Off"}
+        </button>
+      )}
+
+      {/* Sync button */}
+      {!conn.needs_reauth && (isOAuth || conn.ics_url) && (
+        <button
+          disabled={isSyncing || !conn.enabled}
+          className="shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs font-medium transition-all duration-150 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+          style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+          onClick={handleSync}
+        >
+          {isSyncing ? "Syncing…" : "Sync"}
+        </button>
+      )}
 
       {/* Remove */}
       <button
@@ -129,9 +159,11 @@ type ProviderID = "google" | "microsoft" | "apple" | "ics";
 function AddConnectionSheet({
   open,
   onClose,
+  userId,
 }: {
   open: boolean;
   onClose: () => void;
+  userId: string;
 }) {
   const [provider, setProvider] = useState<ProviderID>("google");
   const [label, setLabel] = useState("");
@@ -140,6 +172,7 @@ function AddConnectionSheet({
   const sync = useSyncCalendarConnection();
 
   const prov = PROVIDERS.find((p) => p.id === provider)!;
+  const cloudRequired = !isSupabaseConfigured();
 
   async function handleAdd() {
     if (!icsUrl.trim()) return;
@@ -184,38 +217,59 @@ function AddConnectionSheet({
           })}
         </div>
 
-        {/* Instructions */}
-        <div
-          className="animate-fade-slide rounded-xl px-3 py-2.5 text-xs leading-relaxed"
-          style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-        >
-          {prov.instructions}
-        </div>
-
-        {/* Label */}
-        <input
-          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none transition-all duration-150 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]"
-          placeholder={`Label (e.g. "${prov.label}")`}
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-        />
-
-        {/* ICS URL */}
-        <input
-          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none transition-all duration-150 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--ring)]"
-          placeholder="Paste .ics URL here"
-          value={icsUrl}
-          onChange={(e) => setIcsUrl(e.target.value)}
-          autoComplete="off"
-          spellCheck={false}
-        />
-
-        <div className="flex gap-2 pt-1">
-          <Button onClick={handleAdd} disabled={!icsUrl.trim() || create.isPending}>
-            {create.isPending ? "Adding…" : "Add & sync"}
-          </Button>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        </div>
+        {/* Google — OAuth sign-in button */}
+        {prov.oauth ? (
+          <div className="space-y-3">
+            <div
+              className="rounded-xl px-3 py-2.5 text-xs leading-relaxed"
+              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+            >
+              {cloudRequired
+                ? "Google sign-in requires cloud sync. Add your Supabase keys to enable it."
+                : "You'll be taken to Google to approve read-only access to your calendar. No events are modified."}
+            </div>
+            {!cloudRequired && userId && (
+              <a
+                href={`/api/calendar/oauth/google/start?uid=${userId}`}
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-[#fffdf9] transition-all duration-150 hover:scale-[1.02] hover:brightness-110 active:scale-[0.98]"
+                style={{ background: "var(--primary)" }}
+              >
+                🗓️ Sign in with Google
+              </a>
+            )}
+            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          </div>
+        ) : (
+          /* ICS flow for Outlook, Apple, and generic URLs */
+          <div className="space-y-3">
+            <div
+              className="rounded-xl px-3 py-2.5 text-xs leading-relaxed"
+              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+            >
+              {prov.instructions}
+            </div>
+            <input
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none transition-all duration-150 focus:border-[var(--primary)]"
+              placeholder={`Label (e.g. "${prov.label}")`}
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+            <input
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none transition-all duration-150 focus:border-[var(--primary)]"
+              placeholder="Paste .ics URL here"
+              value={icsUrl}
+              onChange={(e) => setIcsUrl(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <div className="flex gap-2 pt-1">
+              <Button onClick={handleAdd} disabled={!icsUrl.trim() || create.isPending}>
+                {create.isPending ? "Adding…" : "Add & sync"}
+              </Button>
+              <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            </div>
+          </div>
+        )}
       </div>
     </Sheet>
   );
@@ -224,12 +278,39 @@ function AddConnectionSheet({
 export default function ConnectionsPanel() {
   const { data: connections = [] } = useCalendarConnections();
   const [addOpen, setAddOpen] = useState(false);
+  const [userId, setUserId] = useState("");
+  const [oauthMsg, setOauthMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    getSupabase()?.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? ""));
+  }, []);
+
+  // Show feedback from OAuth redirect query params.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("oauth_connected") === "google") {
+      setOauthMsg({ type: "success", text: "Google Calendar connected successfully." });
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("oauth_error")) {
+      const msgs: Record<string, string> = {
+        denied: "You cancelled the Google sign-in.",
+        expired: "The connection attempt timed out. Please try again.",
+        csrf: "Security check failed. Please try again.",
+        token: "Could not complete sign-in with Google. Please try again.",
+        db: "Connection saved but an internal error occurred.",
+      };
+      setOauthMsg({
+        type: "error",
+        text: msgs[params.get("oauth_error") ?? ""] ?? "Something went wrong. Please try again.",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">Connected calendars</p>
-        {/* Solid primary button — clearly a CTA, not a greyed-out link */}
         <button
           onClick={() => setAddOpen(true)}
           className="flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-[#fffdf9] transition-all duration-150 hover:scale-[1.03] hover:brightness-110 active:scale-[0.97]"
@@ -239,33 +320,39 @@ export default function ConnectionsPanel() {
         </button>
       </div>
 
+      {/* OAuth success / error banner */}
+      {oauthMsg && (
+        <div
+          className="flex items-center justify-between rounded-xl px-3 py-2.5 text-xs"
+          style={{
+            background: oauthMsg.type === "success" ? "var(--primary-soft)" : "#f8ece8",
+            color: oauthMsg.type === "success" ? "var(--primary)" : "#c06b5a",
+          }}
+        >
+          <span>{oauthMsg.text}</span>
+          <button className="ml-3 opacity-60 hover:opacity-100" onClick={() => setOauthMsg(null)}>✕</button>
+        </div>
+      )}
+
       {connections.length === 0 ? (
         <button
           onClick={() => setAddOpen(true)}
           className="w-full cursor-pointer rounded-2xl p-5 text-center text-sm transition-all duration-150 hover:scale-[1.01] hover:shadow-sm active:scale-[0.99]"
-          style={{
-            border: "1.5px dashed var(--mist)",
-            color: "var(--muted)",
-            background: "transparent",
-          }}
+          style={{ border: "1.5px dashed var(--mist)", color: "var(--muted)", background: "transparent" }}
         >
           <p className="mb-1.5 text-2xl">📅</p>
-          <p className="font-medium" style={{ color: "var(--foreground)" }}>
-            Connect your calendars
-          </p>
-          <p className="mt-0.5 text-xs">
-            Google, Outlook, or Apple — tap to get started
-          </p>
+          <p className="font-medium" style={{ color: "var(--foreground)" }}>Connect your calendars</p>
+          <p className="mt-0.5 text-xs">Google, Outlook, or Apple — tap to get started</p>
         </button>
       ) : (
         <div className="space-y-2">
           {connections.map((conn) => (
-            <ConnectionRow key={conn.id} conn={conn} />
+            <ConnectionRow key={conn.id} conn={conn} userId={userId} />
           ))}
         </div>
       )}
 
-      <AddConnectionSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddConnectionSheet open={addOpen} onClose={() => setAddOpen(false)} userId={userId} />
     </div>
   );
 }

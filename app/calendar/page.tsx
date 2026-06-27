@@ -10,6 +10,7 @@ import {
   useRemoveCalendarBlock,
   useSuggestions,
   useSyncCalendarConnection,
+  useGoogleSync,
 } from "@/lib/queries";
 import { addDays, startOfWeek, todayKey } from "@/lib/date";
 import type { CalendarBlock, Task } from "@/lib/types";
@@ -50,24 +51,22 @@ function CalendarInner() {
   const createBlock = useCreateCalendarBlock();
   const removeBlock = useRemoveCalendarBlock();
   const syncConnection = useSyncCalendarConnection();
+  const googleSync = useGoogleSync();
 
   // Auto-sync stale connections on page load.
   useEffect(() => {
     connections.forEach((conn) => {
-      if (!conn.enabled || !conn.ics_url) return;
+      if (!conn.enabled || conn.needs_reauth) return;
       const stale =
         !conn.last_synced_at ||
         Date.now() - new Date(conn.last_synced_at).getTime() > STALE_MS;
-      if (stale) {
-        syncConnection.mutate({
-          id: conn.id,
-          url: conn.ics_url,
-          provider: conn.provider,
-          label: conn.label,
-        });
+      if (!stale) return;
+      if (conn.provider === "google" && !conn.ics_url) {
+        googleSync.mutate(conn.id);
+      } else if (conn.ics_url) {
+        syncConnection.mutate({ id: conn.id, url: conn.ics_url, provider: conn.provider, label: conn.label });
       }
     });
-    // Only run when connections list first loads, not on every sync status change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connections.map((c) => c.id).join(",")]);
 
