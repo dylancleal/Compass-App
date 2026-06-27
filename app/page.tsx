@@ -9,6 +9,7 @@ import {
   useCheckin,
   useMetrics,
   useSettings,
+  useSessions,
   useTasks,
 } from "@/lib/queries";
 import { findConflictPairs, findConflictGroups } from "@/lib/schedule";
@@ -33,13 +34,7 @@ export default function TodayPage() {
   const today = todayKey();
   const router = useRouter();
   const { data: settings } = useSettings();
-
-  // Redirect new users to onboarding once settings load
-  useEffect(() => {
-    if (settings && !settings.onboarding_completed_at) {
-      router.replace("/onboarding");
-    }
-  }, [settings, router]);
+  const { data: sessions = [], isLoading: sessionsLoading } = useSessions();
   const { data: checkin } = useCheckin(today);
   const { data: categories = [] } = useCategories();
   const { data: metrics = [] } = useMetrics();
@@ -49,6 +44,15 @@ export default function TodayPage() {
   );
   const { data: tasks = [] } = useTasks();
   const [logCat, setLogCat] = useState<Category | null>(null);
+
+  // Redirect brand-new users to onboarding. Wait for sessions to load first
+  // so existing users without the flag set don't get bounced.
+  useEffect(() => {
+    if (!settings || sessionsLoading) return;
+    if (settings.onboarding_completed_at) return;
+    if (sessions.length > 0) return; // existing user — has activity, skip
+    router.replace("/onboarding");
+  }, [settings, sessions, sessionsLoading, router]);
 
   const activeCats = categories.filter((c) => c.active);
 

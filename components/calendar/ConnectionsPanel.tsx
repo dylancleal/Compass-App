@@ -156,6 +156,113 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
 
 type ProviderID = "google" | "microsoft" | "apple" | "ics";
 
+function GoogleConnectForm({
+  cloudRequired,
+  userId,
+  onClose,
+  onCreate,
+  onSync,
+}: {
+  cloudRequired: boolean;
+  userId: string;
+  onClose: () => void;
+  onCreate: ReturnType<typeof useCreateCalendarConnection>;
+  onSync: ReturnType<typeof useSyncCalendarConnection>;
+}) {
+  const [useIcs, setUseIcs] = useState(false);
+  const [label, setLabel] = useState("");
+  const [icsUrl, setIcsUrl] = useState("");
+
+  async function handleIcsAdd() {
+    if (!icsUrl.trim()) return;
+    const conn = await onCreate.mutateAsync({
+      provider: "google",
+      label: label.trim() || "Google Calendar (ICS)",
+      ics_url: icsUrl.trim(),
+      enabled: true,
+    });
+    onSync.mutate({
+      id: conn.id,
+      url: icsUrl.trim(),
+      provider: "google",
+      label: label.trim() || "Google Calendar (ICS)",
+    });
+    onClose();
+  }
+
+  if (useIcs) {
+    return (
+      <div className="space-y-3">
+        <button
+          onClick={() => setUseIcs(false)}
+          className="flex items-center gap-1 text-xs"
+          style={{ color: "var(--muted)" }}
+        >
+          ← Back to sign-in
+        </button>
+        <div
+          className="rounded-xl px-3 py-2.5 text-xs leading-relaxed"
+          style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+        >
+          In Google Calendar, open Settings → your calendar → scroll to{" "}
+          <strong>Secret address in iCal format</strong> and copy that URL. It
+          starts with <code>https://calendar.google.com/calendar/ical/…</code>
+        </div>
+        <input
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]"
+          placeholder="Label (e.g. My Google Calendar)"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+        />
+        <input
+          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]"
+          placeholder="Paste secret iCal URL here"
+          value={icsUrl}
+          onChange={(e) => setIcsUrl(e.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <div className="flex gap-2 pt-1">
+          <Button onClick={handleIcsAdd} disabled={!icsUrl.trim() || onCreate.isPending}>
+            {onCreate.isPending ? "Adding…" : "Add & sync"}
+          </Button>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="rounded-xl px-3 py-2.5 text-xs leading-relaxed"
+        style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+      >
+        {cloudRequired
+          ? "Google sign-in requires cloud sync. Add your Supabase keys to enable it."
+          : "You'll be taken to Google to approve read-only access to your calendar. No events are modified."}
+      </div>
+      {!cloudRequired && userId && (
+        <a
+          href={`/api/calendar/oauth/google/start?uid=${userId}`}
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-[#fffdf9] transition-all duration-150 hover:scale-[1.02] hover:brightness-110 active:scale-[0.98]"
+          style={{ background: "var(--primary)" }}
+        >
+          🗓️ Sign in with Google
+        </a>
+      )}
+      <button
+        onClick={() => setUseIcs(true)}
+        className="w-full rounded-xl py-2 text-xs transition-all hover:opacity-100"
+        style={{ color: "var(--muted)" }}
+      >
+        Use Google Calendar ICS URL instead →
+      </button>
+      <Button variant="ghost" onClick={onClose}>Cancel</Button>
+    </div>
+  );
+}
+
 function AddConnectionSheet({
   open,
   onClose,
@@ -217,28 +324,15 @@ function AddConnectionSheet({
           })}
         </div>
 
-        {/* Google — OAuth sign-in button */}
+        {/* Google — OAuth sign-in OR ICS URL */}
         {prov.oauth ? (
-          <div className="space-y-3">
-            <div
-              className="rounded-xl px-3 py-2.5 text-xs leading-relaxed"
-              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-            >
-              {cloudRequired
-                ? "Google sign-in requires cloud sync. Add your Supabase keys to enable it."
-                : "You'll be taken to Google to approve read-only access to your calendar. No events are modified."}
-            </div>
-            {!cloudRequired && userId && (
-              <a
-                href={`/api/calendar/oauth/google/start?uid=${userId}`}
-                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-[#fffdf9] transition-all duration-150 hover:scale-[1.02] hover:brightness-110 active:scale-[0.98]"
-                style={{ background: "var(--primary)" }}
-              >
-                🗓️ Sign in with Google
-              </a>
-            )}
-            <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          </div>
+          <GoogleConnectForm
+            cloudRequired={cloudRequired}
+            userId={userId}
+            onClose={onClose}
+            onCreate={create}
+            onSync={sync}
+          />
         ) : (
           /* ICS flow for Outlook, Apple, and generic URLs */
           <div className="space-y-3">
