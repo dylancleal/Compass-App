@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  useCalendarBlocks,
   useCategories,
   useCheckin,
   useSaveSuggestions,
@@ -28,6 +29,10 @@ export default function Plan() {
   const { data: settings } = useSettings();
   const { data: checkin } = useCheckin(today);
   const { data: suggestions = [], isLoading } = useSuggestions(today);
+  const { data: calendarBlocks = [] } = useCalendarBlocks(
+    `${today}T00:00:00.000Z`,
+    `${today}T23:59:59.999Z`,
+  );
 
   const save = useSaveSuggestions();
   const update = useUpdateSuggestion(today);
@@ -40,14 +45,14 @@ export default function Plan() {
     if (generatedRef.current) return;
     if (suggestions.length > 0) return;
     generatedRef.current = true;
-    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings });
+    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings, calendarBlocks });
     save.mutate({ date: today, items: draft });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, checkin, isLoading, suggestions.length]);
 
   function regenerate() {
     if (!settings || !checkin) return;
-    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings });
+    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings, calendarBlocks });
     save.mutate({ date: today, items: draft });
   }
 

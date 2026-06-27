@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useCategories, useCheckin, useMetrics, useSettings } from "@/lib/queries";
+import {
+  useCategories,
+  useCalendarBlocks,
+  useCheckin,
+  useMetrics,
+  useSettings,
+} from "@/lib/queries";
+import { findConflictPairs, findConflictGroups } from "@/lib/schedule";
 import { greeting, prettyDate, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import type { Category } from "@/lib/types";
@@ -10,9 +17,15 @@ import Plan from "@/components/Plan";
 import TaskList from "@/components/TaskList";
 import LogSheet from "@/components/LogSheet";
 import { GoalsOverview } from "@/components/GoalCard";
+import DeadlineChip from "@/components/calendar/DeadlineChip";
+import { isDeadlineLike } from "@/lib/categoryMatcher";
 
 const MENTAL_EMOJI = ["", "😞", "😕", "😐", "🙂", "😄"];
 const CAP_LABEL: Record<string, string> = { light: "Light day", medium: "Medium day", big: "Big day" };
+
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
 export default function TodayPage() {
   const today = todayKey();
@@ -20,15 +33,47 @@ export default function TodayPage() {
   const { data: checkin } = useCheckin(today);
   const { data: categories = [] } = useCategories();
   const { data: metrics = [] } = useMetrics();
+  const { data: allBlocks = [] } = useCalendarBlocks(
+    `${today}T00:00:00.000Z`,
+    `${today}T23:59:59.999Z`,
+  );
   const [logCat, setLogCat] = useState<Category | null>(null);
 
   const activeCats = categories.filter((c) => c.active);
 
+  // Only timed, non-ghost blocks for today's schedule display
+  const todayBlocks = useMemo(
+    () =>
+      allBlocks
+        .filter((b) => !b.all_day && !(b.source === "compass" && b.status === "planned"))
+        .sort((a, b) => a.start_at.localeCompare(b.start_at)),
+    [allBlocks],
+  );
+
+  const conflictPairs = useMemo(() => findConflictPairs(allBlocks), [allBlocks]);
+  const conflictGroups = useMemo(() => findConflictGroups(conflictPairs), [conflictPairs]);
+  const conflictIds = useMemo(
+    () => new Set(conflictPairs.flatMap(([a, b]) => [a.id, b.id])),
+    [conflictPairs],
+  );
+
   return (
     <div className="space-y-7">
-      <header className="space-y-0.5">
-        <p className="text-sm text-[var(--muted)]">{prettyDate(today)}</p>
-        <h1 className="text-2xl font-bold">{greeting(settings?.greetingName ?? "")}</h1>
+      {/* Header — conflict badge sits top-right */}
+      <header className="flex items-start justify-between gap-3">
+        <div className="space-y-0.5">
+          <p className="text-sm text-[var(--muted)]">{prettyDate(today)}</p>
+          <h1 className="text-2xl font-bold">{greeting(settings?.greetingName ?? "")}</h1>
+        </div>
+        {conflictGroups.length > 0 && (
+          <Link
+            href="/calendar"
+            className="mt-1 flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all duration-150 hover:scale-105 hover:brightness-95 active:scale-95"
+            style={{ background: "#fef9ec", color: "#8a6800", border: "1px solid #e8c84088" }}
+          >
+            ⚠ {conflictGroups.length} conflict{conflictGroups.length !== 1 ? "s" : ""}
+          </Link>
+        )}
       </header>
 
       {/* Check-in entry / summary */}
@@ -95,6 +140,56 @@ export default function TodayPage() {
           })}
         </div>
       </section>
+
+      {/* Today's schedule — calendar blocks */}
+      {todayBlocks.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-[var(--muted)]">Today&apos;s schedule</h2>
+            <Link
+              href="/calendar"
+              className="text-xs text-[var(--muted)] underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105"
+            >
+              calendar →
+            </Link>
+          </div>
+          <div className="space-y-1.5">
+            {todayBlocks.map((block) => {
+              const isConflict = conflictIds.has(block.id);
+              return (
+                <div
+                  key={block.id}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm"
+                  style={{
+                    background: isConflict ? "#fef9ec" : "var(--surface)",
+                    border: isConflict ? "1px solid #e8c84066" : "1px solid var(--border)",
+                    borderLeft: isConflict ? "3px solid #e8c840" : "3px solid #7a9bb5",
+                  }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="truncate text-sm font-medium"
+                      style={{ color: isConflict ? "#8a6800" : "var(--foreground)" }}
+                    >
+                      {isConflict && <span className="mr-1">⚠</span>}
+                      {block.title}
+                    </p>
+                    <p className="text-xs" style={{ color: "var(--muted)" }}>
+                      {fmtTime(block.start_at)}–{fmtTime(block.end_at)}
+                      {block.source !== "manual" && (
+                        <span className="ml-1 opacity-60">· {block.source}</span>
+                      )}
+                    </p>
+                  </div>
+                  {block.category_id && isDeadlineLike(block.title) && (
+                    <DeadlineChip block={block} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Quick-tick tasks */}
       <section className="space-y-2">
