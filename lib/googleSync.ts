@@ -1,6 +1,8 @@
 // Server-only — do not import in client components.
 import { getFreshGoogleToken } from "./googleTokens";
 import { getServiceSupabase } from "./supabaseService";
+import { matchEventToCategory } from "./categoryMatcher";
+import type { Category, Task } from "./types";
 
 const SYNC_DAYS = 90;
 
@@ -27,6 +29,7 @@ function toBlock(event: GoogleEvent, connectionId: string, userId: string) {
     external_calendar_id: connectionId,
     busy: event.transparency !== "transparent",
     status: "planned",
+    category_id: undefined as string | undefined,
   };
 }
 
@@ -42,6 +45,14 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
   const userId = conn.user_id as string;
 
   const accessToken = await getFreshGoogleToken(connectionId);
+
+  // Fetch user's categories and open tasks for event → category matching.
+  const [{ data: catRows }, { data: taskRows }] = await Promise.all([
+    sb.from("categories").select("*").eq("user_id", userId),
+    sb.from("tasks").select("id, title, category_id").eq("user_id", userId).neq("status", "complete"),
+  ]);
+  const categories = (catRows ?? []) as Category[];
+  const tasks = (taskRows ?? []) as Task[];
 
   const { data: tokenRow } = await sb
     .from("calendar_oauth_tokens")
@@ -88,7 +99,11 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
         toDelete.push(event.id);
       } else {
         const block = toBlock(event, connectionId, userId);
-        if (block) toUpsert.push(block as Block);
+        if (block) {
+          const match = matchEventToCategory(block.title, categories, tasks);
+          if (match) block.category_id = match.categoryId;
+          toUpsert.push(block as Block);
+        }
       }
     }
   } while (pageToken);

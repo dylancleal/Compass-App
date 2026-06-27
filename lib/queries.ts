@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { db } from "@/lib/db";
+import { matchEventToCategory } from "@/lib/categoryMatcher";
 import type {
   AppSettings,
   CalendarBlock,
@@ -173,18 +174,27 @@ export const useSyncCalendarConnection = () => {
         throw new Error(body.error ?? `Sync failed (${res.status})`);
       }
       const { events, connectionId } = await res.json();
-      const blocks: Omit<import("@/lib/types").CalendarBlock, "id" | "created_at">[] = events.map(
-        (e: { externalId: string; title: string; start_at: string; end_at: string; all_day: boolean }) => ({
-          title: e.title,
-          start_at: e.start_at,
-          end_at: e.end_at,
-          all_day: e.all_day,
-          source: conn.provider as import("@/lib/types").CalendarSource,
-          external_id: e.externalId,
-          external_calendar_id: connectionId,
-          busy: true,
-          status: "planned" as const,
-        }),
+
+      // Pull categories + tasks from cache for event → category matching.
+      const categories = qc.getQueryData<Category[]>(keys.categories) ?? [];
+      const tasks = qc.getQueryData<Task[]>(keys.tasks) ?? [];
+
+      const blocks: Omit<CalendarBlock, "id" | "created_at">[] = events.map(
+        (e: { externalId: string; title: string; start_at: string; end_at: string; all_day: boolean }) => {
+          const match = matchEventToCategory(e.title, categories, tasks);
+          return {
+            title: e.title,
+            start_at: e.start_at,
+            end_at: e.end_at,
+            all_day: e.all_day,
+            source: conn.provider as import("@/lib/types").CalendarSource,
+            external_id: e.externalId,
+            external_calendar_id: connectionId,
+            busy: true,
+            status: "planned" as const,
+            ...(match ? { category_id: match.categoryId } : {}),
+          };
+        },
       );
       const result = await db.syncCalendarBlocks(blocks, connectionId);
       await db.updateCalendarConnection(connectionId, { last_synced_at: new Date().toISOString() });

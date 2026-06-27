@@ -3,6 +3,8 @@
 import type { CalendarBlock, Category, Task } from "@/lib/types";
 import { accentOf } from "@/lib/palette";
 import { addDays, prettyDate, todayKey } from "@/lib/date";
+import { isDeadlineLike } from "@/lib/categoryMatcher";
+import DeadlineChip from "./DeadlineChip";
 
 const DAYS_AHEAD = 14;
 
@@ -76,10 +78,9 @@ export default function AgendaView({ blocks, tasks, categories, rangeStart, conf
                 const isGhost = block.source === "compass";
                 const isConflict = conflictIds?.has(block.id) ?? false;
                 return (
-                  <button
+                  <div
                     key={block.id}
-                    onClick={() => onClickBlock(block)}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all hover:scale-[1.01]"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm"
                     style={{
                       background: isConflict ? "#fef9ec" : isGhost ? "transparent" : accent.soft,
                       border: isConflict
@@ -89,23 +90,31 @@ export default function AgendaView({ blocks, tasks, categories, rangeStart, conf
                         : `1px solid ${accent.accent}22`,
                     }}
                   >
-                    {isConflict && (
-                      <span className="shrink-0 text-sm" title="Scheduling conflict">⚠</span>
+                    <button
+                      onClick={() => onClickBlock(block)}
+                      className="flex flex-1 items-center gap-3 text-left transition-all hover:scale-[1.01]"
+                    >
+                      {isConflict && (
+                        <span className="shrink-0 text-sm" title="Scheduling conflict">⚠</span>
+                      )}
+                      {!isConflict && (
+                        <span className="shrink-0 text-base">{cat?.icon ?? "📅"}</span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium" style={{ color: isConflict ? "#8a6800" : accent.text }}>
+                          {block.title}
+                        </p>
+                        <p className="text-xs" style={{ color: "var(--muted)" }}>
+                          {fmt(block.start_at)}–{fmt(block.end_at)}
+                          {isGhost ? " · proposed" : ""}
+                          {isConflict ? " · conflict" : ""}
+                        </p>
+                      </div>
+                    </button>
+                    {block.category_id && isDeadlineLike(block.title) && (
+                      <DeadlineChip block={block} />
                     )}
-                    {!isConflict && (
-                      <span className="shrink-0 text-base">{cat?.icon ?? "📅"}</span>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium" style={{ color: isConflict ? "#8a6800" : accent.text }}>
-                        {block.title}
-                      </p>
-                      <p className="text-xs" style={{ color: "var(--muted)" }}>
-                        {fmt(block.start_at)}–{fmt(block.end_at)}
-                        {isGhost ? " · proposed" : ""}
-                        {isConflict ? " · conflict" : ""}
-                      </p>
-                    </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>

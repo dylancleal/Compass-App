@@ -17,6 +17,8 @@ import Plan from "@/components/Plan";
 import TaskList from "@/components/TaskList";
 import LogSheet from "@/components/LogSheet";
 import { GoalsOverview } from "@/components/GoalCard";
+import DeadlineChip from "@/components/calendar/DeadlineChip";
+import { isDeadlineLike } from "@/lib/categoryMatcher";
 
 const MENTAL_EMOJI = ["", "😞", "😕", "😐", "🙂", "😄"];
 const CAP_LABEL: Record<string, string> = { light: "Light day", medium: "Medium day", big: "Big day" };
@@ -179,6 +181,9 @@ export default function TodayPage() {
                       )}
                     </p>
                   </div>
+                  {block.category_id && isDeadlineLike(block.title) && (
+                    <DeadlineChip block={block} />
+                  )}
                 </div>
               );
             })}

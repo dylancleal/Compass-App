@@ -1,5 +1,6 @@
 import type {
   AppSettings,
+  CalendarBlock,
   Category,
   Checkin,
   Session,
@@ -24,6 +25,7 @@ export interface PlannerInput {
   tasks: Task[];
   sessions: Session[];
   settings: AppSettings;
+  calendarBlocks?: CalendarBlock[]; // today's blocks — used to avoid double-suggesting covered areas
 }
 
 export type DraftSuggestion = Omit<Suggestion, "id" | "created_at">;
@@ -118,8 +120,23 @@ export function scoreCategories(input: PlannerInput): Scored[] {
       else if (SCHEDULED[cat.name]) readiness = (mental / 5) * 0.7 + (isScheduledToday(cat, input) ? 0.3 : 0);
       if (isScheduledToday(cat, input)) reasonBits.push("it's on today's schedule");
 
-      const score =
+      let score =
         w.neglect * neglect + w.deadline * deadline + w.readiness * readiness;
+
+      // If the calendar already has a busy block for this category today,
+      // suppress the suggestion — the activity is already happening.
+      // Physical categories (gym, sport) get near-silenced; mental categories
+      // (study) get a lighter suppression since a lecture ≠ independent study.
+      const coveredByCalendar = (input.calendarBlocks ?? []).some(
+        (b) => b.category_id === cat.id && b.busy && !b.all_day,
+      );
+      if (coveredByCalendar) {
+        const isPhysical =
+          /gym|tennis|swim|run|jog|cycl|bike|hike|yoga|sport|fitness|athlet|box|martial|rugby|football|soccer|basketball|cricket/i.test(
+            cat.name,
+          );
+        score *= isPhysical ? 0.08 : 0.65;
+      }
 
       return { cat, score, task, reasonBits };
     })
