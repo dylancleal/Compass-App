@@ -16,7 +16,21 @@ interface Props {
 }
 
 function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
+// "9:30–10:30 am" when same period, "11:00 am–1:00 pm" when crossing noon
+function fmtRange(start: string, end: string) {
+  const s = new Date(start);
+  const e = new Date(end);
+  const samePeriod = s.getHours() < 12 === e.getHours() < 12;
+  const startFull = fmtTime(start);
+  const endFull = fmtTime(end);
+  if (samePeriod) {
+    const startShort = startFull.replace(/\s?(am|pm)/i, "");
+    return `${startShort}–${endFull}`;
+  }
+  return `${startFull}–${endFull}`;
 }
 
 export default function BlockChip({
@@ -82,7 +96,7 @@ export default function BlockChip({
             {block.title}
           </p>
           <p className="mt-0.5 text-[11px] opacity-60 leading-tight">
-            {fmtTime(block.start_at)} – {fmtTime(block.end_at)}
+            {fmtRange(block.start_at, block.end_at)}
           </p>
 
           {isGhost && (
