@@ -7,12 +7,14 @@ import {
   useCheckin,
   useSaveSuggestions,
   useSessions,
+  useSessionTemplates,
   useSettings,
   useSuggestions,
   useTasks,
   useUpdateSuggestion,
 } from "@/lib/queries";
 import { buildPlan } from "@/lib/planner";
+import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import { todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import type { Suggestion, Category } from "@/lib/types";
@@ -28,6 +30,8 @@ export default function Plan() {
   const { data: sessions = [] } = useSessions();
   const { data: settings } = useSettings();
   const { data: checkin } = useCheckin(today);
+  const { data: templates } = useSessionTemplates();
+  const library = templates ?? BUILTIN_LIBRARY;
   const { data: suggestions = [], isLoading } = useSuggestions(today);
   const { data: calendarBlocks = [] } = useCalendarBlocks(
     `${today}T00:00:00.000Z`,
@@ -45,14 +49,14 @@ export default function Plan() {
     if (generatedRef.current) return;
     if (suggestions.length > 0) return;
     generatedRef.current = true;
-    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings, calendarBlocks });
+    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings, calendarBlocks, library });
     save.mutate({ date: today, items: draft });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, checkin, isLoading, suggestions.length]);
 
   function regenerate() {
     if (!settings || !checkin) return;
-    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings, calendarBlocks });
+    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings, calendarBlocks, library });
     save.mutate({ date: today, items: draft });
   }
 
