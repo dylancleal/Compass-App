@@ -9,6 +9,7 @@ interface Props {
   topPct: number;
   heightPct: number;
   isGhost?: boolean;
+  isConflict?: boolean;
   onConfirm?: () => void;
   onDismiss?: () => void;
   onClick?: () => void;
@@ -20,6 +21,7 @@ export default function BlockChip({
   topPct,
   heightPct,
   isGhost,
+  isConflict,
   onConfirm,
   onDismiss,
   onClick,
@@ -34,16 +36,18 @@ export default function BlockChip({
       style={{
         top: `${topPct}%`,
         height: `${Math.max(heightPct, 2)}%`,
-        background: isGhost ? "transparent" : accent.soft,
-        color: accent.text,
-        border: isGhost
+        background: isConflict ? "#fef9ec" : isGhost ? "transparent" : accent.soft,
+        color: isConflict ? "#8a6800" : accent.text,
+        border: isConflict
+          ? "1.5px solid #e8c84088"
+          : isGhost
           ? `1.5px dashed ${accent.accent}`
           : `1px solid ${accent.accent}33`,
-        opacity: isExternal ? 0.7 : 1,
+        opacity: isExternal && !isConflict ? 0.7 : 1,
         cursor: isExternal ? "default" : "pointer",
         zIndex: 1,
       }}
-      onClick={!isExternal && !isGhost ? onClick : undefined}
+      onClick={!isGhost ? onClick : undefined}
     >
       {!short && (
         <p className="truncate font-semibold" style={{ color: accent.text }}>
@@ -55,7 +59,10 @@ export default function BlockChip({
           {block.title}
         </p>
       )}
-      {isExternal && !short && (
+      {isConflict && !short && (
+        <span className="text-[10px]" style={{ color: "#8a6800" }}>⚠ conflict</span>
+      )}
+      {isExternal && !isConflict && !short && (
         <span className="text-[10px] opacity-60">🔒 synced</span>
       )}
       {isGhost && !short && (

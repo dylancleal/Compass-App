@@ -94,10 +94,33 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
   } while (pageToken);
 
   if (toUpsert.length > 0) {
-    await sb.from("calendar_blocks").upsert(toUpsert, {
-      onConflict: "user_id,external_calendar_id,external_id",
-      ignoreDuplicates: false,
-    });
+    // Dedup across connections: skip events that already exist from a different
+    // connection with the exact same title + start + end (e.g. shared meetings
+    // that appear in both of a user's Google accounts).
+    const { data: existing } = await sb
+      .from("calendar_blocks")
+      .select("title, start_at, end_at")
+      .eq("user_id", userId)
+      .not("external_id", "is", null)
+      .neq("external_calendar_id", connectionId);
+
+    const existingKeys = new Set(
+      (existing ?? []).map(
+        (b: { title: string; start_at: string; end_at: string }) =>
+          `${b.title.trim().toLowerCase()}::${b.start_at}::${b.end_at}`,
+      ),
+    );
+
+    const dedupedUpsert = toUpsert.filter(
+      (b) => !existingKeys.has(`${b.title.trim().toLowerCase()}::${b.start_at}::${b.end_at}`),
+    );
+
+    if (dedupedUpsert.length > 0) {
+      await sb.from("calendar_blocks").upsert(dedupedUpsert, {
+        onConflict: "user_id,external_calendar_id,external_id",
+        ignoreDuplicates: false,
+      });
+    }
   }
 
   if (toDelete.length > 0) {

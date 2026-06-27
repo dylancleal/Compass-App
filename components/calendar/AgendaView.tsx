@@ -11,10 +11,11 @@ interface Props {
   tasks: Task[];
   categories: Category[];
   rangeStart: string;
+  conflictIds?: Set<string>;
   onClickBlock: (block: CalendarBlock) => void;
 }
 
-export default function AgendaView({ blocks, tasks, categories, rangeStart, onClickBlock }: Props) {
+export default function AgendaView({ blocks, tasks, categories, rangeStart, conflictIds, onClickBlock }: Props) {
   const today = todayKey();
   const days = Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(rangeStart, i));
 
@@ -73,26 +74,35 @@ export default function AgendaView({ blocks, tasks, categories, rangeStart, onCl
                 const cat = categories.find((c) => c.id === block.category_id);
                 const accent = accentOf(cat?.color ?? "slate");
                 const isGhost = block.source === "compass";
+                const isConflict = conflictIds?.has(block.id) ?? false;
                 return (
                   <button
                     key={block.id}
                     onClick={() => onClickBlock(block)}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all hover:scale-[1.01]"
                     style={{
-                      background: isGhost ? "transparent" : accent.soft,
-                      border: isGhost
+                      background: isConflict ? "#fef9ec" : isGhost ? "transparent" : accent.soft,
+                      border: isConflict
+                        ? "1.5px solid #e8c84088"
+                        : isGhost
                         ? `1.5px dashed ${accent.accent}`
                         : `1px solid ${accent.accent}22`,
                     }}
                   >
-                    <span className="shrink-0 text-base">{cat?.icon ?? "📅"}</span>
+                    {isConflict && (
+                      <span className="shrink-0 text-sm" title="Scheduling conflict">⚠</span>
+                    )}
+                    {!isConflict && (
+                      <span className="shrink-0 text-base">{cat?.icon ?? "📅"}</span>
+                    )}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium" style={{ color: accent.text }}>
+                      <p className="truncate font-medium" style={{ color: isConflict ? "#8a6800" : accent.text }}>
                         {block.title}
                       </p>
                       <p className="text-xs" style={{ color: "var(--muted)" }}>
                         {fmt(block.start_at)}–{fmt(block.end_at)}
                         {isGhost ? " · proposed" : ""}
+                        {isConflict ? " · conflict" : ""}
                       </p>
                     </div>
                   </button>
