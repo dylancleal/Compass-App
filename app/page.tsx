@@ -29,7 +29,7 @@ const MENTAL_EMOJI = ["", "😞", "😕", "😐", "🙂", "😄"];
 const CAP_LABEL: Record<string, string> = { light: "Light day", medium: "Medium day", big: "Big day" };
 
 function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
 export default function TodayPage() {

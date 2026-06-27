@@ -20,7 +20,10 @@ export function findFreeSlot(
   blocks: CalendarBlock[],
   durationMin: number,
 ): string | undefined {
-  const WINDOW_START = 7 * 60;  // 7am
+  const now = new Date();
+  // Start from the next full hour (minimum 7am) so we never suggest past times.
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const WINDOW_START = Math.max(7 * 60, Math.ceil(nowMin / 60) * 60);
   const WINDOW_END   = 22 * 60; // 10pm
   const BUFFER = 15;
   const needed = durationMin + BUFFER;
