@@ -12,12 +12,14 @@ import type {
   Metric,
   MetricLog,
   Session,
+  SessionTemplate,
   Suggestion,
   Task,
 } from "@/lib/types";
 
 const keys = {
   categories: ["categories"],
+  sessionTemplates: ["sessionTemplates"],
   tasks: ["tasks"],
   sessions: ["sessions"],
   metrics: ["metrics"],
@@ -32,6 +34,8 @@ const keys = {
 // ---- reads ----
 export const useCategories = () =>
   useQuery({ queryKey: keys.categories, queryFn: () => db.listCategories() });
+export const useSessionTemplates = () =>
+  useQuery({ queryKey: keys.sessionTemplates, queryFn: () => db.listSessionTemplates() });
 export const useTasks = () => useQuery({ queryKey: keys.tasks, queryFn: () => db.listTasks() });
 export const useSessions = () =>
   useQuery({ queryKey: keys.sessions, queryFn: () => db.listSessions() });
@@ -244,5 +248,14 @@ export const useGoogleSync = () => {
     },
   });
 };
+
+// ---- session templates ----
+export const useUpsertSessionTemplate = () =>
+  useInvalidatingMutation(
+    (input: SessionTemplate) => db.upsertSessionTemplate(input),
+    [keys.sessionTemplates],
+  );
+export const useRemoveSessionTemplate = () =>
+  useInvalidatingMutation((id: string) => db.removeSessionTemplate(id), [keys.sessionTemplates]);
 
 export { keys as queryKeys };

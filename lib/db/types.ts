@@ -7,6 +7,7 @@ import type {
   Metric,
   MetricLog,
   Session,
+  SessionTemplate,
   Suggestion,
   Task,
   TaskStatus,
@@ -70,6 +71,11 @@ export interface CompassDB {
   createCalendarConnection(input: Omit<CalendarConnection, "id" | "created_at">): Promise<CalendarConnection>;
   updateCalendarConnection(id: string, patch: Partial<CalendarConnection>): Promise<CalendarConnection>;
   removeCalendarConnection(id: string): Promise<void>;
+
+  // session templates (data-driven science library)
+  listSessionTemplates(): Promise<SessionTemplate[]>;
+  upsertSessionTemplate(input: SessionTemplate): Promise<SessionTemplate>;
+  removeSessionTemplate(id: string): Promise<void>;
 
   // maintenance
   ensureSeeded(): Promise<void>;

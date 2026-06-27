@@ -7,9 +7,11 @@ import type {
   Metric,
   MetricLog,
   Session,
+  SessionTemplate,
   Suggestion,
   Task,
 } from "@/lib/types";
+import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import type { CompassDB } from "./types";
 import { getSupabase } from "@/lib/supabaseClient";
 import { defaultCategories, defaultMetrics, defaultSettings } from "./seed";
@@ -49,6 +51,19 @@ export class SupabaseDB implements CompassDB {
       await sb().from("metrics").insert(metrics);
     }
     await sb().from("settings").upsert({ data: defaultSettings() });
+    // Seed session templates — idempotent: only runs when table is empty for this user.
+    const { count: tplCount } = await sb()
+      .from("session_templates")
+      .select("id", { count: "exact", head: true });
+    if (!tplCount || tplCount === 0) {
+      // Strip the local id so Supabase generates its own UUID, but keep domain/session_type
+      // so existing lookups still work. We store the builtin id in a separate column.
+      const rows = BUILTIN_LIBRARY.map(({ id: builtin_id, ...rest }) => ({
+        ...rest,
+        builtin_id,
+      }));
+      await sb().from("session_templates").insert(rows);
+    }
   }
 
   async listCategories(): Promise<Category[]> {
@@ -228,5 +243,33 @@ export class SupabaseDB implements CompassDB {
   }
   async removeCalendarConnection(id: string): Promise<void> {
     await sb().from("calendar_connections").delete().eq("id", id);
+  }
+
+  // session templates
+  async listSessionTemplates(): Promise<SessionTemplate[]> {
+    const { data } = await sb().from("session_templates").select("*").order("domain");
+    if (!data || data.length === 0) return BUILTIN_LIBRARY;
+    return data.map((row) => ({
+      id: row.builtin_id ?? row.id,
+      domain: row.domain,
+      session_type: row.session_type,
+      duration_min: row.duration_min,
+      plan: row.plan ?? [],
+      cite: row.cite ?? "",
+      why: row.why ?? "",
+      variants: row.variants ?? [],
+      is_builtin: row.is_builtin,
+      weekly_default: row.weekly_default ?? undefined,
+    })) as SessionTemplate[];
+  }
+  async upsertSessionTemplate(input: SessionTemplate): Promise<SessionTemplate> {
+    const { builtin_id, ...rest } = { builtin_id: input.id, ...input };
+    await sb()
+      .from("session_templates")
+      .upsert({ ...rest, builtin_id }, { onConflict: "user_id,builtin_id" });
+    return input;
+  }
+  async removeSessionTemplate(id: string): Promise<void> {
+    await sb().from("session_templates").delete().eq("builtin_id", id);
   }
 }

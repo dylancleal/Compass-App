@@ -19,6 +19,28 @@ export type Capacity = "light" | "medium" | "big";
 
 export type SuggestionStatus = "pending" | "accepted" | "dismissed" | "snoozed";
 
+export interface CategoryMetadata {
+  // Gym
+  experience?: "beginner" | "intermediate" | "advanced";
+  weekly_goal?: number;
+  gym_focus?: "strength" | "cardio" | "both";
+  // Tennis
+  utr?: number; // 1–16 UTR scale
+  tennis_weekly_goal?: number;
+  tennis_focus?: "match_play" | "drilling" | "both";
+  // Finance
+  savings_target?: number;
+  review_frequency?: "weekly" | "monthly";
+  // Job searching
+  applications_per_week?: number;
+  role_type?: string;
+  // Uni / Study
+  enrolled_units?: string[];
+  // Generic / Custom
+  success_description?: string;
+  custom_weekly_goal?: number;
+}
+
 export interface Category {
   id: ID;
   name: string;
@@ -26,6 +48,7 @@ export interface Category {
   icon: string; // emoji
   order: number;
   active: boolean;
+  metadata?: CategoryMetadata;
 }
 
 export interface Task {
@@ -89,6 +112,7 @@ export interface Suggestion {
   text: string;
   reason: string;
   est_minutes?: number;
+  session_type?: string; // carried from planner for auto-logging (C1)
   status: SuggestionStatus;
   created_at: string;
 }
@@ -144,9 +168,43 @@ export interface PlannerWeights {
   balance: number;
 }
 
+// ── Science library (Phase 4) ─────────────────────────────────────────────────
+
+export interface SessionVariant {
+  when: {
+    field: "experience" | "level" | "deadlineDays" | "lowWellbeing";
+    op: "eq" | "lt" | "lte" | "gt" | "gte";
+    value: string | number | boolean;
+  };
+  patch: {
+    sessionTypeOverride?: string;
+    durationDelta?: number;
+    durationFactor?: number;
+    planPrepend?: string[];
+    planAppend?: string[];
+    planReplace?: string[];
+    whyAppend?: string;
+    whyReplace?: string;
+  };
+}
+
+export interface SessionTemplate {
+  id: ID;
+  domain: string;
+  session_type: string;
+  duration_min: number;
+  plan: string[];
+  cite: string;
+  why: string;
+  variants?: SessionVariant[];
+  is_builtin: boolean;
+  weekly_default?: number;
+}
+
 export interface AppSettings {
   greetingName: string;
   weeklySchedule: WeeklySchedule;
   plannerWeights: PlannerWeights;
   weeklyTargets?: Record<string, number>; // category_id → sessions/week goal
+  onboarding_completed_at?: string; // ISO datetime — null means new user
 }

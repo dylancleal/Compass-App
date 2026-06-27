@@ -7,9 +7,11 @@ import type {
   Metric,
   MetricLog,
   Session,
+  SessionTemplate,
   Suggestion,
   Task,
 } from "@/lib/types";
+import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import type { CompassDB } from "./types";
 import { uid } from "@/lib/date";
 import { defaultCategories, defaultMetrics, defaultSettings } from "./seed";
@@ -31,6 +33,7 @@ const KEYS = {
   seeded: PREFIX + "seeded",
   calendarBlocks: PREFIX + "calendarBlocks",
   calendarConnections: PREFIX + "calendarConnections",
+  sessionTemplates: PREFIX + "sessionTemplates",
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -57,7 +60,32 @@ export class LocalDB implements CompassDB {
     write(KEYS.categories, cats);
     write(KEYS.metrics, metrics);
     write(KEYS.settings, defaultSettings());
+    write(KEYS.sessionTemplates, BUILTIN_LIBRARY);
     window.localStorage.setItem(KEYS.seeded, "1");
+  }
+
+  // session templates
+  async listSessionTemplates(): Promise<SessionTemplate[]> {
+    const stored = read<SessionTemplate[]>(KEYS.sessionTemplates, []);
+    // Seed on first access even if ensureSeeded ran before this key existed.
+    if (stored.length === 0) {
+      write(KEYS.sessionTemplates, BUILTIN_LIBRARY);
+      return BUILTIN_LIBRARY;
+    }
+    return stored;
+  }
+  async upsertSessionTemplate(input: SessionTemplate): Promise<SessionTemplate> {
+    const all = read<SessionTemplate[]>(KEYS.sessionTemplates, []);
+    const idx = all.findIndex((t) => t.id === input.id);
+    const next = idx >= 0 ? all.map((t) => (t.id === input.id ? input : t)) : [...all, input];
+    write(KEYS.sessionTemplates, next);
+    return input;
+  }
+  async removeSessionTemplate(id: string): Promise<void> {
+    write(
+      KEYS.sessionTemplates,
+      read<SessionTemplate[]>(KEYS.sessionTemplates, []).filter((t) => t.id !== id),
+    );
   }
 
   // categories
