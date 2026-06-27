@@ -48,6 +48,11 @@ const SCHEDULED: Record<string, keyof AppSettings["weeklySchedule"]> = {
   "Uni work": "study",
 };
 
+function weeklyCount(catSessions: Session[], date: string): number {
+  const weekStart = addDays(date, -(dayIndex(date)));
+  return catSessions.filter((s) => s.date >= weekStart).length;
+}
+
 function lastActivity(cat: Category, input: PlannerInput): string | undefined {
   const dates: string[] = [];
   for (const s of input.sessions) if (s.category_id === cat.id) dates.push(s.date);
@@ -189,9 +194,17 @@ function gymSuggestion(s: Scored, input: PlannerInput, lighter: boolean): DraftS
     : s.reasonBits.length
     ? `Suggested because ${s.reasonBits.slice(0, 2).join(" and ")}.`
     : `Keeping your gym momentum going.`;
-  const reason = `${reasonBase} ${science.whyItWorks}${personalNote}`.trim();
+  const reason = `${reasonBase} ${science.whyItWorks}`.trim();
 
-  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: sessionType };
+  const wCount = weeklyCount(catSessions, input.date);
+  const wGoal = s.cat.metadata?.weekly_goal;
+  const personal_insight = wGoal
+    ? `${wCount}/${wGoal} gym sessions this week${wCount >= wGoal ? " ✓" : ""}`
+    : stats.hasEnoughData
+    ? `Your avg: ${stats.avgDurationMin} min — sized for you`
+    : undefined;
+
+  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: sessionType, personal_insight };
 }
 
 function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): DraftSuggestion {
@@ -206,7 +219,12 @@ function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): Dra
     const planLines = science.plan.map((p) => `· ${p}`).join("\n");
     const text = `Match play — ~${est} min\n${planLines}`;
     const reason = `Easy day — match play keeps you sharp without the mental load of technical drilling. ${science.whyItWorks}`;
-    return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: "Match" };
+    const wCountT = weeklyCount(catSessions, input.date);
+    const wGoalT = s.cat.metadata?.tennis_weekly_goal ?? s.cat.metadata?.weekly_goal;
+    const personal_insight = wGoalT
+      ? `${wCountT}/${wGoalT} tennis sessions this week${wCountT >= wGoalT ? " ✓" : ""}`
+      : stats.hasEnoughData ? `Your avg: ${stats.avgDurationMin} min` : undefined;
+    return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: "Match", personal_insight };
   }
 
   // Score each core skill by neglect (how long since last practised) and
@@ -247,6 +265,14 @@ function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): Dra
   const planLines = science.plan.map((p) => `· ${p}`).join("\n");
   const text = `${recommendedSkill} focus — ~${est} min\n${planLines}`;
 
+  const wCountTennis = weeklyCount(catSessions, input.date);
+  const wGoalTennis = s.cat.metadata?.tennis_weekly_goal ?? s.cat.metadata?.weekly_goal;
+  const tennisPInsight = wGoalTennis
+    ? `${wCountTennis}/${wGoalTennis} tennis sessions this week${wCountTennis >= wGoalTennis ? " ✓" : ""}`
+    : stats.hasEnoughData
+    ? `Your avg: ${stats.avgDurationMin} min`
+    : undefined;
+
   const isNewTennis = catSessions.length === 0;
   const neglectNote = isNewTennis
     ? `A great place to start — let's begin with your ${recommendedSkill.toLowerCase()}.`
@@ -264,7 +290,7 @@ function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): Dra
 
   const reason = `${neglectNote}${confidenceNote} ${science.whyItWorks}${personalNote}`.trim();
 
-  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: recommendedSkill };
+  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: recommendedSkill, personal_insight: tennisPInsight };
 }
 
 type StudyCategory = "reading" | "assignment" | "exam";
@@ -482,7 +508,16 @@ function studySuggestion(s: Scored, input: PlannerInput, lighter: boolean, task?
     ? `${selectionReason} Recent sessions average ${stats.avgDurationMin} min.`
     : selectionReason;
 
-  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: sessionType };
+  const streak = studyStreak(input);
+  const wCountStudy = weeklyCount(catSessions, input.date);
+  const wGoalStudy = s.cat.metadata?.weekly_goal ?? 5;
+  const study_insight = streak >= 2
+    ? `${streak}-day study streak 🔥`
+    : wCountStudy > 0
+    ? `${wCountStudy}/${wGoalStudy} study sessions this week`
+    : undefined;
+
+  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: sessionType, personal_insight: study_insight };
 }
 
 function suggestionText(s: Scored, input: PlannerInput, lighter: boolean): DraftSuggestion {
@@ -538,7 +573,14 @@ function suggestionText(s: Scored, input: PlannerInput, lighter: boolean): Draft
     const reason = s.reasonBits.length
       ? `Suggested because ${s.reasonBits.slice(0, 2).join(" and ")}. ${science.whyItWorks}${successNote}`.trim()
       : `${science.whyItWorks}${successNote}`.trim();
-    return { date: input.date, category_id: cat.id, text, reason, est_minutes: est, status: "pending", session_type: resolvedType };
+    const wCountLib = weeklyCount(catSessions, input.date);
+    const wGoalLib = meta?.weekly_goal ?? meta?.custom_weekly_goal;
+    const lib_insight = wGoalLib
+      ? `${wCountLib}/${wGoalLib} sessions this week${wCountLib >= wGoalLib ? " ✓" : ""}`
+      : stats.hasEnoughData
+      ? `Your avg: ${stats.avgDurationMin} min`
+      : undefined;
+    return { date: input.date, category_id: cat.id, text, reason, est_minutes: est, status: "pending", session_type: resolvedType, personal_insight: lib_insight };
   }
 
   // True fallback for categories with no domain templates (finance-like custom cats, etc.).

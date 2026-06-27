@@ -150,6 +150,24 @@ export default function TodayPage() {
         </div>
       )}
 
+      {/* Evening wrap prompt — visible after 4pm when wrap not done yet */}
+      {checkin && !checkin.extra?.evening_rating && new Date().getHours() >= 16 && (
+        <Link
+          href="/wrap"
+          className="card animate-pop flex items-center gap-3 p-4 transition-all duration-150 hover:scale-[1.01] hover:brightness-[1.03] hover:shadow-md active:scale-[0.99]"
+          style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
+        >
+          <span className="text-2xl">🌙</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color: "var(--primary)" }}>
+              Close the day
+            </p>
+            <p className="text-xs text-[var(--muted)]">How did today land? One tap.</p>
+          </div>
+          <span className="text-xs text-[var(--muted)]">→</span>
+        </Link>
+      )}
+
       {/* Personalised plan */}
       <Plan />
 
