@@ -64,9 +64,14 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   async function devLogin() {
     try {
       const res = await fetch("/api/dev-auth");
-      const { link, error } = await res.json();
+      const { token, email, error } = await res.json();
       if (error) { setErr(error); return; }
-      window.location.href = link;
+      const { error: verifyErr } = await getSupabase()!.auth.verifyOtp({
+        email,
+        token,
+        type: "magiclink",
+      });
+      if (verifyErr) setErr(verifyErr.message);
     } catch (e) {
       setErr(String(e));
     }

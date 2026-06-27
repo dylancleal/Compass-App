@@ -35,5 +35,7 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ link: data.properties.action_link });
+  // email_otp is the raw OTP that verifyOtp() expects.
+  // The `token` param in action_link is a hashed version that only works via redirect.
+  return NextResponse.json({ token: data.properties.email_otp, email });
 }
