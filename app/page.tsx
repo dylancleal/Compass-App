@@ -8,6 +8,7 @@ import {
   useCheckin,
   useMetrics,
   useSettings,
+  useTasks,
 } from "@/lib/queries";
 import { findConflictPairs, findConflictGroups } from "@/lib/schedule";
 import { greeting, prettyDate, todayKey } from "@/lib/date";
@@ -37,6 +38,7 @@ export default function TodayPage() {
     `${today}T00:00:00.000Z`,
     `${today}T23:59:59.999Z`,
   );
+  const { data: tasks = [] } = useTasks();
   const [logCat, setLogCat] = useState<Category | null>(null);
 
   const activeCats = categories.filter((c) => c.active);
@@ -156,6 +158,9 @@ export default function TodayPage() {
           <div className="space-y-1.5">
             {todayBlocks.map((block) => {
               const isConflict = conflictIds.has(block.id);
+              const alreadyTasked = tasks.some(
+                (t) => t.source === "calendar" && t.title === block.title,
+              );
               return (
                 <div
                   key={block.id}
@@ -182,7 +187,7 @@ export default function TodayPage() {
                     </p>
                   </div>
                   {block.category_id && isDeadlineLike(block.title) && (
-                    <DeadlineChip block={block} />
+                    <DeadlineChip block={block} alreadyTasked={alreadyTasked} />
                   )}
                 </div>
               );

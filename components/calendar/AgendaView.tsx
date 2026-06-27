@@ -28,7 +28,10 @@ export default function AgendaView({ blocks, tasks, categories, rangeStart, conf
   }
 
   function dueTasks(dayKey: string) {
-    return tasks.filter((t) => t.due_date === dayKey && t.status !== "complete");
+    // Exclude calendar-sourced tasks — they show alongside their originating block
+    return tasks.filter(
+      (t) => t.due_date === dayKey && t.status !== "complete" && t.source !== "calendar",
+    );
   }
 
   function fmt(iso: string) {
@@ -77,6 +80,9 @@ export default function AgendaView({ blocks, tasks, categories, rangeStart, conf
                 const accent = accentOf(cat?.color ?? "slate");
                 const isGhost = block.source === "compass";
                 const isConflict = conflictIds?.has(block.id) ?? false;
+                const alreadyTasked = tasks.some(
+                  (t) => t.source === "calendar" && t.title === block.title,
+                );
                 return (
                   <div
                     key={block.id}
@@ -112,7 +118,7 @@ export default function AgendaView({ blocks, tasks, categories, rangeStart, conf
                       </div>
                     </button>
                     {block.category_id && isDeadlineLike(block.title) && (
-                      <DeadlineChip block={block} />
+                      <DeadlineChip block={block} alreadyTasked={alreadyTasked} />
                     )}
                   </div>
                 );
