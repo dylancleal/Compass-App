@@ -6,9 +6,11 @@ import {
   useCreateMetricLog,
   useCreateSession,
   useMetricLogs,
+  useSessions,
   useUpdateSession,
 } from "@/lib/queries";
 import { todayKey } from "@/lib/date";
+import { shouldPromptSkillConfidence } from "@/lib/sessionInfer";
 import { Button, ScalePicker, Sheet } from "./ui";
 
 const SESSION_TYPES: Record<string, string[]> = {
@@ -49,6 +51,7 @@ export default function LogSheet({
   accent: string;
 }) {
   const { data: allLogs = [] } = useMetricLogs();
+  const { data: allSessions = [] } = useSessions();
   const createSession = useCreateSession();
   const updateSession = useUpdateSession();
   const createLog = useCreateMetricLog();
@@ -141,12 +144,19 @@ export default function LogSheet({
     }
   }
 
+  // Determine once at component scope so saveFeedback and the render both see the same value.
+  const showSkillConfidence =
+    savedSession !== null &&
+    isTennis &&
+    !["Match", "Fitness"].includes(savedSession?.type ?? "") &&
+    shouldPromptSkillConfidence(allSessions, category.id, savedSession?.type ?? "", todayKey());
+
   function saveFeedback() {
     if (savedSession) {
       const feedback: Record<string, unknown> = {};
       if (energy !== undefined) feedback.energy_after = energy;
       if (durationFeel !== undefined) feedback.duration_feel = durationFeel;
-      if (isTennis && skillConfidence !== undefined) feedback.skill_confidence = skillConfidence;
+      if (showSkillConfidence && skillConfidence !== undefined) feedback.skill_confidence = skillConfidence;
 
       if (Object.keys(feedback).length > 0) {
         updateSession.mutate({
@@ -216,8 +226,8 @@ export default function LogSheet({
             </div>
           </div>
 
-          {/* Q3: Skill feel (tennis only, for skill sessions) */}
-          {isSkillSession && skillLabel && (
+          {/* Q3: Skill feel (tennis only, prompted occasionally — not every session) */}
+          {showSkillConfidence && skillLabel && (
             <div>
               <p className="mb-2 text-sm font-medium">
                 How did your{" "}

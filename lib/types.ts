@@ -112,6 +112,7 @@ export interface Suggestion {
   text: string;
   reason: string;
   est_minutes?: number;
+  session_type?: string; // carried from planner for auto-logging (C1)
   status: SuggestionStatus;
   created_at: string;
 }

@@ -5,6 +5,8 @@ import {
   useCalendarBlocks,
   useCategories,
   useCheckin,
+  useCreateSession,
+  useRemoveSession,
   useSaveSuggestions,
   useSessions,
   useSessionTemplates,
@@ -15,6 +17,7 @@ import {
 } from "@/lib/queries";
 import { buildPlan } from "@/lib/planner";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
+import { inferDurationFromBlocks } from "@/lib/sessionInfer";
 import { todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import type { Suggestion, Category } from "@/lib/types";
@@ -40,6 +43,8 @@ export default function Plan() {
 
   const save = useSaveSuggestions();
   const update = useUpdateSuggestion(today);
+  const createSession = useCreateSession();
+  const removeSession = useRemoveSession();
   const generatedRef = useRef(false);
 
   // Generate the plan once per day after check-in, persisting it so accept/
@@ -53,6 +58,38 @@ export default function Plan() {
     save.mutate({ date: today, items: draft });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, checkin, isLoading, suggestions.length]);
+
+  function handleToggle(s: (typeof suggestions)[number], accepted: boolean) {
+    update.mutate({ id: s.id, patch: { status: accepted ? "accepted" : "pending" } });
+    if (!s.category_id || (s.est_minutes ?? 0) === 0) return;
+
+    if (accepted) {
+      const alreadyLogged = sessions.some(
+        (sess) =>
+          (sess.payload as { suggestion_id?: string; auto_logged?: boolean })
+            ?.suggestion_id === s.id &&
+          (sess.payload as { auto_logged?: boolean })?.auto_logged === true,
+      );
+      if (!alreadyLogged) {
+        createSession.mutate({
+          category_id: s.category_id,
+          date: today,
+          type: s.session_type ?? "Session",
+          duration_minutes:
+            inferDurationFromBlocks(s.category_id, calendarBlocks) ?? s.est_minutes,
+          payload: { auto_logged: true, suggestion_id: s.id },
+        });
+      }
+    } else {
+      const toRemove = sessions.find(
+        (sess) =>
+          (sess.payload as { suggestion_id?: string; auto_logged?: boolean })
+            ?.suggestion_id === s.id &&
+          (sess.payload as { auto_logged?: boolean })?.auto_logged === true,
+      );
+      if (toRemove) removeSession.mutate(toRemove.id);
+    }
+  }
 
   function regenerate() {
     if (!settings || !checkin) return;
@@ -139,9 +176,7 @@ export default function Plan() {
               category={cat}
               accent={accent}
               isNext={s.id === nextId}
-              onToggle={(n) =>
-                update.mutate({ id: s.id, patch: { status: n ? "accepted" : "pending" } })
-              }
+              onToggle={(n) => handleToggle(s, n)}
               onSnooze={() => update.mutate({ id: s.id, patch: { status: "snoozed" } })}
               onDismiss={() => update.mutate({ id: s.id, patch: { status: "dismissed" } })}
             />

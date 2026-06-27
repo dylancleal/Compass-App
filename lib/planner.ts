@@ -191,7 +191,7 @@ function gymSuggestion(s: Scored, input: PlannerInput, lighter: boolean): DraftS
     : `Keeping your gym momentum going.`;
   const reason = `${reasonBase} ${science.whyItWorks}${personalNote}`.trim();
 
-  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending" };
+  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: sessionType };
 }
 
 function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): DraftSuggestion {
@@ -206,7 +206,7 @@ function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): Dra
     const planLines = science.plan.map((p) => `· ${p}`).join("\n");
     const text = `Match play — ~${est} min\n${planLines}`;
     const reason = `Easy day — match play keeps you sharp without the mental load of technical drilling. ${science.whyItWorks}`;
-    return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending" };
+    return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: "Match" };
   }
 
   // Score each core skill by neglect (how long since last practised) and
@@ -264,7 +264,7 @@ function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): Dra
 
   const reason = `${neglectNote}${confidenceNote} ${science.whyItWorks}${personalNote}`.trim();
 
-  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending" };
+  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: recommendedSkill };
 }
 
 type StudyCategory = "reading" | "assignment" | "exam";
@@ -482,7 +482,7 @@ function studySuggestion(s: Scored, input: PlannerInput, lighter: boolean, task?
     ? `${selectionReason} Recent sessions average ${stats.avgDurationMin} min.`
     : selectionReason;
 
-  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending" };
+  return { date: input.date, category_id: s.cat.id, text, reason, est_minutes: est, status: "pending", session_type: sessionType };
 }
 
 function suggestionText(s: Scored, input: PlannerInput, lighter: boolean): DraftSuggestion {
@@ -505,7 +505,7 @@ function suggestionText(s: Scored, input: PlannerInput, lighter: boolean): Draft
     const reason = s.reasonBits.length
       ? `Suggested because ${s.reasonBits.slice(0, 2).join(" and ")}.`
       : `A balanced choice to keep ${cat.name} ticking along.`;
-    return { date: input.date, category_id: cat.id, text, reason, est_minutes: 30, status: "pending" };
+    return { date: input.date, category_id: cat.id, text, reason, est_minutes: 30, status: "pending", session_type: "Session" };
   }
   if (cat.name === "Finances" || meta?.review_frequency) {
     const targetStr = meta?.savings_target ? ` — target: $${meta.savings_target}` : "";
@@ -514,7 +514,7 @@ function suggestionText(s: Scored, input: PlannerInput, lighter: boolean): Draft
     const reason = s.reasonBits.length
       ? `Suggested because ${s.reasonBits.slice(0, 2).join(" and ")}.`
       : `A balanced choice to keep ${cat.name} ticking along.`;
-    return { date: input.date, category_id: cat.id, text, reason, est_minutes: est, status: "pending" };
+    return { date: input.date, category_id: cat.id, text, reason, est_minutes: est, status: "pending", session_type: "Session" };
   }
 
   // For domains with library templates (running, swimming, generic, custom): use resolver.
@@ -538,7 +538,7 @@ function suggestionText(s: Scored, input: PlannerInput, lighter: boolean): Draft
     const reason = s.reasonBits.length
       ? `Suggested because ${s.reasonBits.slice(0, 2).join(" and ")}. ${science.whyItWorks}${successNote}`.trim()
       : `${science.whyItWorks}${successNote}`.trim();
-    return { date: input.date, category_id: cat.id, text, reason, est_minutes: est, status: "pending" };
+    return { date: input.date, category_id: cat.id, text, reason, est_minutes: est, status: "pending", session_type: resolvedType };
   }
 
   // True fallback for categories with no domain templates (finance-like custom cats, etc.).
@@ -559,7 +559,7 @@ function suggestionText(s: Scored, input: PlannerInput, lighter: boolean): Draft
   const reason = s.reasonBits.length
     ? `Suggested because ${s.reasonBits.slice(0, 2).join(" and ")}.${successNote}`
     : `A balanced choice to keep ${cat.name} ticking along.${successNote}`;
-  return { date: input.date, category_id: cat.id, text, reason, est_minutes: est, status: "pending" };
+  return { date: input.date, category_id: cat.id, text, reason, est_minutes: est, status: "pending", session_type: "Session" };
 }
 
 export function buildPlan(input: PlannerInput): DraftSuggestion[] {

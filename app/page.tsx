@@ -7,7 +7,9 @@ import {
   useCategories,
   useCalendarBlocks,
   useCheckin,
+  useCreateSession,
   useMetrics,
+  useRemoveSession,
   useSettings,
   useSessions,
   useTasks,
@@ -43,7 +45,35 @@ export default function TodayPage() {
     `${today}T23:59:59.999Z`,
   );
   const { data: tasks = [] } = useTasks();
+  const createSession = useCreateSession();
+  const removeSession = useRemoveSession();
   const [logCat, setLogCat] = useState<Category | null>(null);
+
+  function blockDoneSession(blockId: string) {
+    return sessions.find(
+      (s) =>
+        (s.payload as { block_id?: string; auto_logged?: boolean })?.block_id === blockId &&
+        (s.payload as { auto_logged?: boolean })?.auto_logged === true,
+    );
+  }
+
+  function toggleBlockDone(blockId: string, categoryId: string, startAt: string, endAt: string) {
+    const existing = blockDoneSession(blockId);
+    if (existing) {
+      removeSession.mutate(existing.id);
+    } else {
+      const durationMin = Math.round(
+        (new Date(endAt).getTime() - new Date(startAt).getTime()) / 60_000,
+      );
+      createSession.mutate({
+        category_id: categoryId,
+        date: today,
+        type: "Session",
+        duration_minutes: durationMin > 0 ? durationMin : undefined,
+        payload: { auto_logged: true, block_id: blockId },
+      });
+    }
+  }
 
   // Redirect brand-new users to onboarding. Wait for sessions to load first
   // so existing users without the flag set don't get bounced.
@@ -201,6 +231,22 @@ export default function TodayPage() {
                   </div>
                   {block.category_id && isDeadlineLike(block.title) && (
                     <DeadlineChip block={block} alreadyTasked={alreadyTasked} />
+                  )}
+                  {block.category_id && !isDeadlineLike(block.title) && (
+                    <button
+                      onClick={() =>
+                        toggleBlockDone(block.id, block.category_id!, block.start_at, block.end_at)
+                      }
+                      title={blockDoneSession(block.id) ? "Mark undone" : "Mark done"}
+                      className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold transition-all hover:scale-105 hover:opacity-100"
+                      style={
+                        blockDoneSession(block.id)
+                          ? { background: "#5b8a7222", color: "#3e6b54" }
+                          : { background: "var(--border)", color: "var(--muted)" }
+                      }
+                    >
+                      {blockDoneSession(block.id) ? "✓ done" : "done?"}
+                    </button>
                   )}
                 </div>
               );
