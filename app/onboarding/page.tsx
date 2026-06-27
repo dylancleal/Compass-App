@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   useCategories,
   useCreateCategory,
   useSaveSettings,
+  useSessionTemplates,
   useSettings,
+  useTasks,
 } from "@/lib/queries";
 import { accentOf, PALETTE_KEYS } from "@/lib/palette";
 import CategorySetupSheet from "@/components/CategorySetupSheet";
-import type { Category, CategoryMetadata } from "@/lib/types";
+import { BUILTIN_LIBRARY } from "@/lib/science/library";
+import { buildWeekPreview } from "@/lib/preview";
+import type { AppSettings, Category, CategoryMetadata, SessionTemplate, Task } from "@/lib/types";
 
 // ── Curated starter tiles ─────────────────────────────────────────────────────
 
@@ -172,7 +176,7 @@ function StepSetup({
 
 // ── Step 3 — Connect calendar ─────────────────────────────────────────────────
 
-function StepCalendar({ onFinish }: { onFinish: () => void }) {
+function StepCalendar({ onConnect, onSkip }: { onConnect: () => void; onSkip: () => void }) {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -200,17 +204,98 @@ function StepCalendar({ onFinish }: { onFinish: () => void }) {
         href="/calendar"
         className="block w-full rounded-xl py-3 text-center text-sm font-semibold transition-all hover:brightness-105"
         style={{ background: "var(--primary)", color: "#fffdf9" }}
-        onClick={onFinish}
+        onClick={onConnect}
       >
         Connect calendar →
       </a>
 
       <button
-        onClick={onFinish}
+        onClick={onSkip}
         className="w-full py-2 text-sm"
         style={{ color: "var(--muted)" }}
       >
-        Skip for now — I&apos;ll connect later
+        Skip for now — show me my week preview
+      </button>
+    </div>
+  );
+}
+
+// ── Step 4 — 7-day preview ────────────────────────────────────────────────────
+
+function StepPreview({
+  categories,
+  library,
+  settings,
+  tasks,
+  onFinish,
+}: {
+  categories: Category[];
+  library: SessionTemplate[];
+  settings: AppSettings;
+  tasks: Task[];
+  onFinish: () => void;
+}) {
+  const preview = useMemo(
+    () =>
+      buildWeekPreview({
+        categories,
+        tasks,
+        sessions: [],
+        settings,
+        calendarBlocks: [],
+        library,
+      }),
+    // stable deps — categories/settings won't change during preview display
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold">Here&apos;s what your next 7 days could look like</h1>
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          This adapts as you log sessions — the more you track, the more personal it gets.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {preview.map((day) => (
+          <div
+            key={day.date}
+            className="card p-3.5"
+            style={{ borderLeft: "3px solid var(--primary)" }}
+          >
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--primary)" }}>
+              {day.weekdayLabel}
+            </p>
+            {day.items.length === 0 ? (
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                Breathing room — nothing scheduled.
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {day.items.slice(0, 2).map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <span>{item.icon}</span>
+                    <span className="font-medium">{item.headline}</span>
+                    <span className="ml-auto text-xs" style={{ color: "var(--muted)" }}>
+                      ~{item.estMin} min
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={onFinish}
+        className="w-full rounded-xl py-3 text-sm font-semibold transition-all hover:brightness-105"
+        style={{ background: "var(--primary)", color: "#fffdf9" }}
+      >
+        Start day 1 →
       </button>
     </div>
   );
@@ -218,11 +303,14 @@ function StepCalendar({ onFinish }: { onFinish: () => void }) {
 
 // ── Main orchestrator ─────────────────────────────────────────────────────────
 
-type Step = "pick" | "setup" | "calendar";
+type Step = "pick" | "setup" | "calendar" | "preview";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { data: existingCategories = [] } = useCategories();
+  const { data: existingCategories = [], data: allCategories = [] } = useCategories();
+  const { data: tasks = [] } = useTasks();
+  const { data: templates } = useSessionTemplates();
+  const library = templates ?? BUILTIN_LIBRARY;
   const createCategory = useCreateCategory();
   const saveSettings = useSaveSettings();
   const { data: settings } = useSettings();
@@ -276,6 +364,10 @@ export default function OnboardingPage() {
     }
   }
 
+  function handleCalendarSkip() {
+    setStep("preview");
+  }
+
   async function handleFinish() {
     await new Promise<void>((resolve) => {
       saveSettings.mutate(
@@ -314,10 +406,22 @@ export default function OnboardingPage() {
 
         {step === "setup" && createdCategories.length === 0 && (
           // Nothing to set up — skip straight to calendar
-          <StepCalendar onFinish={handleFinish} />
+          <StepCalendar onConnect={handleFinish} onSkip={handleCalendarSkip} />
         )}
 
-        {step === "calendar" && <StepCalendar onFinish={handleFinish} />}
+        {step === "calendar" && (
+          <StepCalendar onConnect={handleFinish} onSkip={handleCalendarSkip} />
+        )}
+
+        {step === "preview" && settings && (
+          <StepPreview
+            categories={allCategories}
+            library={library}
+            settings={settings}
+            tasks={tasks}
+            onFinish={handleFinish}
+          />
+        )}
       </div>
     </div>
   );

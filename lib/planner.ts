@@ -1,6 +1,7 @@
 import type {
   AppSettings,
   CalendarBlock,
+  Capacity,
   Category,
   Checkin,
   Session,
@@ -24,6 +25,7 @@ import { getPersonalStats, blendedDuration } from "@/lib/personalStats";
 export interface PlannerInput {
   date: string;
   checkin?: Checkin;
+  assume?: { capacity: Capacity; mental: number; uni_readiness: number };
   categories: Category[];
   tasks: Task[];
   sessions: Session[];
@@ -93,8 +95,8 @@ interface Scored {
 
 export function scoreCategories(input: PlannerInput): Scored[] {
   const w = input.settings.plannerWeights;
-  const uniReadiness = input.checkin?.uni_readiness ?? 3;
-  const mental = input.checkin?.mental ?? 3;
+  const uniReadiness = input.checkin?.uni_readiness ?? input.assume?.uni_readiness ?? 3;
+  const mental = input.checkin?.mental ?? input.assume?.mental ?? 3;
 
   return input.categories
     .filter((c) => c.active)
@@ -103,9 +105,11 @@ export function scoreCategories(input: PlannerInput): Scored[] {
 
       // Neglect: days since last activity, normalised to ~2 weeks.
       const last = lastActivity(cat, input);
+      const isFresh = !last; // no sessions and no completed tasks ever
       const sinceDays = last ? daysBetween(last, input.date) : 14;
       const neglect = Math.min(sinceDays, 14) / 14;
-      if (sinceDays >= 5) reasonBits.push(`it's been ${sinceDays} days`);
+      if (isFresh) reasonBits.push("starting fresh");
+      else if (sinceDays >= 5) reasonBits.push(`it's been ${sinceDays} days`);
 
       // Deadline urgency from the nearest open task.
       const task = nearestDueTask(cat, input);
@@ -170,7 +174,7 @@ function gymSuggestion(s: Scored, input: PlannerInput, lighter: boolean): DraftS
   const nextType = lighter ? "Recovery" : getNextGymType(lastSession?.type ?? "");
   const { sessionType, science } = resolveSession(input.library, "gym", nextType, { experience });
   const stats = getPersonalStats(catSessions, s.cat.id);
-  const mental = input.checkin?.mental ?? 3;
+  const mental = input.checkin?.mental ?? input.assume?.mental ?? 3;
   const est = blendedDuration(science.durationMin, stats, mental);
 
   const planLines = science.plan.map((p) => `· ${p}`).join("\n");
@@ -179,7 +183,10 @@ function gymSuggestion(s: Scored, input: PlannerInput, lighter: boolean): DraftS
   const personalNote = stats.hasEnoughData
     ? ` Your recent sessions average ${stats.avgDurationMin} min — blended in.`
     : "";
-  const reasonBase = s.reasonBits.length
+  const isFreshGym = catSessions.length === 0;
+  const reasonBase = isFreshGym
+    ? "A great place to start — here's your first session plan."
+    : s.reasonBits.length
     ? `Suggested because ${s.reasonBits.slice(0, 2).join(" and ")}.`
     : `Keeping your gym momentum going.`;
   const reason = `${reasonBase} ${science.whyItWorks}${personalNote}`.trim();
@@ -190,7 +197,7 @@ function gymSuggestion(s: Scored, input: PlannerInput, lighter: boolean): DraftS
 function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): DraftSuggestion {
   const catSessions = input.sessions.filter((sess) => sess.category_id === s.cat.id);
   const stats = getPersonalStats(catSessions, s.cat.id);
-  const mental = input.checkin?.mental ?? 3;
+  const mental = input.checkin?.mental ?? input.assume?.mental ?? 3;
 
   // Low-readiness day → suggest a Match (fun, no technical pressure) or rest.
   if (lighter) {
@@ -240,7 +247,10 @@ function tennisSuggestion(s: Scored, input: PlannerInput, lighter: boolean): Dra
   const planLines = science.plan.map((p) => `· ${p}`).join("\n");
   const text = `${recommendedSkill} focus — ~${est} min\n${planLines}`;
 
-  const neglectNote = meta.daysSince >= 7
+  const isNewTennis = catSessions.length === 0;
+  const neglectNote = isNewTennis
+    ? `A great place to start — let's begin with your ${recommendedSkill.toLowerCase()}.`
+    : meta.daysSince >= 7
     ? `You haven't worked on your ${recommendedSkill.toLowerCase()} in ${meta.daysSince} days.`
     : s.reasonBits.length
     ? `Suggested because ${s.reasonBits.slice(0, 2).join(" and ")}.`
@@ -340,8 +350,8 @@ function deadlineUrgencyReason(
 function studySuggestion(s: Scored, input: PlannerInput, lighter: boolean, task?: Task): DraftSuggestion {
   const catSessions = input.sessions.filter((sess) => sess.category_id === s.cat.id);
   const sortedSessions = [...catSessions].sort((a, b) => (b.date > a.date ? 1 : -1));
-  const mental = input.checkin?.mental ?? 3;
-  const cap = input.checkin?.capacity ?? "medium";
+  const mental = input.checkin?.mental ?? input.assume?.mental ?? 3;
+  const cap = input.checkin?.capacity ?? input.assume?.capacity ?? "medium";
   const stats = getPersonalStats(catSessions, s.cat.id);
   const momentum = studyMomentum(catSessions, input.date);
   const lowWellbeing = mental <= 2 || cap === "light";
@@ -482,8 +492,8 @@ function suggestionText(s: Scored, input: PlannerInput, lighter: boolean): Draft
   if (cat.name === "Tennis") return tennisSuggestion(s, input, lighter);
   if (cat.name === "Uni work") return studySuggestion(s, input, lighter, task);
 
-  const cap = input.checkin?.capacity ?? "medium";
-  const mental = input.checkin?.mental ?? 3;
+  const cap = input.checkin?.capacity ?? input.assume?.capacity ?? "medium";
+  const mental = input.checkin?.mental ?? input.assume?.mental ?? 3;
   const block = lighter ? 45 : cap === "big" ? 90 : 60;
   const meta = cat.metadata;
   const domain = detectDomain(cat.name);
@@ -553,9 +563,9 @@ function suggestionText(s: Scored, input: PlannerInput, lighter: boolean): Draft
 }
 
 export function buildPlan(input: PlannerInput): DraftSuggestion[] {
-  const cap = input.checkin?.capacity ?? "medium";
-  const mental = input.checkin?.mental ?? 3;
-  const uniReadiness = input.checkin?.uni_readiness ?? 3;
+  const cap = input.checkin?.capacity ?? input.assume?.capacity ?? "medium";
+  const mental = input.checkin?.mental ?? input.assume?.mental ?? 3;
+  const uniReadiness = input.checkin?.uni_readiness ?? input.assume?.uni_readiness ?? 3;
   const lowReadiness = mental <= 2 || uniReadiness <= 2 || cap === "light";
 
   const budget = CAPACITY_BUDGET[cap];
