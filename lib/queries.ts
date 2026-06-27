@@ -213,4 +213,26 @@ export const useUpdateCalendarConnection = () =>
 export const useRemoveCalendarConnection = () =>
   useInvalidatingMutation((id: string) => db.removeCalendarConnection(id), [keys.calendarConnections]);
 
+export const useGoogleSync = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (connectionId: string) => {
+      const res = await fetch("/api/calendar/google-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? `Sync failed (${res.status})`);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.calendarBlocks });
+      qc.invalidateQueries({ queryKey: keys.calendarConnections });
+    },
+  });
+};
+
 export { keys as queryKeys };

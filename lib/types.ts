@@ -120,10 +120,12 @@ export interface CalendarConnection {
   id: ID;
   provider: "google" | "microsoft" | "apple" | "ics";
   label: string;
-  ics_url?: string; // Phase 2
+  ics_url?: string;
   color?: string;
   enabled: boolean;
   last_synced_at?: string;
+  account_email?: string;  // OAuth connections only
+  needs_reauth?: boolean;  // true when refresh token was revoked
   created_at: string;
 }
 
