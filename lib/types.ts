@@ -113,6 +113,7 @@ export interface Suggestion {
   reason: string;
   est_minutes?: number;
   session_type?: string; // carried from planner for auto-logging (C1)
+  personal_insight?: string; // personalisation note shown distinctly in the card
   status: SuggestionStatus;
   created_at: string;
 }

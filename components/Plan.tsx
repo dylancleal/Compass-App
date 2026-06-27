@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useCalendarBlocks,
   useCategories,
@@ -18,7 +18,8 @@ import {
 import { buildPlan } from "@/lib/planner";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import { inferDurationFromBlocks } from "@/lib/sessionInfer";
-import { todayKey } from "@/lib/date";
+import { findFreeSlot } from "@/lib/timeSlot";
+import { addDays, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import type { Suggestion, Category } from "@/lib/types";
 import { Button, Pill } from "./ui";
@@ -40,6 +41,33 @@ export default function Plan() {
     `${today}T00:00:00.000Z`,
     `${today}T23:59:59.999Z`,
   );
+
+  const yesterday = addDays(today, -1);
+  const { data: yesterdaySuggestions = [] } = useSuggestions(yesterday);
+  const updateYesterday = useUpdateSuggestion(yesterday);
+
+  const carryOver = useMemo(
+    () =>
+      yesterdaySuggestions.filter(
+        (s) => (s.est_minutes ?? 0) > 0 && s.category_id && s.status === "pending",
+      ),
+    [yesterdaySuggestions],
+  );
+
+  // Pre-compute a suggested time slot for each actionable suggestion based on today's calendar.
+  const slotMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const usedEnds: number[] = [];
+    for (const s of suggestions.filter((s) => (s.est_minutes ?? 0) > 0)) {
+      const slot = findFreeSlot(
+        calendarBlocks.filter(() => true),
+        s.est_minutes ?? 45,
+      );
+      if (slot) map.set(s.id, slot);
+    }
+    return map;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestions.map((s) => s.id).join(), calendarBlocks.length]);
 
   const save = useSaveSuggestions();
   const update = useUpdateSuggestion(today);
@@ -131,6 +159,52 @@ export default function Plan() {
     <section className="space-y-3">
       {celebrating && <ConfettiRain />}
 
+      {/* Carry-over from yesterday */}
+      {carryOver.length > 0 && (
+        <div
+          className="rounded-2xl p-3.5 space-y-2"
+          style={{ background: "var(--surface)", border: "1px dashed var(--border)" }}
+        >
+          <p className="text-xs font-semibold text-[var(--muted)]">From yesterday</p>
+          {carryOver.map((s) => {
+            const cat = categories.find((c) => c.id === s.category_id);
+            const accent = cat ? accentOf(cat.color).accent : "#7d7c6e";
+            return (
+              <div key={s.id} className="flex items-center gap-2 text-sm">
+                <span>{cat?.icon ?? "📋"}</span>
+                <span className="flex-1 truncate text-[var(--muted)]">
+                  {s.text.split("\n")[0]}
+                </span>
+                <button
+                  onClick={() => {
+                    updateYesterday.mutate({ id: s.id, patch: { status: "dismissed" } });
+                    createSession.mutate({
+                      category_id: s.category_id!,
+                      date: yesterday,
+                      type: s.session_type ?? "Session",
+                      duration_minutes: s.est_minutes,
+                      payload: { auto_logged: true, suggestion_id: s.id },
+                    });
+                  }}
+                  className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold hover:opacity-100"
+                  style={{ background: accent + "22", color: accent }}
+                >
+                  ✓ done
+                </button>
+                <button
+                  onClick={() =>
+                    updateYesterday.mutate({ id: s.id, patch: { status: "dismissed" } })
+                  }
+                  className="shrink-0 text-xs text-[var(--muted)] hover:opacity-100"
+                >
+                  ✕
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[var(--muted)]">Your day, gently planned</h2>
         <div className="flex items-center gap-3">
@@ -176,6 +250,7 @@ export default function Plan() {
               category={cat}
               accent={accent}
               isNext={s.id === nextId}
+              suggestedTime={slotMap.get(s.id)}
               onToggle={(n) => handleToggle(s, n)}
               onSnooze={() => update.mutate({ id: s.id, patch: { status: "snoozed" } })}
               onDismiss={() => update.mutate({ id: s.id, patch: { status: "dismissed" } })}
@@ -207,6 +282,7 @@ function SuggestionCard({
   category: cat,
   accent,
   isNext = false,
+  suggestedTime,
   onToggle,
   onSnooze,
   onDismiss,
@@ -215,6 +291,7 @@ function SuggestionCard({
   category?: Category;
   accent: string;
   isNext?: boolean;
+  suggestedTime?: string;
   onToggle: (next: boolean) => void;
   onSnooze: () => void;
   onDismiss: () => void;
@@ -270,6 +347,12 @@ function SuggestionCard({
               </Pill>
             )}
             {s.est_minutes ? <Pill color="#7d7c6e">~{s.est_minutes} min</Pill> : null}
+            {suggestedTime && !accepted && (
+              <Pill color="#7a9bb5">🕐 {suggestedTime}</Pill>
+            )}
+            {s.personal_insight && (
+              <Pill color="#5b8a72">{s.personal_insight}</Pill>
+            )}
           </div>
 
           {steps.length > 0 && (
