@@ -5,9 +5,9 @@ import { blockBox, dayWindowFor } from "@/lib/schedule";
 import { addDays, todayKey } from "@/lib/date";
 import BlockChip from "./BlockChip";
 
-const HOUR_H = 48; // px per hour row
+const HOUR_H = 64; // px per hour row
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7am – 8pm
-const TOTAL_H = HOURS.length * HOUR_H; // 672px — full column height
+const TOTAL_H = HOURS.length * HOUR_H; // 896px — full column height
 const DAY_WIN = { startHour: 7, endHour: 21 };
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
