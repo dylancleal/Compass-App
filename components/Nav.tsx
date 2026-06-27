@@ -19,6 +19,7 @@ function isActive(pathname: string, href: string) {
 
 export default function Nav() {
   const pathname = usePathname();
+  if (pathname.startsWith("/onboarding")) return null;
 
   return (
     <header

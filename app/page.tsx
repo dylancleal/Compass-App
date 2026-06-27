@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useCategories,
   useCalendarBlocks,
@@ -30,7 +31,15 @@ function fmtTime(iso: string) {
 
 export default function TodayPage() {
   const today = todayKey();
+  const router = useRouter();
   const { data: settings } = useSettings();
+
+  // Redirect new users to onboarding once settings load
+  useEffect(() => {
+    if (settings && !settings.onboarding_completed_at) {
+      router.replace("/onboarding");
+    }
+  }, [settings, router]);
   const { data: checkin } = useCheckin(today);
   const { data: categories = [] } = useCategories();
   const { data: metrics = [] } = useMetrics();
