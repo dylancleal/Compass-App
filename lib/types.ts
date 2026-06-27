@@ -167,6 +167,39 @@ export interface PlannerWeights {
   balance: number;
 }
 
+// ── Science library (Phase 4) ─────────────────────────────────────────────────
+
+export interface SessionVariant {
+  when: {
+    field: "experience" | "level" | "deadlineDays" | "lowWellbeing";
+    op: "eq" | "lt" | "lte" | "gt" | "gte";
+    value: string | number | boolean;
+  };
+  patch: {
+    sessionTypeOverride?: string;
+    durationDelta?: number;
+    durationFactor?: number;
+    planPrepend?: string[];
+    planAppend?: string[];
+    planReplace?: string[];
+    whyAppend?: string;
+    whyReplace?: string;
+  };
+}
+
+export interface SessionTemplate {
+  id: ID;
+  domain: string;
+  session_type: string;
+  duration_min: number;
+  plan: string[];
+  cite: string;
+  why: string;
+  variants?: SessionVariant[];
+  is_builtin: boolean;
+  weekly_default?: number;
+}
+
 export interface AppSettings {
   greetingName: string;
   weeklySchedule: WeeklySchedule;
