@@ -59,6 +59,24 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     else setSent(true);
   }
 
+  const isDev = process.env.NODE_ENV === "development";
+
+  async function devLogin() {
+    try {
+      const res = await fetch("/api/dev-auth");
+      const { token, email, error } = await res.json();
+      if (error) { setErr(error); return; }
+      const { error: verifyErr } = await getSupabase()!.auth.verifyOtp({
+        email,
+        token,
+        type: "magiclink",
+      });
+      if (verifyErr) setErr(verifyErr.message);
+    } catch (e) {
+      setErr(String(e));
+    }
+  }
+
   return (
     <div className="grid min-h-dvh place-items-center bg-[var(--background)] p-4">
       <div className="card w-full max-w-sm space-y-5 p-6">
@@ -75,6 +93,16 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             Sign in with a magic link — no password needed.
           </p>
         </div>
+
+        {isDev && (
+          <button
+            onClick={devLogin}
+            className="w-full rounded-xl py-2 text-xs font-semibold transition-opacity hover:opacity-80"
+            style={{ background: "var(--border)", color: "var(--muted)" }}
+          >
+            ⚡ Dev login (preview only)
+          </button>
+        )}
 
         {sent ? (
           <div className="space-y-1.5 rounded-xl p-4 text-sm" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
