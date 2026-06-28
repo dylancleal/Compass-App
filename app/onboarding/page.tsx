@@ -354,7 +354,14 @@ export default function OnboardingPage() {
       ...selected,
       ...(customName ? [customName as TileName] : []),
     ]);
-    const allForSetup = fresh.filter((c) => selectedNames.has(c.name as TileName));
+    // Dedup by name — DB may have duplicates if seeding raced with mutations.
+    const seen = new Set<string>();
+    const allForSetup = fresh.filter((c) => {
+      if (!selectedNames.has(c.name as TileName)) return false;
+      if (seen.has(c.name)) return false;
+      seen.add(c.name);
+      return true;
+    });
 
     setCreatedCategories(allForSetup);
     setSetupIndex(0);
