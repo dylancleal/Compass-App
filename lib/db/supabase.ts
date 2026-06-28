@@ -68,7 +68,15 @@ export class SupabaseDB implements CompassDB {
 
   async listCategories(): Promise<Category[]> {
     const { data } = await sb().from("categories").select("*").order("order");
-    return (data ?? []) as Category[];
+    const all = (data ?? []) as Category[];
+    // Deduplicate by name — DB may have duplicate rows if seeding and onboarding mutations
+    // both ran before the idempotency fix. Keep the first (lowest order) row per name.
+    const seen = new Set<string>();
+    return all.filter((c) => {
+      if (seen.has(c.name)) return false;
+      seen.add(c.name);
+      return true;
+    });
   }
   async createCategory(input: Omit<Category, "id" | "order">): Promise<Category> {
     const { count } = await sb().from("categories").select("id", { count: "exact", head: true });
