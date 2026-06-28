@@ -368,11 +368,18 @@ export default function OnboardingPage() {
     setStep("setup");
   }
 
-  function handleSetupNext() {
+  async function handleSetupNext() {
     const next = setupIndex + 1;
     if (next < createdCategories.length) {
       setSetupIndex(next);
     } else {
+      // Refresh categories so the preview gets the metadata saved during setup
+      // (weekly_goal, tennis_weekly_goal, etc.) — createdCategories was set
+      // before any setup mutations ran and doesn't have the updated values.
+      await qc.refetchQueries({ queryKey: queryKeys.categories });
+      const fresh = qc.getQueryData<Category[]>(queryKeys.categories) ?? [];
+      const ids = new Set(createdCategories.map((c) => c.id));
+      setCreatedCategories(fresh.filter((c) => ids.has(c.id)));
       setStep("calendar");
     }
   }
