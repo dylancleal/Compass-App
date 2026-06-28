@@ -165,6 +165,7 @@ function StepSetup({
         </div>
       </div>
       <CategorySetupSheet
+        key={cat.id}
         category={cat}
         mode="inline"
         onSave={onNext}
@@ -344,9 +345,11 @@ export default function OnboardingPage() {
       }
     }
 
-    // Also include existing categories that were selected (they still need setup)
-    const existingSelected = existingCategories.filter((c) =>
-      selected.includes(c.name as TileName),
+    // Also include existing categories that were selected (they still need setup),
+    // but dedup against freshly created ones to avoid showing the same category twice.
+    const createdIds = new Set(created.map((c) => c.id));
+    const existingSelected = existingCategories.filter(
+      (c) => selected.includes(c.name as TileName) && !createdIds.has(c.id),
     );
     const allForSetup = [...existingSelected, ...created];
 
