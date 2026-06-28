@@ -428,7 +428,7 @@ export default function OnboardingPage() {
 
         {step === "preview" && settings && (
           <StepPreview
-            categories={allCategories}
+            categories={createdCategories}
             library={library}
             settings={settings}
             tasks={tasks}
