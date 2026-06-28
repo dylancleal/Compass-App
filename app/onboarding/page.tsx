@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   useCategories,
@@ -9,6 +10,7 @@ import {
   useSessionTemplates,
   useSettings,
   useTasks,
+  queryKeys,
 } from "@/lib/queries";
 import { accentOf, PALETTE_KEYS } from "@/lib/palette";
 import CategorySetupSheet from "@/components/CategorySetupSheet";
@@ -308,6 +310,7 @@ type Step = "pick" | "setup" | "calendar" | "preview";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const { data: existingCategories = [], data: allCategories = [] } = useCategories();
   const { data: tasks = [] } = useTasks();
   const { data: templates } = useSessionTemplates();
@@ -321,7 +324,7 @@ export default function OnboardingPage() {
   const [setupIndex, setSetupIndex] = useState(0);
 
   async function handlePick(selected: TileName[], customName?: string) {
-    // Create categories that don't already exist
+    // Create categories that don't already exist (stale check — may miss seeded ones)
     const existingNames = new Set(existingCategories.map((c) => c.name));
     const toCreate = [
       ...TILES.filter((t) => selected.includes(t.name) && !existingNames.has(t.name)),
@@ -330,28 +333,28 @@ export default function OnboardingPage() {
         : []),
     ];
 
-    const created: Category[] = [];
     for (const tile of toCreate) {
       try {
-        const cat = await new Promise<Category>((resolve, reject) => {
+        await new Promise<Category>((resolve, reject) => {
           createCategory.mutate(
             { name: tile.name, icon: tile.icon, color: tile.color, active: true },
             { onSuccess: resolve, onError: reject },
           );
         });
-        created.push(cat);
       } catch {
-        // continue — don't block onboarding on a single category failure
+        // continue — category may already exist (e.g. created by seeding)
       }
     }
 
-    // Also include existing categories that were selected (they still need setup),
-    // but dedup against freshly created ones to avoid showing the same category twice.
-    const createdIds = new Set(created.map((c) => c.id));
-    const existingSelected = existingCategories.filter(
-      (c) => selected.includes(c.name as TileName) && !createdIds.has(c.id),
-    );
-    const allForSetup = [...existingSelected, ...created];
+    // Refetch after mutations to get the definitive list — handles races between
+    // ensureSeeded() and these mutations (both may try to create the same category).
+    await qc.refetchQueries({ queryKey: queryKeys.categories });
+    const fresh = (qc.getQueryData<Category[]>(queryKeys.categories) ?? []);
+    const selectedNames = new Set([
+      ...selected,
+      ...(customName ? [customName as TileName] : []),
+    ]);
+    const allForSetup = fresh.filter((c) => selectedNames.has(c.name as TileName));
 
     setCreatedCategories(allForSetup);
     setSetupIndex(0);

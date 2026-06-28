@@ -72,7 +72,9 @@ export class SupabaseDB implements CompassDB {
   }
   async createCategory(input: Omit<Category, "id" | "order">): Promise<Category> {
     const { count } = await sb().from("categories").select("id", { count: "exact", head: true });
-    const { data } = await sb().from("categories").insert({ ...input, order: count ?? 0 }).select().single();
+    const { data, error } = await sb().from("categories").insert({ ...input, order: count ?? 0 }).select().single();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error("createCategory returned no data");
     return data as Category;
   }
   async updateCategory(id: string, patch: Partial<Category>): Promise<Category> {
