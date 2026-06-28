@@ -208,4 +208,5 @@ export interface AppSettings {
   plannerWeights: PlannerWeights;
   weeklyTargets?: Record<string, number>; // category_id → sessions/week goal
   onboarding_completed_at?: string; // ISO datetime — null means new user
+  tour_completed_at?: string;       // ISO datetime — unset means intro tour hasn't been seen
 }

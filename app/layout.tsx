@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import Nav from "@/components/Nav";
+import IntroTour from "@/components/IntroTour";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="mx-auto w-full max-w-2xl px-4 pt-20 pb-10">
             {children}
           </main>
+          <IntroTour />
         </Providers>
       </body>
     </html>
