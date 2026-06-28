@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import IntroTour from "@/components/IntroTour";
 import {
   useCategories,
   useCreateCategory,
@@ -39,6 +40,7 @@ export default function SettingsPage() {
   const saveSettings = useSaveSettings();
 
   const [newName, setNewName] = useState("");
+  const [tourOpen, setTourOpen] = useState(false);
 
   function move(cat: Category, dir: -1 | 1) {
     const ordered = [...categories].sort((a, b) => a.order - b.order);
@@ -235,6 +237,30 @@ export default function SettingsPage() {
           <ConnectionsPanel />
         </div>
       </section>
+
+      {/* Help */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-[var(--muted)]">Help</h2>
+        <div className="card p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">How Compass works</p>
+              <p className="text-xs text-[var(--muted)]">Replay the intro tour any time.</p>
+            </div>
+            <button
+              onClick={() => setTourOpen(true)}
+              className="rounded-xl px-3 py-2 text-xs font-semibold transition-all hover:brightness-105"
+              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+            >
+              Replay tour
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {tourOpen && (
+        <IntroTour forceOpen onClose={() => setTourOpen(false)} />
+      )}
 
       {/* Integrations */}
       <section className="space-y-3">
