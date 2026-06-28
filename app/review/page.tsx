@@ -105,7 +105,7 @@ export default function ReviewPage() {
       </header>
 
       {/* Headline numbers */}
-      <div className="grid grid-cols-3 gap-3">
+      <div data-tour="review-stats" className="grid grid-cols-3 gap-3">
         <div className="card p-4 text-center">
           <p className="text-2xl font-bold" style={{ color: "var(--primary)" }}>
             {thisWeek.length}

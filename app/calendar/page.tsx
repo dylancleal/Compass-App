@@ -281,6 +281,7 @@ function CalendarInner() {
 
       {/* Calendar connections */}
       <div
+        data-tour="calendar-connect"
         className="card rounded-2xl p-4"
         style={{ borderTop: "1px solid var(--border)" }}
       >

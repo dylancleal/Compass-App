@@ -169,7 +169,9 @@ export default function TodayPage() {
       )}
 
       {/* Personalised plan */}
-      <Plan />
+      <div data-tour="suggestions">
+        <Plan />
+      </div>
 
       {/* Weekly goals — glanceable here, tap through to Trends for detail */}
       {activeCats.length > 0 && (

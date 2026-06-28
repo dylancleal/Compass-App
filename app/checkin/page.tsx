@@ -137,7 +137,7 @@ export default function CheckinPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
+    <div className="mx-auto max-w-md space-y-6" data-tour="checkin-card">
       <header className="space-y-1">
         <p className="text-sm text-[var(--muted)]">{greeting(settings?.greetingName ?? "")}</p>
         <h1 className="text-2xl font-bold">A quick check-in</h1>
