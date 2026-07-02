@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useCheckin, useSettings, useUpsertCheckin } from "@/lib/queries";
+import { useCheckin, useCheckins, useSettings, useUpsertCheckin } from "@/lib/queries";
 import { dayIndex, todayKey, greeting } from "@/lib/date";
 import type { Capacity } from "@/lib/types";
 import { Button } from "@/components/ui";
@@ -89,7 +89,11 @@ export default function CheckinPage() {
   const today = todayKey();
   const { data: settings } = useSettings();
   const { data: existing } = useCheckin(today);
+  const { data: allCheckins = [] } = useCheckins();
   const upsert = useUpsertCheckin();
+
+  // Brand-new user landing here straight from onboarding — frame it as day one.
+  const isFirstEver = allCheckins.length === 0 && !existing;
 
   const di = dayIndex(today);
   const isGym = settings?.weeklySchedule.gym.includes(di as never) ?? false;
@@ -132,7 +136,17 @@ export default function CheckinPage() {
         note: note || undefined,
         extra: { ...extra, note },
       },
-      { onSuccess: () => router.push("/") },
+      {
+        onSuccess: () => {
+          // Signal the Today page to play the plan-reveal moment.
+          try {
+            sessionStorage.setItem("compass:reveal", "1");
+          } catch {
+            /* sessionStorage may be unavailable — reveal just won't play */
+          }
+          router.push("/");
+        },
+      },
     );
   }
 
@@ -140,8 +154,12 @@ export default function CheckinPage() {
     <div className="mx-auto max-w-md space-y-6" data-tour="checkin-card">
       <header className="space-y-1">
         <p className="text-sm text-[var(--muted)]">{greeting(settings?.greetingName ?? "")}</p>
-        <h1 className="text-2xl font-bold">A quick check-in</h1>
-        <p className="text-sm text-[var(--muted)]">Takes about 30 seconds. No wrong answers.</p>
+        <h1 className="text-2xl font-bold">{isFirstEver ? "Day 1 — let's set your baseline" : "A quick check-in"}</h1>
+        <p className="text-sm text-[var(--muted)]">
+          {isFirstEver
+            ? "This first check-in shapes today's plan — and everything gets more personal from here."
+            : "Takes about 30 seconds. No wrong answers."}
+        </p>
       </header>
 
       {/* progress dots */}
