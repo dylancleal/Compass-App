@@ -17,6 +17,7 @@ import {
 import { findConflictPairs, findConflictGroups } from "@/lib/schedule";
 import { greeting, prettyDate, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
+import { useTilt } from "@/lib/useTilt";
 import type { Category } from "@/lib/types";
 import Plan from "@/components/Plan";
 import TaskList from "@/components/TaskList";
@@ -48,6 +49,7 @@ export default function TodayPage() {
   const createSession = useCreateSession();
   const removeSession = useRemoveSession();
   const [logCat, setLogCat] = useState<Category | null>(null);
+  const checkinTiltRef = useTilt<HTMLAnchorElement>(!checkin);
 
   function blockDoneSession(blockId: string) {
     return sessions.find(
@@ -128,6 +130,7 @@ export default function TodayPage() {
       {/* Check-in entry / summary */}
       {!checkin ? (
         <Link
+          ref={checkinTiltRef}
           href="/checkin"
           className="card card-interactive animate-pop block p-5 hover:brightness-[1.03]"
           style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}

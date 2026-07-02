@@ -7,7 +7,7 @@ import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import { buildWeekPreview } from "@/lib/preview";
 import { addDays, daysBetween, prettyDate, startOfWeek, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
-import { AnimatedBar } from "@/components/ui";
+import { AnimatedBar, IconChip } from "@/components/ui";
 import { useCountUp } from "@/lib/useCountUp";
 
 function fmtMin(min: number) {
@@ -156,7 +156,7 @@ export default function ReviewPage() {
                   className="card animate-fade-slide flex items-center gap-3 px-4 py-3"
                   style={{ borderLeft: `3px solid ${accent}`, animationDelay: `${i * 60}ms` }}
                 >
-                  <span className="text-xl">{cat.icon}</span>
+                  <IconChip emoji={cat.icon} color={accent} size={40} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-semibold">{cat.name}</p>

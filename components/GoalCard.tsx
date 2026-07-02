@@ -6,7 +6,7 @@ import { todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import { defaultWeeklyTarget, weeklyGoalProgress, type GoalStatus } from "@/lib/stats";
 import type { Category } from "@/lib/types";
-import { AnimatedBar } from "@/components/ui";
+import { AnimatedBar, ProgressRing } from "@/components/ui";
 
 const STATUS_META: Record<GoalStatus, { color: string; bg: string; label: string }> = {
   met: { color: "var(--success-text)", bg: "var(--success-soft)", label: "Goal met" },
@@ -64,37 +64,44 @@ export function GoalCard({ category }: { category: Category }) {
         </span>
       </div>
 
-      <div className="mb-2 flex items-end justify-between gap-3">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-3xl font-semibold leading-none" style={{ color: accent }}>
-            {done}
-          </span>
-          <span className="text-sm text-[var(--muted)]">of {target} sessions</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setTarget(target - 1)}
-            className="grid h-6 w-6 place-items-center rounded-full border border-[var(--border)] text-[var(--muted)] transition-colors hover:bg-[var(--background)]"
-            aria-label="Lower goal"
-          >
-            −
-          </button>
-          <span className="w-10 text-center text-xs text-[var(--muted)]">goal {target}</span>
-          <button
-            onClick={() => setTarget(target + 1)}
-            className="grid h-6 w-6 place-items-center rounded-full border border-[var(--border)] text-[var(--muted)] transition-colors hover:bg-[var(--background)]"
-            aria-label="Raise goal"
-          >
-            +
-          </button>
+      <div className="flex items-center gap-4">
+        <ProgressRing
+          value={pct / 100}
+          color={status === "behind" ? "var(--warn-text)" : accent}
+          size={78}
+          stroke={8}
+        >
+          <div className="flex flex-col items-center leading-none">
+            <span className="text-xl font-bold" style={{ color: accent }}>
+              {done}
+            </span>
+            <span className="mt-0.5 text-[10px] text-[var(--muted)]">of {target}</span>
+          </div>
+        </ProgressRing>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-xs leading-relaxed text-[var(--muted)]">
+            {line(status, remaining, daysLeft, done)}
+          </p>
+          <div className="mt-2.5 flex items-center gap-1.5">
+            <button
+              onClick={() => setTarget(target - 1)}
+              className="grid h-6 w-6 place-items-center rounded-full border border-[var(--border)] text-[var(--muted)] transition-colors hover:bg-[var(--background)]"
+              aria-label="Lower goal"
+            >
+              −
+            </button>
+            <span className="w-14 text-center text-xs text-[var(--muted)]">goal {target}/wk</span>
+            <button
+              onClick={() => setTarget(target + 1)}
+              className="grid h-6 w-6 place-items-center rounded-full border border-[var(--border)] text-[var(--muted)] transition-colors hover:bg-[var(--background)]"
+              aria-label="Raise goal"
+            >
+              +
+            </button>
+          </div>
         </div>
       </div>
-
-      <div className="mb-2">
-        <AnimatedBar pct={pct} color={status === "behind" ? "var(--warn-text)" : accent} />
-      </div>
-
-      <p className="text-xs leading-relaxed text-[var(--muted)]">{line(status, remaining, daysLeft, done)}</p>
     </div>
   );
 }

@@ -21,6 +21,7 @@ import { inferDurationFromBlocks } from "@/lib/sessionInfer";
 import { findFreeSlot } from "@/lib/timeSlot";
 import { addDays, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
+import { useTilt } from "@/lib/useTilt";
 import type { Suggestion, Category } from "@/lib/types";
 import { Button, Pill } from "./ui";
 import TickCircle from "./TickCircle";
@@ -302,6 +303,7 @@ function SuggestionCard({
   const accepted = s.status === "accepted";
   const [open, setOpen] = useState(false);
   const highlight = isNext && !accepted;
+  const tiltRef = useTilt<HTMLDivElement>(highlight);
 
   // The suggestion text packs a header (and maybe a "Task:" line) followed by
   // "· " bullet steps. Split so the headline stays, the steps tuck away.
@@ -313,11 +315,12 @@ function SuggestionCard({
 
   return (
     <div
+      ref={tiltRef}
       className={`card animate-pop p-4 ${highlight ? "animate-breathe" : ""}`}
       style={{
         borderLeft: `3px solid ${accent}`,
         opacity: accepted ? 0.72 : 1,
-        transition: "opacity 0.3s ease",
+        transition: highlight ? "transform 0.25s ease, opacity 0.3s ease" : "opacity 0.3s ease",
         animationDelay: `${index * 60}ms`,
         ...(highlight
           ? { borderColor: accent, boxShadow: `0 0 0 1.5px ${accent}55` }
