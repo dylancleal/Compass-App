@@ -217,3 +217,53 @@ export function currentStreak(dates: string[]): number {
   }
   return streak;
 }
+
+// Consecutive *prior* full weeks (excluding the in-progress week) where the
+// category hit its weekly target. Powers identity framing ("You train 4×/wk").
+export function weeksGoalHitStreak(
+  sessions: Session[],
+  categoryId: string,
+  target: number,
+  today: string,
+): number {
+  if (target <= 0) return 0;
+  const counts: Record<string, number> = {};
+  for (const s of sessions) {
+    if (s.category_id !== categoryId) continue;
+    const wk = startOfWeek(s.date);
+    counts[wk] = (counts[wk] ?? 0) + 1;
+  }
+  let streak = 0;
+  let wk = addDays(startOfWeek(today), -7); // start from last week
+  for (let i = 0; i < 26; i++) {
+    if ((counts[wk] ?? 0) >= target) {
+      streak++;
+      wk = addDays(wk, -7);
+    } else break;
+  }
+  return streak;
+}
+
+// A streak that survives deliberate rest: a day with no activity doesn't break
+// the run if it was marked a Light day or rated a "Rough" evening. Returns
+// whether any protection was actually used in the current run.
+export function protectedStreak(
+  activeDates: Set<string>,
+  protectedDates: Set<string>,
+  today: string,
+): { streak: number; protectedUsed: boolean } {
+  let streak = 0;
+  let protectedUsed = false;
+  let cursor = today;
+  for (let i = 0; i < 90; i++) {
+    if (activeDates.has(cursor)) {
+      streak++;
+    } else if (protectedDates.has(cursor)) {
+      if (i > 0) protectedUsed = true; // a protected gap keeps the run alive
+    } else if (i > 0) {
+      break;
+    }
+    cursor = addDays(cursor, -1);
+  }
+  return { streak, protectedUsed };
+}
