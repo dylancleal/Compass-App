@@ -27,6 +27,8 @@ import Plan from "@/components/Plan";
 import TaskList from "@/components/TaskList";
 import LogSheet from "@/components/LogSheet";
 import DayArc from "@/components/DayArc";
+import { ParallaxLeaf } from "@/components/decor";
+import { IconChip, QuietLink } from "@/components/ui";
 import { GoalsOverview } from "@/components/GoalCard";
 import DeadlineChip from "@/components/calendar/DeadlineChip";
 import { isDeadlineLike } from "@/lib/categoryMatcher";
@@ -162,7 +164,8 @@ export default function TodayPage() {
   return (
     <div className="space-y-7">
       {/* Header — day-arc + greeting, conflict badge top-right */}
-      <header className="flex items-start justify-between gap-3">
+      <header className="relative flex items-start justify-between gap-3">
+        <ParallaxLeaf />
         <div className="space-y-0.5">
           <p className="text-sm text-[var(--muted)]">{prettyDate(today)}</p>
           <h1 className="text-2xl font-bold">{greeting(settings?.greetingName ?? "")}</h1>
@@ -266,9 +269,7 @@ export default function TodayPage() {
               Mind {checkin.mental}/5 · Uni readiness {checkin.uni_readiness}/5
             </p>
           </div>
-          <Link href="/checkin" className="text-xs text-[var(--muted)] underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105">
-            redo
-          </Link>
+          <QuietLink href="/checkin">redo</QuietLink>
         </div>
       )}
 
@@ -302,9 +303,7 @@ export default function TodayPage() {
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--muted)]">This week&apos;s goals</h2>
-            <Link href="/trends" className="text-xs text-[var(--muted)] underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105">
-              details
-            </Link>
+            <QuietLink href="/trends">details</QuietLink>
           </div>
           <GoalsOverview categories={activeCats} showHeader={false} />
         </section>
@@ -320,10 +319,16 @@ export default function TodayPage() {
               <button
                 key={c.id}
                 onClick={() => setLogCat(c)}
-                className="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium hover:scale-[1.05] hover:opacity-100 hover:shadow-sm"
-                style={{ background: accent.soft, color: accent.text }}
+                className="flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3.5 text-sm font-medium transition-all hover:scale-[1.05] hover:opacity-100"
+                style={{
+                  background: "var(--surface)",
+                  color: accent.text,
+                  border: "1px solid var(--border)",
+                  boxShadow: "inset 0 1px 0 var(--card-highlight), var(--shadow-1)",
+                }}
               >
-                <span>{c.icon}</span> {c.name}
+                <IconChip emoji={c.icon} color={accent.accent} size={26} />
+                {c.name}
               </button>
             );
           })}
@@ -335,12 +340,7 @@ export default function TodayPage() {
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--muted)]">Today&apos;s schedule</h2>
-            <Link
-              href="/calendar"
-              className="text-xs text-[var(--muted)] underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105"
-            >
-              calendar →
-            </Link>
+            <QuietLink href="/calendar">calendar →</QuietLink>
           </div>
           <div className="space-y-1.5">
             {todayBlocks.map((block) => {
@@ -405,9 +405,7 @@ export default function TodayPage() {
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-[var(--muted)]">Quick-tick</h2>
-          <Link href="/categories" className="text-xs text-[var(--muted)] underline transition-all duration-150 hover:text-[var(--foreground)] hover:scale-105">
-            all areas
-          </Link>
+          <QuietLink href="/categories">all areas</QuietLink>
         </div>
         <TaskList
           accent="#5b8a72"
