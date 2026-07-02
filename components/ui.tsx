@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 export function ProgressRing({
   value,
@@ -8,6 +8,7 @@ export function ProgressRing({
   stroke = 7,
   color,
   track = "var(--border)",
+  animate = true,
   children,
 }: {
   value: number; // 0..1
@@ -15,32 +16,89 @@ export function ProgressRing({
   stroke?: number;
   color: string;
   track?: string;
+  animate?: boolean;
   children?: React.ReactNode;
 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const clamped = Math.max(0, Math.min(1, value));
+  const target = Math.max(0, Math.min(1, value));
+  const gid = "ring-" + useId().replace(/[^a-zA-Z0-9]/g, "");
+  const complete = target >= 1;
+
+  // Fill from 0 → target on mount so the arc "draws in".
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!animate || reduced) {
+      setShown(target);
+      return;
+    }
+    const raf = requestAnimationFrame(() => setShown(target));
+    return () => cancelAnimationFrame(raf);
+  }, [target, animate]);
+
   return (
     <div style={{ width: size, height: size }} className="relative grid place-items-center">
       <svg width={size} height={size} className="-rotate-90">
+        <defs>
+          <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" style={{ stopColor: `color-mix(in srgb, ${color} 55%, white)` }} />
+            <stop offset="100%" style={{ stopColor: color }} />
+          </linearGradient>
+        </defs>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill="none"
-          stroke={color}
+          stroke={`url(#${gid})`}
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={c}
-          strokeDashoffset={c * (1 - clamped)}
-          style={{ transition: "stroke-dashoffset 0.6s ease" }}
+          strokeDashoffset={c * (1 - shown)}
+          style={{
+            transition: "stroke-dashoffset 0.9s cubic-bezier(0.22, 1, 0.36, 1)",
+            filter: `drop-shadow(0 1px 3px color-mix(in srgb, ${color} 45%, transparent))`,
+          }}
         />
       </svg>
-      <div className="absolute inset-0 grid place-items-center text-sm font-semibold">
+      <div
+        className={`absolute inset-0 grid place-items-center text-sm font-semibold ${complete ? "animate-check" : ""}`}
+      >
         {children}
       </div>
     </div>
+  );
+}
+
+// A dimensional "squircle" icon holder — soft radial tint of the category colour,
+// inner top highlight + drop shadow so emoji read as raised chips, not flat glyphs.
+export function IconChip({
+  emoji,
+  color,
+  size = 36,
+}: {
+  emoji: string;
+  color: string;
+  size?: number;
+}) {
+  return (
+    <span
+      aria-hidden
+      className="grid shrink-0 place-items-center"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "34%",
+        background: `radial-gradient(circle at 32% 26%, color-mix(in srgb, ${color} 26%, var(--surface)), color-mix(in srgb, ${color} 10%, var(--surface)))`,
+        boxShadow: "inset 0 1px 0 var(--card-highlight), var(--shadow-1)",
+        fontSize: size * 0.5,
+        lineHeight: 1,
+      }}
+    >
+      {emoji}
+    </span>
   );
 }
 
