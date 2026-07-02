@@ -6,11 +6,12 @@ import { todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import { defaultWeeklyTarget, weeklyGoalProgress, type GoalStatus } from "@/lib/stats";
 import type { Category } from "@/lib/types";
+import { AnimatedBar } from "@/components/ui";
 
 const STATUS_META: Record<GoalStatus, { color: string; bg: string; label: string }> = {
-  met: { color: "#0F6E56", bg: "#E1F5EE", label: "Goal met" },
-  ontrack: { color: "#185FA5", bg: "#E6F1FB", label: "On track" },
-  behind: { color: "#854F0B", bg: "#FAEEDA", label: "Behind pace" },
+  met: { color: "var(--success-text)", bg: "var(--success-soft)", label: "Goal met" },
+  ontrack: { color: "var(--info-text)", bg: "var(--info-soft)", label: "On track" },
+  behind: { color: "var(--warn-text)", bg: "var(--warn-soft)", label: "Behind pace" },
 };
 
 function targetFor(
@@ -89,16 +90,8 @@ export function GoalCard({ category }: { category: Category }) {
         </div>
       </div>
 
-      <div className="mb-2 h-2 overflow-hidden rounded-full bg-[var(--background)]">
-        <div
-          style={{
-            width: `${pct}%`,
-            height: "100%",
-            background: status === "behind" ? "#BA7517" : accent,
-            borderRadius: 999,
-            transition: "width 0.5s ease",
-          }}
-        />
+      <div className="mb-2">
+        <AnimatedBar pct={pct} color={status === "behind" ? "var(--warn-text)" : accent} />
       </div>
 
       <p className="text-xs leading-relaxed text-[var(--muted)]">{line(status, remaining, daysLeft, done)}</p>
@@ -142,16 +135,8 @@ export function GoalsOverview({
               <span className="w-24 shrink-0 truncate text-xs text-[var(--muted)]">
                 {cat.icon} {cat.name}
               </span>
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--background)]">
-                <div
-                  style={{
-                    width: `${pct}%`,
-                    height: "100%",
-                    background: status === "behind" ? "#BA7517" : accent,
-                    borderRadius: 999,
-                    transition: "width 0.5s ease",
-                  }}
-                />
+              <div className="flex-1">
+                <AnimatedBar pct={pct} color={status === "behind" ? "var(--warn-text)" : accent} />
               </div>
               <span className="w-12 shrink-0 text-right text-xs font-medium" style={{ color: meta.color }}>
                 {done}/{target}

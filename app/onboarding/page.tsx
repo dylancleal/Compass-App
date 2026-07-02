@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   useCategories,
@@ -9,6 +10,7 @@ import {
   useSessionTemplates,
   useSettings,
   useTasks,
+  queryKeys,
 } from "@/lib/queries";
 import { accentOf, PALETTE_KEYS } from "@/lib/palette";
 import CategorySetupSheet from "@/components/CategorySetupSheet";
@@ -94,8 +96,8 @@ function StepPick({
           onClick={() => setShowCustom((v) => !v)}
           className="flex flex-col items-start gap-1.5 rounded-2xl p-3.5 text-left transition-all hover:scale-[1.02]"
           style={{
-            background: showCustom ? "#f0f4ff" : "var(--surface)",
-            border: showCustom ? "2px solid #6a7ba8" : "2px solid var(--border)",
+            background: showCustom ? "var(--info-soft)" : "var(--surface)",
+            border: showCustom ? "2px solid var(--info-text)" : "2px solid var(--border)",
           }}
         >
           <span className="text-2xl">✨</span>
@@ -121,7 +123,7 @@ function StepPick({
           onNext([...selected] as TileName[], showCustom && customName.trim() ? customName.trim() : undefined)
         }
         disabled={!anySelected}
-        className="w-full rounded-xl py-3 text-sm font-semibold transition-all hover:brightness-105 disabled:opacity-40"
+        className="btn-life w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-40"
         style={{ background: "var(--primary)", color: "#fffdf9" }}
       >
         Continue →
@@ -165,6 +167,7 @@ function StepSetup({
         </div>
       </div>
       <CategorySetupSheet
+        key={cat.id}
         category={cat}
         mode="inline"
         onSave={onNext}
@@ -260,11 +263,11 @@ function StepPreview({
       </div>
 
       <div className="space-y-2">
-        {preview.map((day) => (
+        {preview.map((day, i) => (
           <div
             key={day.date}
-            className="card p-3.5"
-            style={{ borderLeft: "3px solid var(--primary)" }}
+            className="card animate-fade-slide p-3.5"
+            style={{ borderLeft: "3px solid var(--primary)", animationDelay: `${i * 55}ms` }}
           >
             <p className="mb-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--primary)" }}>
               {day.weekdayLabel}
@@ -292,7 +295,7 @@ function StepPreview({
 
       <button
         onClick={onFinish}
-        className="w-full rounded-xl py-3 text-sm font-semibold transition-all hover:brightness-105"
+        className="btn-life w-full rounded-xl py-3 text-sm font-semibold"
         style={{ background: "var(--primary)", color: "#fffdf9" }}
       >
         Start day 1 →
@@ -307,6 +310,7 @@ type Step = "pick" | "setup" | "calendar" | "preview";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const { data: existingCategories = [], data: allCategories = [] } = useCategories();
   const { data: tasks = [] } = useTasks();
   const { data: templates } = useSessionTemplates();
@@ -320,7 +324,7 @@ export default function OnboardingPage() {
   const [setupIndex, setSetupIndex] = useState(0);
 
   async function handlePick(selected: TileName[], customName?: string) {
-    // Create categories that don't already exist
+    // Create categories that don't already exist (stale check — may miss seeded ones)
     const existingNames = new Set(existingCategories.map((c) => c.name));
     const toCreate = [
       ...TILES.filter((t) => selected.includes(t.name) && !existingNames.has(t.name)),
@@ -329,37 +333,53 @@ export default function OnboardingPage() {
         : []),
     ];
 
-    const created: Category[] = [];
     for (const tile of toCreate) {
       try {
-        const cat = await new Promise<Category>((resolve, reject) => {
+        await new Promise<Category>((resolve, reject) => {
           createCategory.mutate(
             { name: tile.name, icon: tile.icon, color: tile.color, active: true },
             { onSuccess: resolve, onError: reject },
           );
         });
-        created.push(cat);
       } catch {
-        // continue — don't block onboarding on a single category failure
+        // continue — category may already exist (e.g. created by seeding)
       }
     }
 
-    // Also include existing categories that were selected (they still need setup)
-    const existingSelected = existingCategories.filter((c) =>
-      selected.includes(c.name as TileName),
-    );
-    const allForSetup = [...existingSelected, ...created];
+    // Refetch after mutations to get the definitive list — handles races between
+    // ensureSeeded() and these mutations (both may try to create the same category).
+    await qc.refetchQueries({ queryKey: queryKeys.categories });
+    const fresh = (qc.getQueryData<Category[]>(queryKeys.categories) ?? []);
+    const selectedNames = new Set([
+      ...selected,
+      ...(customName ? [customName as TileName] : []),
+    ]);
+    // Dedup by name — DB may have duplicates if seeding raced with mutations.
+    const seen = new Set<string>();
+    const allForSetup = fresh.filter((c) => {
+      if (!selectedNames.has(c.name as TileName)) return false;
+      if (seen.has(c.name)) return false;
+      seen.add(c.name);
+      return true;
+    });
 
     setCreatedCategories(allForSetup);
     setSetupIndex(0);
     setStep("setup");
   }
 
-  function handleSetupNext() {
+  async function handleSetupNext() {
     const next = setupIndex + 1;
     if (next < createdCategories.length) {
       setSetupIndex(next);
     } else {
+      // Refresh categories so the preview gets the metadata saved during setup
+      // (weekly_goal, tennis_weekly_goal, etc.) — createdCategories was set
+      // before any setup mutations ran and doesn't have the updated values.
+      await qc.refetchQueries({ queryKey: queryKeys.categories });
+      const fresh = qc.getQueryData<Category[]>(queryKeys.categories) ?? [];
+      const ids = new Set(createdCategories.map((c) => c.id));
+      setCreatedCategories(fresh.filter((c) => ids.has(c.id)));
       setStep("calendar");
     }
   }
@@ -415,7 +435,7 @@ export default function OnboardingPage() {
 
         {step === "preview" && settings && (
           <StepPreview
-            categories={allCategories}
+            categories={createdCategories}
             library={library}
             settings={settings}
             tasks={tasks}

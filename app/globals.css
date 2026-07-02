@@ -24,6 +24,20 @@
   --accent: #d98e63; /* warm apricot / clay */
   --accent-soft: #f7ece2;
 
+  /* semantic status tints — kept in vars so they adapt to dark mode */
+  --success-soft: #e1f5ee;
+  --success-text: #0f6e56;
+  --info-soft: #e6f1fb;
+  --info-text: #185fa5;
+  --warn-soft: #faeeda;
+  --warn-text: #854f0b;
+
+  /* elevation scale — green-tinted shadows read warmer than neutral gray */
+  --shadow-1: 0 1px 2px rgba(46, 58, 51, 0.05), 0 1px 3px rgba(46, 58, 51, 0.04);
+  --shadow-2: 0 2px 4px rgba(46, 58, 51, 0.05), 0 6px 14px rgba(46, 58, 51, 0.07);
+  --shadow-3: 0 4px 8px rgba(46, 58, 51, 0.06), 0 14px 32px rgba(46, 58, 51, 0.11);
+  --card-highlight: rgba(255, 255, 255, 0.6); /* inner top "lit from above" edge */
+
   /* decorative blob tints — biophilic depth behind all content */
   --blob-a: rgba(168, 195, 181, 0.45); /* mist green */
   --blob-b: rgba(232, 168, 124, 0.24); /* apricot */
@@ -44,6 +58,18 @@
     --mist: #3c5447;
     --accent: #e0a079;
     --accent-soft: #33291f;
+
+    --success-soft: #1e3a30;
+    --success-text: #7fd0b0;
+    --info-soft: #1c3348;
+    --info-text: #8fbfe8;
+    --warn-soft: #3a2f1c;
+    --warn-text: #e0b877;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.28), 0 6px 16px rgba(0, 0, 0, 0.34);
+    --shadow-3: 0 6px 14px rgba(0, 0, 0, 0.34), 0 18px 40px rgba(0, 0, 0, 0.46);
+    --card-highlight: rgba(255, 255, 255, 0.045);
 
     --blob-a: rgba(111, 165, 136, 0.18);
     --blob-b: rgba(224, 160, 121, 0.11);
@@ -189,6 +215,9 @@ body::after {
   }
   body::before, body::after { animation: none; }
   .collapsible { transition: none; }
+  .card-interactive, .btn-life, .strike { transition: none; }
+  .card-interactive:hover, .btn-life:hover:not(:disabled) { transform: none; }
+  .strike.on { background-size: 100% 1.5px; } /* show final state, no grow */
 }
 
 /* ---- global interactive baseline ---- */
@@ -217,6 +246,47 @@ button:not(:disabled):active {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 1.25rem;
-  box-shadow: 0 1px 3px rgba(46, 58, 51, 0.05);
+  box-shadow: inset 0 1px 0 var(--card-highlight), var(--shadow-1);
 }
+
+/* interactive cards lift toward the viewer on hover */
+.card-interactive {
+  transition: transform 0.18s ease, box-shadow 0.22s ease, filter 0.18s ease;
+}
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 var(--card-highlight), var(--shadow-3);
+}
+.card-interactive:active {
+  transform: translateY(0);
+}
+
+/* primary CTA: subtle top-light sheen + colored glow lift on hover.
+   Set --btn-color to tint the glow to the button's own colour. */
+.btn-life {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.15s ease;
+  box-shadow: var(--shadow-1);
+}
+.btn-life:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--btn-color, var(--primary)) 38%, transparent),
+    var(--shadow-2);
+  filter: brightness(1.05);
+}
+.btn-life:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* animated strikethrough — a line that grows left→right when .on is added */
+.strike {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 62%;
+  background-size: 0% 1.5px;
+  transition: background-size 0.32s ease;
+}
+.strike.on {
+  background-size: 100% 1.5px;
+}
+
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }

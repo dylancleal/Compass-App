@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useSaveSettings, useSettings } from "@/lib/queries";
 
 interface IntroTourProps {
@@ -9,296 +9,311 @@ interface IntroTourProps {
   onClose?: () => void;
 }
 
-// ── Mini mocks (styled divs that look like real UI elements) ──────────────────
+// ── Tour step definitions ─────────────────────────────────────────────────────
 
-function MockCheckinRow() {
-  return (
-    <div
-      className="flex items-center gap-3 rounded-xl px-4 py-3"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-    >
-      <span className="text-2xl">🙂</span>
-      <div>
-        <p className="text-sm font-semibold">Medium day</p>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>Mind 4/5 · Uni readiness 3/5</p>
-      </div>
-    </div>
-  );
+interface TourStep {
+  path: string;
+  selector?: string; // [data-tour="…"] — if absent the tooltip is centred
+  title: string;
+  body: string;
 }
 
-function MockSuggestionCard() {
-  return (
-    <div
-      className="rounded-2xl p-4 space-y-3"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)", borderLeft: "3px solid #5b8a72" }}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className="mt-0.5 h-6 w-6 shrink-0 rounded-full border-2"
-          style={{ borderColor: "#5b8a72" }}
-        />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold">Push day — upper body strength</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: "#5b8a7222", color: "#3e6b54" }}>
-              💪 Gym
-            </span>
-            <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: "var(--border)", color: "var(--muted)" }}>
-              ~55 min
-            </span>
-            <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ background: "var(--border)", color: "var(--muted)" }}>
-              🕐 ~9am
-            </span>
-          </div>
-          <div className="mt-2 flex items-center gap-1.5">
-            <span
-              className="rounded-full px-2.5 py-1 text-xs font-semibold"
-              style={{ background: "#5b8a7233", color: "#3e6b54" }}
-            >
-              2/3 sessions this week ✓
-            </span>
-            <span className="text-xs" style={{ color: "var(--muted)" }}>← Compass learning</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MockCaptureRow() {
-  return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
-        {["📚 Uni work", "💪 Gym", "🎾 Tennis"].map((label) => (
-          <span
-            key={label}
-            className="rounded-full px-3 py-1.5 text-xs font-medium"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-          >
-            {label}
-          </span>
-        ))}
-      </div>
-      <div
-        className="flex items-center justify-between rounded-xl px-3 py-2.5"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)", borderLeft: "3px solid #7a9bb5" }}
-      >
-        <div>
-          <p className="text-sm font-medium">SIT221 lecture</p>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>11:00 am–12:30 pm · google</p>
-        </div>
-        <span
-          className="rounded-full px-2.5 py-1 text-xs font-semibold"
-          style={{ background: "var(--border)", color: "var(--muted)" }}
-        >
-          done?
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function MockCloseLoop() {
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-center gap-3">
-        {[["🌟", "Great"], ["😌", "Okay"], ["😕", "Rough"]].map(([emoji, label]) => (
-          <div
-            key={label}
-            className="flex flex-col items-center gap-1.5 rounded-2xl px-4 py-3"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)", minWidth: 72 }}
-          >
-            <span className="text-2xl">{emoji}</span>
-            <p className="text-xs font-semibold">{label}</p>
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {[["7", "sessions"], ["4h 40m", "total time"], ["3d", "streak"]].map(([val, label]) => (
-          <div
-            key={label}
-            className="rounded-xl p-3 text-center"
-            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-          >
-            <p className="text-lg font-bold" style={{ color: "var(--primary)" }}>{val}</p>
-            <p className="text-[10px]" style={{ color: "var(--muted)" }}>{label}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Card content ──────────────────────────────────────────────────────────────
-
-const CARDS = [
+const STEPS: TourStep[] = [
   {
-    emoji: "🧭",
-    heading: "Welcome to Compass",
-    body: "A calm daily companion. Each morning it shapes a gentle plan around your energy and your goals. No pressure, no guilt — just a nudge in the right direction.",
-    mock: null,
+    path: "/",
+    title: "Welcome to Compass 🧭",
+    body: "A calm daily companion that shapes your plan around your energy and goals. Let's take a 60-second look around.",
   },
   {
-    emoji: "🌿",
-    heading: "Start with a 30-second check-in",
-    body: "Tell Compass how today feels and it shapes the plan to match — a lighter list on a rough day, more on a big one.",
-    mock: <MockCheckinRow />,
+    path: "/checkin",
+    selector: "[data-tour='checkin-card']",
+    title: "Start every morning here",
+    body: "Tell Compass how you feel today — takes 30 seconds. It adjusts your suggestions to match: lighter on a rough day, more ambitious on a big one.",
   },
   {
-    emoji: "✅",
-    heading: "Tick to log — that's the whole trick",
-    body: "Tap the circle on any suggestion to mark it done. Compass logs it for you and learns from it. The more you tick, the more personal your plan becomes.",
-    mock: <MockSuggestionCard />,
+    path: "/",
+    selector: "[data-tour='suggestions']",
+    title: "Your personalised plan",
+    body: "After your check-in, suggestions appear here — built around your goals, your energy, and what you haven't done lately. Tap the circle to log one done.",
   },
   {
-    emoji: "🗓️",
-    heading: "Capture everything, gently",
-    body: "Did something off-plan? Use the Quick-log chips. Got events in your calendar? Tap 'done' right on the schedule. Yesterday's unfinished items carry over to today automatically.",
-    mock: <MockCaptureRow />,
+    path: "/calendar",
+    selector: "[data-tour='calendar-connect']",
+    title: "Connect your calendar",
+    body: "Link Google or Apple Calendar. Compass reads your schedule and never suggests the gym on a day you're already booked — no conflicts, no guilt.",
   },
   {
-    emoji: "🌙",
-    heading: "Close the loop",
-    body: "After 4pm, rate your day with one tap. On the Review tab, see your week — sessions, streaks, and a preview of what's next.",
-    mock: <MockCloseLoop />,
+    path: "/review",
+    selector: "[data-tour='review-stats']",
+    title: "Close the loop here",
+    body: "The Review tab shows sessions, streaks, and a preview of what next week could look like. Worth a glance at the end of each week.",
   },
 ];
+
+// ── Spotlight overlay ─────────────────────────────────────────────────────────
+
+const PAD = 10; // px padding around the highlighted element
+
+function useTargetRect(selector: string | undefined, pathname: string) {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const attemptsRef = useRef(0);
+
+  useEffect(() => {
+    setRect(null);
+    if (!selector) return;
+
+    attemptsRef.current = 0;
+
+    function tryFind() {
+      const el = document.querySelector(selector!);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        setRect(r);
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Re-measure after scroll settles
+        setTimeout(() => {
+          const updated = el.getBoundingClientRect();
+          setRect(updated);
+        }, 350);
+        return true;
+      }
+      return false;
+    }
+
+    if (tryFind()) return;
+
+    const interval = setInterval(() => {
+      attemptsRef.current++;
+      if (tryFind() || attemptsRef.current >= 25) clearInterval(interval);
+    }, 120);
+
+    return () => clearInterval(interval);
+  // Re-run when selector OR pathname changes (navigation completed)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selector, pathname]);
+
+  // Update rect on resize
+  useEffect(() => {
+    if (!selector || !rect) return;
+    function onResize() {
+      const el = document.querySelector(selector!);
+      if (el) setRect(el.getBoundingClientRect());
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selector, !!rect]);
+
+  return rect;
+}
+
+// ── Tooltip positioning ───────────────────────────────────────────────────────
+
+function tooltipStyle(rect: DOMRect | null): React.CSSProperties {
+  const W = typeof window !== "undefined" ? window.innerWidth : 400;
+  const H = typeof window !== "undefined" ? window.innerHeight : 700;
+  const TW = 300; // tooltip width
+
+  if (!rect) {
+    // Centred modal
+    return {
+      position: "fixed",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      width: TW,
+      zIndex: 60,
+    };
+  }
+
+  const spotTop = rect.top - PAD;
+  const spotBottom = rect.bottom + PAD;
+  const spotCentreX = (rect.left + rect.right) / 2;
+
+  // Horizontal: centre on the element, clamped to viewport
+  const rawLeft = spotCentreX - TW / 2;
+  const left = Math.max(12, Math.min(rawLeft, W - TW - 12));
+
+  // Vertical: go below if spotlight is in the top half, else go above
+  if (spotTop < H / 2) {
+    return { position: "fixed", top: spotBottom + 12, left, width: TW, zIndex: 60 };
+  }
+  return { position: "fixed", bottom: H - spotTop + 12, left, width: TW, zIndex: 60 };
+}
 
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function IntroTour({ forceOpen, onClose }: IntroTourProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: settings, isLoading } = useSettings();
   const saveSettings = useSaveSettings();
-  const [index, setIndex] = useState(0);
-  const [visible, setVisible] = useState(false);
 
-  // Determine if auto-show conditions are met
+  const [visible, setVisible] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
+
+  // Auto-show: onboarding done but tour not yet seen
   const shouldAutoShow =
     !isLoading &&
     !!settings?.onboarding_completed_at &&
     !settings?.tour_completed_at;
 
-  const isHiddenRoute =
-    pathname?.startsWith("/onboarding") || pathname === "/checkin";
+  const isHiddenRoute = pathname?.startsWith("/onboarding");
 
   useEffect(() => {
-    if (forceOpen) {
-      setIndex(0);
-      setVisible(true);
-    } else if (shouldAutoShow && !isHiddenRoute) {
-      setIndex(0);
-      setVisible(true);
-    }
+    if (forceOpen) { setStepIndex(0); setVisible(true); }
+    else if (shouldAutoShow && !isHiddenRoute) { setStepIndex(0); setVisible(true); }
   }, [forceOpen, shouldAutoShow, isHiddenRoute]);
+
+  // Navigate when the current step is on a different page
+  const currentStep = STEPS[stepIndex];
+  useEffect(() => {
+    if (!visible || !currentStep) return;
+    if (pathname !== currentStep.path) {
+      router.push(currentStep.path);
+    }
+  }, [visible, stepIndex, currentStep, pathname, router]);
 
   // Keyboard navigation
   useEffect(() => {
     if (!visible) return;
-    function handleKey(e: KeyboardEvent) {
+    function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") finish();
-      if (e.key === "ArrowRight") setIndex((i) => Math.min(i + 1, CARDS.length - 1));
-      if (e.key === "ArrowLeft") setIndex((i) => Math.max(i - 1, 0));
+      if (e.key === "ArrowRight") advance();
+      if (e.key === "ArrowLeft") goBack();
     }
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [visible, stepIndex]);
+
+  const isOnCorrectPage = pathname === currentStep?.path;
+  const targetRect = useTargetRect(
+    visible && isOnCorrectPage ? currentStep?.selector : undefined,
+    pathname ?? "",
+  );
 
   function finish() {
     setVisible(false);
-    // Only write the flag on first completion, not on replay
-    if (!forceOpen || !settings?.tour_completed_at) {
+    if (!forceOpen) {
       saveSettings.mutate({ tour_completed_at: new Date().toISOString() });
     }
     onClose?.();
   }
 
+  const advance = useCallback(() => {
+    if (stepIndex < STEPS.length - 1) setStepIndex((i) => i + 1);
+    else finish();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepIndex]);
+
+  const goBack = useCallback(() => {
+    setStepIndex((i) => Math.max(0, i - 1));
+  }, []);
+
   if (!visible) return null;
   if (isHiddenRoute && !forceOpen) return null;
 
-  const card = CARDS[index];
-  const isLast = index === CARDS.length - 1;
+  const isFirst = stepIndex === 0;
+  const isLast = stepIndex === STEPS.length - 1;
+  const hasElement = !!currentStep?.selector;
+
+  // While navigating to the target page, show a bare dark overlay
+  const showSpotlight = isOnCorrectPage && hasElement && !!targetRect;
+  const showCentred = !hasElement || (!showSpotlight && isOnCorrectPage);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) finish(); }}
-    >
+    <>
+      {/* Dark backdrop */}
       <div
-        className="animate-pop w-full max-w-md rounded-3xl shadow-2xl"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        className="fixed inset-0"
+        style={{ background: "rgba(0,0,0,0.55)", zIndex: 55, pointerEvents: "auto" }}
+      />
+
+      {/* Spotlight ring — sits over the target element, box-shadow creates the dark surround */}
+      {showSpotlight && targetRect && (
+        <div
+          style={{
+            position: "fixed",
+            top: targetRect.top - PAD,
+            left: targetRect.left - PAD,
+            width: targetRect.width + PAD * 2,
+            height: targetRect.height + PAD * 2,
+            borderRadius: 16,
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
+            border: "2px solid rgba(255,255,255,0.18)",
+            zIndex: 56,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      {/* Tooltip card */}
+      <div
+        style={{
+          ...tooltipStyle(showCentred ? null : targetRect),
+          pointerEvents: "auto",
+        }}
       >
-        {/* Header row */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-2">
+        <div
+          className="rounded-2xl p-5 shadow-2xl space-y-3"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+          }}
+        >
           {/* Progress dots */}
-          <div className="flex gap-1.5">
-            {CARDS.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setIndex(i)}
-                className="h-1.5 rounded-full transition-all duration-200"
-                style={{
-                  width: i === index ? 20 : 6,
-                  background: i === index ? "var(--primary)" : "var(--border)",
-                }}
-                aria-label={`Go to step ${i + 1}`}
-              />
-            ))}
-          </div>
-          <button
-            onClick={finish}
-            className="text-xs hover:opacity-100 transition-opacity"
-            style={{ color: "var(--muted)" }}
-          >
-            Skip
-          </button>
-        </div>
-
-        {/* Card content */}
-        <div className="px-6 pb-2 pt-3 space-y-3">
-          <div className="text-4xl">{card.emoji}</div>
-          <h2 className="text-xl font-bold leading-snug">{card.heading}</h2>
-          <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
-            {card.body}
-          </p>
-          {card.mock && (
-            <div className="pt-1">
-              {card.mock}
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1.5">
+              {STEPS.map((_, i) => (
+                <div
+                  key={i}
+                  className="h-1.5 rounded-full transition-all duration-200"
+                  style={{
+                    width: i === stepIndex ? 18 : 6,
+                    background: i === stepIndex ? "var(--primary)" : "var(--border)",
+                  }}
+                />
+              ))}
             </div>
-          )}
-        </div>
-
-        {/* Footer buttons */}
-        <div className="flex items-center justify-between gap-3 px-6 py-5">
-          <button
-            onClick={() => setIndex((i) => Math.max(i - 1, 0))}
-            className="text-sm transition-opacity hover:opacity-100"
-            style={{ color: "var(--muted)", visibility: index === 0 ? "hidden" : "visible" }}
-          >
-            ← Back
-          </button>
-
-          {isLast ? (
             <button
               onClick={finish}
-              className="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:brightness-105"
-              style={{ background: "var(--primary)", color: "#fffdf9" }}
+              className="text-xs transition-opacity hover:opacity-80"
+              style={{ color: "var(--muted)" }}
             >
-              Start using Compass →
+              Skip
             </button>
-          ) : (
+          </div>
+
+          <div>
+            <h3 className="font-bold text-base leading-snug">{currentStep.title}</h3>
+            <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+              {currentStep.body}
+            </p>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex items-center justify-between pt-1">
             <button
-              onClick={() => setIndex((i) => i + 1)}
-              className="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all hover:brightness-105"
+              onClick={goBack}
+              className="text-sm transition-opacity hover:opacity-80"
+              style={{
+                color: "var(--muted)",
+                visibility: isFirst ? "hidden" : "visible",
+              }}
+            >
+              ← Back
+            </button>
+            <button
+              onClick={advance}
+              className="rounded-xl px-4 py-2 text-sm font-semibold transition-all hover:brightness-105"
               style={{ background: "var(--primary)", color: "#fffdf9" }}
             >
-              Next →
+              {isLast ? "Done →" : isOnCorrectPage ? "Next →" : "Go there →"}
             </button>
-          )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

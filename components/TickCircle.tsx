@@ -44,7 +44,7 @@ export default function TickCircle({
       style={{
         width: size,
         height: size,
-        borderColor: checked ? accent : "#c7cfc3",
+        borderColor: checked ? accent : "var(--border)",
         background: checked ? accent : "transparent",
       }}
     >

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function ProgressRing({
   value,
   size = 64,
   stroke = 7,
   color,
-  track = "#e7e1d5",
+  track = "var(--border)",
   children,
 }: {
   value: number; // 0..1
@@ -40,6 +40,42 @@ export function ProgressRing({
       <div className="absolute inset-0 grid place-items-center text-sm font-semibold">
         {children}
       </div>
+    </div>
+  );
+}
+
+// A progress bar that fills from 0 → pct on mount, so goals feel like they're
+// "filling up" rather than snapping to a static value.
+export function AnimatedBar({
+  pct,
+  color,
+  height = 8,
+  track,
+}: {
+  pct: number; // 0..100
+  color: string;
+  height?: number;
+  track?: string;
+}) {
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setW(Math.max(0, Math.min(100, pct))));
+    return () => cancelAnimationFrame(id);
+  }, [pct]);
+  return (
+    <div
+      className="overflow-hidden rounded-full"
+      style={{ height, background: track ?? "var(--background)" }}
+    >
+      <div
+        style={{
+          width: `${w}%`,
+          height: "100%",
+          background: color,
+          borderRadius: 999,
+          transition: "width 0.7s cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      />
     </div>
   );
 }
@@ -140,15 +176,32 @@ export function Button({
   className?: string;
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all disabled:opacity-50 hover:scale-[1.03] hover:brightness-110 hover:opacity-100 active:scale-95";
+    "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all disabled:opacity-50";
+  const variantClass =
+    variant === "primary"
+      ? "btn-life"
+      : "hover:scale-[1.03] hover:brightness-110 hover:opacity-100 active:scale-95";
   const style: React.CSSProperties =
     variant === "primary"
-      ? { background: color, color: "#fff" }
+      ? {
+          backgroundColor: color,
+          // top-light sheen sits over the solid colour for a subtle dimensional feel
+          backgroundImage:
+            "linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0))",
+          color: "#fff",
+          ["--btn-color" as string]: color,
+        }
       : variant === "soft"
         ? { background: color + "1a", color }
         : { background: "transparent", color: "var(--muted)" };
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${className}`} style={style}>
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`${base} ${variantClass} ${className}`}
+      style={style}
+    >
       {children}
     </button>
   );
