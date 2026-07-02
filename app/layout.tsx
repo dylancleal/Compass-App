@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "./providers";
 import Nav from "@/components/Nav";
 import IntroTour from "@/components/IntroTour";
+import Fireflies from "@/components/Fireflies";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
       <body className="min-h-full">
         <Providers>
+          <Fireflies />
           <Nav />
           <main className="mx-auto w-full max-w-2xl px-4 pt-20 pb-10">
             {children}

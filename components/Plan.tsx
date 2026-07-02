@@ -26,6 +26,7 @@ import { useTilt } from "@/lib/useTilt";
 import type { Suggestion, Category } from "@/lib/types";
 import { Button, Pill } from "./ui";
 import TickCircle from "./TickCircle";
+import CompassRose from "./CompassRose";
 
 const RAIN_COLORS = ["#5b8a72", "#a8c3b5", "#d98e63", "#c9b46b", "#7faf97", "#3e6b54"];
 
@@ -284,11 +285,9 @@ export default function Plan() {
           className="animate-celebrate rounded-2xl p-4 text-center"
           style={{ background: "linear-gradient(135deg, #5b8a72, #3e6b54)", color: "#fffdf9" }}
         >
-          <p className="text-2xl" aria-hidden>
-            <span className={celebration.spin ? "inline-block animate-spin-slow" : ""}>
-              {celebration.emoji}
-            </span>
-          </p>
+          <div className="mb-1">
+            <CompassRose size={64} spin onDark />
+          </div>
           <p className="text-base font-bold">{celebration.title}</p>
           <p className="text-xs opacity-90">{celebration.line}</p>
         </div>
@@ -306,9 +305,12 @@ export default function Plan() {
       ) : (
         <>
       {visible.length === 0 && (
-        <p className="card p-4 text-sm text-[var(--muted)]">
-          Nothing pressing today — enjoy the breathing room.
-        </p>
+        <div className="card p-6 text-center">
+          <CompassRose size={72} />
+          <p className="mt-3 text-sm text-[var(--muted)]">
+            Nothing pressing today — enjoy the breathing room.
+          </p>
+        </div>
       )}
 
       <div className="space-y-2">
@@ -399,13 +401,15 @@ function SuggestionCard({
       ref={tiltRef}
       className={`card animate-pop p-4 ${highlight ? "animate-breathe" : ""}`}
       style={{
-        borderLeft: `3px solid ${accent}`,
+        // longhand (not the borderLeft shorthand) so it never conflicts with a
+        // borderColor set elsewhere during rerender
+        borderLeftWidth: "3px",
+        borderLeftStyle: "solid",
+        borderLeftColor: accent,
         opacity: accepted ? 0.72 : 1,
         transition: highlight ? "transform 0.25s ease, opacity 0.3s ease" : "opacity 0.3s ease",
         animationDelay: `${index * 60}ms`,
-        ...(highlight
-          ? { borderColor: accent, boxShadow: `0 0 0 1.5px ${accent}55` }
-          : {}),
+        ...(highlight ? { boxShadow: `0 0 0 1.5px ${accent}55` } : {}),
       }}
     >
       {highlight && (

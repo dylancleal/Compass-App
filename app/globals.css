@@ -206,6 +206,35 @@ body::after {
 }
 .animate-breathe { animation: breathe 3.4s ease-in-out infinite; }
 
+/* dark-mode fireflies — slow drifting motes behind content (see Fireflies.tsx) */
+.fireflies { display: none; }
+@media (prefers-color-scheme: dark) {
+  .fireflies { display: block; }
+}
+.firefly {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--primary-mid);
+  filter: blur(2px);
+  box-shadow: 0 0 8px 2px color-mix(in srgb, var(--primary-mid) 50%, transparent);
+  animation-name: firefly-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+@keyframes firefly-drift {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.18; }
+  50% { opacity: 0.5; }
+  100% { transform: translate(22px, -28px) scale(1.25); opacity: 0.3; }
+}
+
+/* compass needle settling to north on day completion */
+@keyframes needle-spin {
+  from { transform: translate(-50%, -50%) rotate(-540deg); }
+  to { transform: translate(-50%, -50%) rotate(0deg); }
+}
+.animate-needle { animation: needle-spin 1.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
 /* expand/collapse — animates height via grid-template-rows */
 .collapsible {
   display: grid;
@@ -223,7 +252,7 @@ body::after {
   body::before, body::after { animation: none; }
   .collapsible { transition: none; }
   .card-interactive, .btn-life, .strike { transition: none; }
-  .animate-spin-slow { animation: none; }
+  .animate-spin-slow, .animate-needle, .firefly { animation: none; }
   .card-interactive:hover, .btn-life:hover:not(:disabled) { transform: none; }
   .strike.on { background-size: 100% 1.5px; } /* show final state, no grow */
 }
