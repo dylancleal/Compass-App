@@ -66,6 +66,15 @@ export default function CategoriesPage() {
                     Set up →
                   </button>
                 )}
+                {domain === "uni" && (
+                  <Link
+                    href="/uni"
+                    className="absolute bottom-3 right-3 rounded-full px-2 py-0.5 text-[11px] font-medium transition-all hover:scale-105"
+                    style={{ background: accent.soft, color: accent.text, border: `1px solid ${accent.accent}55` }}
+                  >
+                    deadlines →
+                  </Link>
+                )}
               </div>
             );
           })}

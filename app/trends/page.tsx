@@ -23,6 +23,7 @@ import {
 import { daysBetween, startOfWeek, todayKey } from "@/lib/date";
 import { BarTrend, LineTrend } from "@/components/charts";
 import { GoalCard, GoalsOverview } from "@/components/GoalCard";
+import ProgressTabs from "@/components/ProgressTabs";
 import type { Category, Metric, MetricLog, Session } from "@/lib/types";
 
 // ── Tiny helpers ─────────────────────────────────────────────────────────────
@@ -596,7 +597,13 @@ function TrendsContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Tab bar */}
+      <header className="space-y-1">
+        <h1 className="text-2xl font-bold">Progress</h1>
+      </header>
+
+      <ProgressTabs />
+
+      {/* Area tab bar */}
       <div
         className="flex gap-2 overflow-x-auto"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}

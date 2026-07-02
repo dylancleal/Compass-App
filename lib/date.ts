@@ -59,6 +59,17 @@ export function greeting(name: string): string {
   return GREETINGS(name);
 }
 
+export type Daypart = "morning" | "afternoon" | "evening" | "night";
+
+export function daypart(d: Date = new Date()): Daypart {
+  const h = d.getHours();
+  if (h < 5) return "night";
+  if (h < 12) return "morning";
+  if (h < 17) return "afternoon";
+  if (h < 22) return "evening";
+  return "night";
+}
+
 export function uid(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return Math.random().toString(36).slice(2) + Date.now().toString(36);

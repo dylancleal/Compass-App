@@ -8,6 +8,7 @@ import { buildWeekPreview } from "@/lib/preview";
 import { addDays, daysBetween, prettyDate, startOfWeek, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import { AnimatedBar, IconChip } from "@/components/ui";
+import ProgressTabs from "@/components/ProgressTabs";
 import { useCountUp } from "@/lib/useCountUp";
 
 function fmtMin(min: number) {
@@ -110,8 +111,10 @@ export default function ReviewPage() {
         <p className="text-sm text-[var(--muted)]">
           {prettyDate(weekStart)} – {prettyDate(weekEnd)}
         </p>
-        <h1 className="text-2xl font-bold">Your week in review</h1>
+        <h1 className="text-2xl font-bold">Progress</h1>
       </header>
+
+      <ProgressTabs />
 
       {/* Headline numbers */}
       <div data-tour="review-stats" className="grid grid-cols-3 gap-3">
