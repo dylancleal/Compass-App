@@ -96,8 +96,8 @@ function StepPick({
           onClick={() => setShowCustom((v) => !v)}
           className="flex flex-col items-start gap-1.5 rounded-2xl p-3.5 text-left transition-all hover:scale-[1.02]"
           style={{
-            background: showCustom ? "#f0f4ff" : "var(--surface)",
-            border: showCustom ? "2px solid #6a7ba8" : "2px solid var(--border)",
+            background: showCustom ? "var(--info-soft)" : "var(--surface)",
+            border: showCustom ? "2px solid var(--info-text)" : "2px solid var(--border)",
           }}
         >
           <span className="text-2xl">✨</span>
@@ -123,7 +123,7 @@ function StepPick({
           onNext([...selected] as TileName[], showCustom && customName.trim() ? customName.trim() : undefined)
         }
         disabled={!anySelected}
-        className="w-full rounded-xl py-3 text-sm font-semibold transition-all hover:brightness-105 disabled:opacity-40"
+        className="btn-life w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-40"
         style={{ background: "var(--primary)", color: "#fffdf9" }}
       >
         Continue →
@@ -263,11 +263,11 @@ function StepPreview({
       </div>
 
       <div className="space-y-2">
-        {preview.map((day) => (
+        {preview.map((day, i) => (
           <div
             key={day.date}
-            className="card p-3.5"
-            style={{ borderLeft: "3px solid var(--primary)" }}
+            className="card animate-fade-slide p-3.5"
+            style={{ borderLeft: "3px solid var(--primary)", animationDelay: `${i * 55}ms` }}
           >
             <p className="mb-1.5 text-xs font-bold uppercase tracking-wide" style={{ color: "var(--primary)" }}>
               {day.weekdayLabel}
@@ -295,7 +295,7 @@ function StepPreview({
 
       <button
         onClick={onFinish}
-        className="w-full rounded-xl py-3 text-sm font-semibold transition-all hover:brightness-105"
+        className="btn-life w-full rounded-xl py-3 text-sm font-semibold"
         style={{ background: "var(--primary)", color: "#fffdf9" }}
       >
         Start day 1 →

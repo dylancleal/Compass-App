@@ -114,7 +114,11 @@ export default function TodayPage() {
           <Link
             href="/calendar"
             className="mt-1 flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all duration-150 hover:scale-105 hover:brightness-95 active:scale-95"
-            style={{ background: "#fef9ec", color: "#8a6800", border: "1px solid #e8c84088" }}
+            style={{
+              background: "var(--warn-soft)",
+              color: "var(--warn-text)",
+              border: "1px solid color-mix(in srgb, var(--warn-text) 45%, transparent)",
+            }}
           >
             ⚠ {conflictGroups.length} conflict{conflictGroups.length !== 1 ? "s" : ""}
           </Link>
@@ -125,7 +129,7 @@ export default function TodayPage() {
       {!checkin ? (
         <Link
           href="/checkin"
-          className="card animate-pop block p-5 transition-all duration-150 hover:scale-[1.01] hover:brightness-[1.03] hover:shadow-md active:scale-[0.99]"
+          className="card card-interactive animate-pop block p-5 hover:brightness-[1.03]"
           style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
         >
           <p className="text-lg font-semibold" style={{ color: "var(--primary)" }}>
@@ -154,7 +158,7 @@ export default function TodayPage() {
       {checkin && !checkin.extra?.evening_rating && new Date().getHours() >= 16 && (
         <Link
           href="/wrap"
-          className="card animate-pop flex items-center gap-3 p-4 transition-all duration-150 hover:scale-[1.01] hover:brightness-[1.03] hover:shadow-md active:scale-[0.99]"
+          className="card card-interactive animate-pop flex items-center gap-3 p-4 hover:brightness-[1.03]"
           style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
         >
           <span className="text-2xl">🌙</span>
@@ -229,15 +233,17 @@ export default function TodayPage() {
                   key={block.id}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm"
                   style={{
-                    background: isConflict ? "#fef9ec" : "var(--surface)",
-                    border: isConflict ? "1px solid #e8c84066" : "1px solid var(--border)",
-                    borderLeft: isConflict ? "3px solid #e8c840" : "3px solid #7a9bb5",
+                    background: isConflict ? "var(--warn-soft)" : "var(--surface)",
+                    border: isConflict
+                      ? "1px solid color-mix(in srgb, var(--warn-text) 40%, transparent)"
+                      : "1px solid var(--border)",
+                    borderLeft: isConflict ? "3px solid var(--warn-text)" : "3px solid #7a9bb5",
                   }}
                 >
                   <div className="min-w-0 flex-1">
                     <p
                       className="truncate text-sm font-medium"
-                      style={{ color: isConflict ? "#8a6800" : "var(--foreground)" }}
+                      style={{ color: isConflict ? "var(--warn-text)" : "var(--foreground)" }}
                     >
                       {isConflict && <span className="mr-1">⚠</span>}
                       {block.title}

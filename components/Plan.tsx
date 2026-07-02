@@ -238,11 +238,11 @@ export default function Plan() {
       )}
 
       <div className="space-y-2">
-        {visible.map((s) => {
+        {visible.map((s, i) => {
           const cat = categories.find((c) => c.id === s.category_id);
           const accent = cat ? accentOf(cat.color).accent : "#5b8a72";
           return s.est_minutes === 0 ? (
-            <Affirmation key={s.id} suggestion={s} />
+            <Affirmation key={s.id} suggestion={s} index={i} />
           ) : (
             <SuggestionCard
               key={s.id}
@@ -250,6 +250,7 @@ export default function Plan() {
               category={cat}
               accent={accent}
               isNext={s.id === nextId}
+              index={i}
               suggestedTime={slotMap.get(s.id)}
               onToggle={(n) => handleToggle(s, n)}
               onSnooze={() => update.mutate({ id: s.id, patch: { status: "snoozed" } })}
@@ -282,6 +283,7 @@ function SuggestionCard({
   category: cat,
   accent,
   isNext = false,
+  index = 0,
   suggestedTime,
   onToggle,
   onSnooze,
@@ -291,6 +293,7 @@ function SuggestionCard({
   category?: Category;
   accent: string;
   isNext?: boolean;
+  index?: number;
   suggestedTime?: string;
   onToggle: (next: boolean) => void;
   onSnooze: () => void;
@@ -314,6 +317,8 @@ function SuggestionCard({
       style={{
         borderLeft: `3px solid ${accent}`,
         opacity: accepted ? 0.72 : 1,
+        transition: "opacity 0.3s ease",
+        animationDelay: `${index * 60}ms`,
         ...(highlight
           ? { borderColor: accent, boxShadow: `0 0 0 1.5px ${accent}55` }
           : {}),
@@ -333,7 +338,7 @@ function SuggestionCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{headerLines[0]}</p>
+          <p className={`text-sm font-semibold strike ${accepted ? "on" : ""}`}>{headerLines[0]}</p>
           {headerLines.slice(1).map((line, i) => (
             <p key={i} className="mt-0.5 text-sm text-[var(--muted)]">
               {line}
@@ -422,28 +427,29 @@ function SuggestionCard({
 
 // ── Affirmation / momentum note — visually distinct from actionable cards ─────
 
-function Affirmation({ suggestion: s }: { suggestion: Suggestion }) {
+function Affirmation({ suggestion: s, index = 0 }: { suggestion: Suggestion; index?: number }) {
   return (
     <div
       className="animate-pop relative overflow-hidden rounded-2xl p-3.5"
       style={{
-        background: "linear-gradient(135deg, #f0fdf4, #ecfeff)",
-        border: "1px dashed #a7f3d0",
+        background: "linear-gradient(135deg, var(--success-soft), var(--primary-soft))",
+        border: "1px dashed color-mix(in srgb, var(--success-text) 40%, transparent)",
+        animationDelay: `${index * 60}ms`,
       }}
     >
       <div className="flex items-center gap-3">
         <span
           className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg"
-          style={{ background: "#ffffffcc" }}
+          style={{ background: "var(--surface)" }}
           aria-hidden
         >
           🌱
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold" style={{ color: "#065f46" }}>
+          <p className="text-sm font-semibold" style={{ color: "var(--success-text)" }}>
             {s.text}
           </p>
-          <p className="text-xs" style={{ color: "#059669" }}>
+          <p className="text-xs" style={{ color: "var(--success-text)", opacity: 0.85 }}>
             {s.reason}
           </p>
         </div>

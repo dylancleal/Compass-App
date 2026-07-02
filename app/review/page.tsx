@@ -7,12 +7,21 @@ import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import { buildWeekPreview } from "@/lib/preview";
 import { addDays, daysBetween, prettyDate, startOfWeek, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
+import { AnimatedBar } from "@/components/ui";
+import { useCountUp } from "@/lib/useCountUp";
 
 function fmtMin(min: number) {
   if (min < 60) return `${min}m`;
   const h = Math.floor(min / 60);
   const m = min % 60;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+// A headline number that counts up from 0 on mount.
+function StatNumber({ value, format }: { value: number; format?: (n: number) => string }) {
+  const v = useCountUp(value);
+  const rounded = Math.round(v);
+  return <>{format ? format(rounded) : String(rounded)}</>;
 }
 
 export default function ReviewPage() {
@@ -108,19 +117,19 @@ export default function ReviewPage() {
       <div data-tour="review-stats" className="grid grid-cols-3 gap-3">
         <div className="card p-4 text-center">
           <p className="text-2xl font-bold" style={{ color: "var(--primary)" }}>
-            {thisWeek.length}
+            <StatNumber value={thisWeek.length} />
           </p>
           <p className="mt-0.5 text-xs text-[var(--muted)]">sessions logged</p>
         </div>
         <div className="card p-4 text-center">
           <p className="text-2xl font-bold" style={{ color: "var(--primary)" }}>
-            {fmtMin(totalMin)}
+            <StatNumber value={totalMin} format={fmtMin} />
           </p>
           <p className="mt-0.5 text-xs text-[var(--muted)]">total time</p>
         </div>
         <div className="card p-4 text-center">
           <p className="text-2xl font-bold" style={{ color: "var(--primary)" }}>
-            {studyStreak > 0 ? `${studyStreak}d` : "—"}
+            <StatNumber value={studyStreak} format={(n) => (n > 0 ? `${n}d` : "—")} />
           </p>
           <p className="mt-0.5 text-xs text-[var(--muted)]">study streak</p>
         </div>
@@ -131,7 +140,7 @@ export default function ReviewPage() {
         <section className="space-y-2">
           <h2 className="text-sm font-semibold text-[var(--muted)]">By area</h2>
           <div className="space-y-2">
-            {activeCats.map((cat) => {
+            {activeCats.map((cat, i) => {
               const accent = accentOf(cat.color).accent;
               const stats = byCategory.get(cat.id) ?? { count: 0, totalMin: 0 };
               const goal =
@@ -144,8 +153,8 @@ export default function ReviewPage() {
               return (
                 <div
                   key={cat.id}
-                  className="card flex items-center gap-3 px-4 py-3"
-                  style={{ borderLeft: `3px solid ${accent}` }}
+                  className="card animate-fade-slide flex items-center gap-3 px-4 py-3"
+                  style={{ borderLeft: `3px solid ${accent}`, animationDelay: `${i * 60}ms` }}
                 >
                   <span className="text-xl">{cat.icon}</span>
                   <div className="flex-1 min-w-0">
@@ -161,14 +170,8 @@ export default function ReviewPage() {
                       )}
                     </div>
                     {progress !== null && (
-                      <div
-                        className="mt-1 h-1 rounded-full overflow-hidden"
-                        style={{ background: "var(--border)" }}
-                      >
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: `${progress * 100}%`, background: accent }}
-                        />
+                      <div className="mt-1">
+                        <AnimatedBar pct={progress * 100} color={accent} height={4} track="var(--border)" />
                       </div>
                     )}
                   </div>
