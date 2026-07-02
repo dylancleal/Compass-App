@@ -1,6 +1,28 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import Link from "next/link";
+
+// One consistent quiet link style for the small "redo / details / all areas"
+// affordances scattered across pages.
+export function QuietLink({
+  href,
+  children,
+  className = "",
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`text-xs text-[var(--muted)] underline decoration-[var(--border)] underline-offset-2 transition-all duration-150 hover:text-[var(--foreground)] hover:decoration-[var(--muted)] ${className}`}
+    >
+      {children}
+    </Link>
+  );
+}
 
 export function ProgressRing({
   value,

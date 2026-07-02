@@ -6,6 +6,7 @@ import type { Task } from "@/lib/types";
 import { prettyDate, todayKey } from "@/lib/date";
 import TickCircle from "./TickCircle";
 import { Pill } from "./ui";
+import { LeafMark } from "./decor";
 
 function dueTone(task: Task): { label: string; color: string } | null {
   if (!task.due_date) return null;
@@ -79,7 +80,10 @@ export default function TaskList({
   return (
     <div className="space-y-2">
       {tasks.length === 0 && (
-        <p className="px-1 py-3 text-sm text-[var(--muted)]">{emptyText}</p>
+        <div className="flex flex-col items-center gap-2 px-1 py-6 text-center">
+          <LeafMark size={34} />
+          <p className="text-sm text-[var(--muted)]">{emptyText}</p>
+        </div>
       )}
 
       {tasks.map((task) => {
