@@ -2,8 +2,9 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { useCategories, useSessions, useSettings, useSessionTemplates } from "@/lib/queries";
+import { useCategories, useCheckins, useSessions, useSettings, useSessionTemplates } from "@/lib/queries";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
+import { protectedStreak } from "@/lib/stats";
 import { buildWeekPreview } from "@/lib/preview";
 import { addDays, daysBetween, prettyDate, startOfWeek, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
@@ -32,6 +33,7 @@ export default function ReviewPage() {
 
   const { data: sessions = [] } = useSessions();
   const { data: categories = [] } = useCategories();
+  const { data: checkins = [] } = useCheckins();
   const { data: settings } = useSettings();
   const { data: templates } = useSessionTemplates();
   const library = templates ?? BUILTIN_LIBRARY;
@@ -60,7 +62,8 @@ export default function ReviewPage() {
     [thisWeek],
   );
 
-  // Study streak (consecutive days with a study session up to today)
+  // Study streak — a day with no study still counts as long as it was a
+  // deliberate rest (a Light check-in or a "Rough" evening). Respect over guilt.
   const studyCat = categories.find((c) => c.name === "Uni work");
   const studyDays = useMemo(
     () =>
@@ -69,16 +72,19 @@ export default function ReviewPage() {
       ),
     [sessions, studyCat],
   );
-  const studyStreak = useMemo(() => {
-    let streak = 0;
-    let cursor = today;
-    for (let i = 0; i < 60; i++) {
-      if (studyDays.has(cursor)) streak++;
-      else if (i > 0) break;
-      cursor = addDays(cursor, -1);
-    }
-    return streak;
-  }, [studyDays, today]);
+  const protectedDays = useMemo(
+    () =>
+      new Set(
+        checkins
+          .filter((c) => c.capacity === "light" || c.extra?.evening_rating === 1)
+          .map((c) => c.date),
+      ),
+    [checkins],
+  );
+  const { streak: studyStreak, protectedUsed } = useMemo(
+    () => protectedStreak(studyDays, protectedDays, today),
+    [studyDays, protectedDays, today],
+  );
 
   // Active categories with sessions or goals this week
   const activeCats = categories.filter((c) => c.active);
@@ -132,9 +138,14 @@ export default function ReviewPage() {
         </div>
         <div className="card p-4 text-center">
           <p className="text-2xl font-bold" style={{ color: "var(--primary)" }}>
-            <StatNumber value={studyStreak} format={(n) => (n > 0 ? `${n}d` : "—")} />
+            <StatNumber
+              value={studyStreak}
+              format={(n) => (n > 0 ? `${n}d${protectedUsed ? " 🛡" : ""}` : "—")}
+            />
           </p>
-          <p className="mt-0.5 text-xs text-[var(--muted)]">study streak</p>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">
+            🔥 streak{protectedUsed ? " · protected" : ""}
+          </p>
         </div>
       </div>
 

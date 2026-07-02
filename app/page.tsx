@@ -17,7 +17,7 @@ import {
   useTasks,
 } from "@/lib/queries";
 import { findConflictPairs, findConflictGroups } from "@/lib/schedule";
-import { addDays, daypart, greeting, prettyDate, todayKey } from "@/lib/date";
+import { addDays, daypart, greeting, prettyDate, startOfWeek, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import { useTilt } from "@/lib/useTilt";
 import { buildPlan } from "@/lib/planner";
@@ -66,6 +66,17 @@ export default function TodayPage() {
     (s) => s.est_minutes !== 0 && s.status !== "dismissed" && s.status !== "snoozed",
   );
   const allDone = actionable.length > 0 && actionable.every((s) => s.status === "accepted");
+
+  // Fresh-start ritual: at the week's turn (Sun, or Mon morning) invite a look
+  // back — but only if last week actually had activity worth reflecting on.
+  const nowDow = new Date().getDay();
+  const showFreshWeek = nowDow === 0 || (nowDow === 1 && new Date().getHours() < 12);
+  const lastWeekStart = addDays(startOfWeek(today), -7);
+  const lastWeekEnd = addDays(lastWeekStart, 6);
+  const lastWeekCount = sessions.filter(
+    (s) => s.date >= lastWeekStart && s.date <= lastWeekEnd,
+  ).length;
+  const freshWeek = showFreshWeek && lastWeekCount > 0;
 
   // One-line sketch of tomorrow — planted tonight to seed intention.
   const tomorrow = addDays(today, 1);
@@ -259,6 +270,26 @@ export default function TodayPage() {
             redo
           </Link>
         </div>
+      )}
+
+      {/* Fresh-week ritual */}
+      {freshWeek && (
+        <Link
+          href="/review"
+          className="card card-interactive flex items-center gap-3 p-4 hover:brightness-[1.03]"
+          style={{ background: "var(--accent-soft)", borderColor: "var(--mist)" }}
+        >
+          <span className="text-2xl">🌅</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color: "var(--accent)" }}>
+              Fresh week
+            </p>
+            <p className="text-xs text-[var(--muted)]">
+              See how last week landed — {lastWeekCount} session{lastWeekCount === 1 ? "" : "s"} logged.
+            </p>
+          </div>
+          <span className="text-sm text-[var(--muted)]">→</span>
+        </Link>
       )}
 
       {/* Personalised plan */}

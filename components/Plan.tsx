@@ -5,6 +5,7 @@ import {
   useCalendarBlocks,
   useCategories,
   useCheckin,
+  useCreateCalendarBlock,
   useCreateSession,
   useRemoveSession,
   useSaveSuggestions,
@@ -27,6 +28,23 @@ import { Button, Pill } from "./ui";
 import TickCircle from "./TickCircle";
 
 const RAIN_COLORS = ["#5b8a72", "#a8c3b5", "#d98e63", "#c9b46b", "#7faf97", "#3e6b54"];
+
+// Rotating all-done rewards — variety keeps the dopamine hit from habituating.
+const CELEBRATIONS = [
+  { emoji: "🎉", title: "Day complete", line: "Every session ticked off — that's the whole plan. Beautifully done.", rain: true, spin: false },
+  { emoji: "🌱", title: "Every seed planted", line: "You did the whole day. This is how the habit takes root.", rain: false, spin: false },
+  { emoji: "🧭", title: "Pointed north all day", line: "Whole plan, done. That's a direction you can be proud of.", rain: false, spin: true },
+  { emoji: "🌟", title: "That's the full set", line: "You finished everything you set out to do today.", rain: false, spin: false },
+];
+
+// Parse a "~9am" / "~5:30pm" slot label back into minutes-from-midnight.
+function parseSlot(slot: string): number | null {
+  const m = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i.exec(slot);
+  if (!m) return null;
+  let h = parseInt(m[1], 10) % 12;
+  if (m[3].toLowerCase() === "pm") h += 12;
+  return h * 60 + (m[2] ? parseInt(m[2], 10) : 0);
+}
 
 export default function Plan() {
   const today = todayKey();
@@ -74,7 +92,26 @@ export default function Plan() {
   const update = useUpdateSuggestion(today);
   const createSession = useCreateSession();
   const removeSession = useRemoveSession();
+  const createBlock = useCreateCalendarBlock();
   const generatedRef = useRef(false);
+
+  // Commit-to-time: turn a suggested slot into a planned block ("at 9am I will…").
+  function commitTime(s: Suggestion, slot: string) {
+    const mins = parseSlot(slot);
+    if (mins == null || !s.category_id) return;
+    const start = new Date();
+    start.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+    const end = new Date(start.getTime() + (s.est_minutes ?? 45) * 60_000);
+    createBlock.mutate({
+      title: s.text.split("\n")[0],
+      category_id: s.category_id,
+      start_at: start.toISOString(),
+      end_at: end.toISOString(),
+      source: "compass",
+      busy: false,
+      status: "planned",
+    });
+  }
 
   // Generate the plan once per day after check-in, persisting it so accept/
   // dismiss choices survive reloads. Regeneration keeps prior feedback.
@@ -137,6 +174,7 @@ export default function Plan() {
 
   // Fire the celebration only on the transition into "all done", never on load.
   const [celebrating, setCelebrating] = useState(false);
+  const [celebrateVariant, setCelebrateVariant] = useState(0);
   const mounted = useRef(false);
   const wasAllDone = useRef(false);
   useEffect(() => {
@@ -146,6 +184,7 @@ export default function Plan() {
       return;
     }
     if (allDone && !wasAllDone.current) {
+      setCelebrateVariant(Math.floor(Math.random() * CELEBRATIONS.length));
       setCelebrating(true);
       const t = window.setTimeout(() => setCelebrating(false), 2800);
       wasAllDone.current = allDone;
@@ -153,6 +192,7 @@ export default function Plan() {
     }
     wasAllDone.current = allDone;
   }, [allDone]);
+  const celebration = CELEBRATIONS[celebrateVariant];
 
   // Plan-reveal moment: arriving fresh from check-in, briefly "build" the day
   // before the cards deal in — turns plan generation into an anticipated reward.
@@ -175,7 +215,7 @@ export default function Plan() {
 
   return (
     <section className="space-y-3">
-      {celebrating && <ConfettiRain />}
+      {celebrating && celebration.rain && <ConfettiRain />}
 
       {/* Carry-over from yesterday */}
       {carryOver.length > 0 && (
@@ -227,8 +267,10 @@ export default function Plan() {
         <h2 className="text-sm font-semibold text-[var(--muted)]">Your day, gently planned</h2>
         <div className="flex items-center gap-3">
           {actionable.length > 0 && (
+            // Endowed progress: the check-in already counts as your first tick,
+            // so the day never starts at 0/N.
             <span className="text-xs font-medium text-[var(--muted)]">
-              {doneCount}/{actionable.length} done
+              {doneCount + 1}/{actionable.length + 1} · check-in ✓
             </span>
           )}
           <button onClick={regenerate} className="text-xs text-[var(--muted)] underline hover:text-[var(--foreground)] hover:opacity-100">
@@ -242,10 +284,13 @@ export default function Plan() {
           className="animate-celebrate rounded-2xl p-4 text-center"
           style={{ background: "linear-gradient(135deg, #5b8a72, #3e6b54)", color: "#fffdf9" }}
         >
-          <p className="text-base font-bold">Day complete 🎉</p>
-          <p className="text-xs opacity-90">
-            Every session ticked off — that&apos;s the whole plan. Beautifully done.
+          <p className="text-2xl" aria-hidden>
+            <span className={celebration.spin ? "inline-block animate-spin-slow" : ""}>
+              {celebration.emoji}
+            </span>
           </p>
+          <p className="text-base font-bold">{celebration.title}</p>
+          <p className="text-xs opacity-90">{celebration.line}</p>
         </div>
       )}
 
@@ -281,6 +326,9 @@ export default function Plan() {
               isNext={s.id === nextId}
               index={i}
               suggestedTime={slotMap.get(s.id)}
+              onCommitTime={
+                slotMap.get(s.id) ? () => commitTime(s, slotMap.get(s.id)!) : undefined
+              }
               onToggle={(n) => handleToggle(s, n)}
               onSnooze={() => update.mutate({ id: s.id, patch: { status: "snoozed" } })}
               onDismiss={() => update.mutate({ id: s.id, patch: { status: "dismissed" } })}
@@ -316,6 +364,7 @@ function SuggestionCard({
   isNext = false,
   index = 0,
   suggestedTime,
+  onCommitTime,
   onToggle,
   onSnooze,
   onDismiss,
@@ -326,12 +375,14 @@ function SuggestionCard({
   isNext?: boolean;
   index?: number;
   suggestedTime?: string;
+  onCommitTime?: () => void;
   onToggle: (next: boolean) => void;
   onSnooze: () => void;
   onDismiss: () => void;
 }) {
   const accepted = s.status === "accepted";
   const [open, setOpen] = useState(false);
+  const [committed, setCommitted] = useState(false);
   const highlight = isNext && !accepted;
   const tiltRef = useTilt<HTMLDivElement>(highlight);
 
@@ -385,9 +436,24 @@ function SuggestionCard({
               </Pill>
             )}
             {s.est_minutes ? <Pill color="#7d7c6e">~{s.est_minutes} min</Pill> : null}
-            {suggestedTime && !accepted && (
-              <Pill color="#7a9bb5">🕐 {suggestedTime}</Pill>
-            )}
+            {suggestedTime && !accepted &&
+              (committed ? (
+                <Pill color="#5b8a72">🗓 planned {suggestedTime}</Pill>
+              ) : onCommitTime ? (
+                <button
+                  onClick={() => {
+                    onCommitTime();
+                    setCommitted(true);
+                  }}
+                  title="Add this to today's calendar"
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-all hover:scale-105"
+                  style={{ background: "#7a9bb522", color: "#7a9bb5" }}
+                >
+                  🕐 {suggestedTime} · plan it
+                </button>
+              ) : (
+                <Pill color="#7a9bb5">🕐 {suggestedTime}</Pill>
+              ))}
             {s.personal_insight && (
               <Pill color="#5b8a72">{s.personal_insight}</Pill>
             )}

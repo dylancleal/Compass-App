@@ -4,9 +4,23 @@ import Link from "next/link";
 import { useSaveSettings, useSessions, useSettings } from "@/lib/queries";
 import { todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
-import { defaultWeeklyTarget, weeklyGoalProgress, type GoalStatus } from "@/lib/stats";
+import { defaultWeeklyTarget, weeklyGoalProgress, weeksGoalHitStreak, type GoalStatus } from "@/lib/stats";
+import { detectDomain } from "@/lib/categorySetup";
 import type { Category } from "@/lib/types";
 import { AnimatedBar, ProgressRing } from "@/components/ui";
+
+// Identity verb per domain — for the "You train 4× a week" framing that only
+// appears once a goal has been sustained for a couple of weeks.
+function identityVerb(name: string): string {
+  switch (detectDomain(name)) {
+    case "gym": return "train";
+    case "tennis": return "play";
+    case "uni": return "study";
+    case "running": return "run";
+    case "swimming": return "swim";
+    default: return "show up";
+  }
+}
 
 const STATUS_META: Record<GoalStatus, { color: string; bg: string; label: string }> = {
   met: { color: "var(--success-text)", bg: "var(--success-soft)", label: "Goal met" },
@@ -47,6 +61,12 @@ export function GoalCard({ category }: { category: Category }) {
   const meta = STATUS_META[status];
   const pct = target > 0 ? Math.min(100, (done / target) * 100) : 0;
 
+  // Goal-gradient: one session from the finish line gets an urgent, bright nudge.
+  const nearComplete = status !== "met" && remaining === 1;
+  // Identity framing: earned only after sustaining the goal 2+ prior weeks.
+  const goalStreakWeeks = weeksGoalHitStreak(sessions, category.id, target, today);
+  const identity = goalStreakWeeks >= 2;
+
   function setTarget(next: number) {
     const n = Math.max(1, Math.min(14, next));
     save.mutate({ weeklyTargets: { ...(settings?.weeklyTargets ?? {}), [category.id]: n } });
@@ -54,14 +74,25 @@ export function GoalCard({ category }: { category: Category }) {
 
   return (
     <div className="rounded-2xl border p-4" style={{ borderColor: meta.bg, background: "var(--surface)" }}>
-      <div className="mb-2.5 flex items-center justify-between">
-        <span className="text-xs font-medium text-[var(--muted)]">This week&apos;s goal</span>
-        <span
-          className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-          style={{ background: meta.bg, color: meta.color }}
-        >
-          {meta.label}
+      <div className="mb-2.5 flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-xs font-medium text-[var(--muted)]">
+          {identity ? `You ${identityVerb(category.name)} ${target}× a week 💪` : "This week's goal"}
         </span>
+        {nearComplete ? (
+          <span
+            className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+            style={{ background: accent + "22", color: accent }}
+          >
+            1 to go 🔥
+          </span>
+        ) : (
+          <span
+            className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+            style={{ background: meta.bg, color: meta.color }}
+          >
+            {meta.label}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-4">
