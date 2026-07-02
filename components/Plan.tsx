@@ -154,6 +154,23 @@ export default function Plan() {
     wasAllDone.current = allDone;
   }, [allDone]);
 
+  // Plan-reveal moment: arriving fresh from check-in, briefly "build" the day
+  // before the cards deal in — turns plan generation into an anticipated reward.
+  const [revealing, setRevealing] = useState(false);
+  useEffect(() => {
+    let flag = false;
+    try {
+      flag = sessionStorage.getItem("compass:reveal") === "1";
+      if (flag) sessionStorage.removeItem("compass:reveal");
+    } catch {
+      /* sessionStorage unavailable — skip the reveal */
+    }
+    if (!flag) return;
+    setRevealing(true);
+    const t = window.setTimeout(() => setRevealing(false), 1100);
+    return () => window.clearTimeout(t);
+  }, []);
+
   if (!checkin) return null;
 
   return (
@@ -232,6 +249,17 @@ export default function Plan() {
         </div>
       )}
 
+      {revealing ? (
+        <div className="space-y-2">
+          <p className="text-sm font-medium" style={{ color: "var(--primary)" }}>
+            ✨ Building your day…
+          </p>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="card animate-pulse p-4" style={{ height: 76, opacity: 0.55 }} />
+          ))}
+        </div>
+      ) : (
+        <>
       {visible.length === 0 && (
         <p className="card p-4 text-sm text-[var(--muted)]">
           Nothing pressing today — enjoy the breathing room.
@@ -260,6 +288,8 @@ export default function Plan() {
           );
         })}
       </div>
+        </>
+      )}
 
       {suggestions.some((s) => s.status === "snoozed") && (
         <Button
