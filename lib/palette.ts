@@ -25,5 +25,14 @@ export const PALETTE: Record<string, Accent> = {
 export const PALETTE_KEYS = Object.keys(PALETTE);
 
 export function accentOf(colorKey: string): Accent {
-  return PALETTE[colorKey] ?? PALETTE.slate;
+  const base = PALETTE[colorKey] ?? PALETTE.slate;
+  // Derive soft/text from the accent against the theme vars so they adapt to
+  // dark mode automatically — pale tint in light mode, deep tint in dark, with
+  // text contrast that flips with --foreground. (The static soft/text hexes in
+  // PALETTE are light-mode only and are kept just for the swatch labels.)
+  return {
+    ...base,
+    soft: `color-mix(in srgb, ${base.accent} 18%, var(--surface))`,
+    text: `color-mix(in srgb, ${base.accent} 70%, var(--foreground))`,
+  };
 }

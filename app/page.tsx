@@ -12,16 +12,21 @@ import {
   useRemoveSession,
   useSettings,
   useSessions,
+  useSessionTemplates,
+  useSuggestions,
   useTasks,
 } from "@/lib/queries";
 import { findConflictPairs, findConflictGroups } from "@/lib/schedule";
-import { greeting, prettyDate, todayKey } from "@/lib/date";
+import { addDays, daypart, greeting, prettyDate, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import { useTilt } from "@/lib/useTilt";
+import { buildPlan } from "@/lib/planner";
+import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import type { Category } from "@/lib/types";
 import Plan from "@/components/Plan";
 import TaskList from "@/components/TaskList";
 import LogSheet from "@/components/LogSheet";
+import DayArc from "@/components/DayArc";
 import { GoalsOverview } from "@/components/GoalCard";
 import DeadlineChip from "@/components/calendar/DeadlineChip";
 import { isDeadlineLike } from "@/lib/categoryMatcher";
@@ -46,10 +51,49 @@ export default function TodayPage() {
     `${today}T23:59:59.999Z`,
   );
   const { data: tasks = [] } = useTasks();
+  const { data: suggestions = [] } = useSuggestions(today);
+  const { data: templates } = useSessionTemplates();
+  const library = templates ?? BUILTIN_LIBRARY;
   const createSession = useCreateSession();
   const removeSession = useRemoveSession();
   const [logCat, setLogCat] = useState<Category | null>(null);
   const checkinTiltRef = useTilt<HTMLAnchorElement>(!checkin);
+
+  // Day-state, used to morph what leads the page by time + progress.
+  const wrapped = !!checkin?.extra?.evening_rating;
+  const isLateDay = new Date().getHours() >= 16;
+  const actionable = suggestions.filter(
+    (s) => s.est_minutes !== 0 && s.status !== "dismissed" && s.status !== "snoozed",
+  );
+  const allDone = actionable.length > 0 && actionable.every((s) => s.status === "accepted");
+
+  // One-line sketch of tomorrow — planted tonight to seed intention.
+  const tomorrow = addDays(today, 1);
+  const tomorrowChips = useMemo(() => {
+    if (!settings || !wrapped) return [];
+    const plan = buildPlan({
+      date: tomorrow,
+      assume: { capacity: "medium", mental: 3, uni_readiness: 3 },
+      categories,
+      tasks,
+      sessions,
+      settings,
+      calendarBlocks: [],
+      library,
+    });
+    const seen = new Set<string>();
+    const chips: { icon: string; label: string }[] = [];
+    for (const s of plan) {
+      if ((s.est_minutes ?? 0) <= 0 || !s.category_id || seen.has(s.category_id)) continue;
+      seen.add(s.category_id);
+      const cat = categories.find((c) => c.id === s.category_id);
+      if (!cat) continue;
+      chips.push({ icon: cat.icon, label: s.text.split("\n")[0].split(" — ")[0].split(" ·")[0] });
+      if (chips.length >= 3) break;
+    }
+    return chips;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wrapped, settings, categories.length, sessions.length, tasks.length, library.length]);
 
   function blockDoneSession(blockId: string) {
     return sessions.find(
@@ -106,43 +150,103 @@ export default function TodayPage() {
 
   return (
     <div className="space-y-7">
-      {/* Header — conflict badge sits top-right */}
+      {/* Header — day-arc + greeting, conflict badge top-right */}
       <header className="flex items-start justify-between gap-3">
         <div className="space-y-0.5">
           <p className="text-sm text-[var(--muted)]">{prettyDate(today)}</p>
           <h1 className="text-2xl font-bold">{greeting(settings?.greetingName ?? "")}</h1>
         </div>
-        {conflictGroups.length > 0 && (
-          <Link
-            href="/calendar"
-            className="mt-1 flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all duration-150 hover:scale-105 hover:brightness-95 active:scale-95"
-            style={{
-              background: "var(--warn-soft)",
-              color: "var(--warn-text)",
-              border: "1px solid color-mix(in srgb, var(--warn-text) 45%, transparent)",
-            }}
-          >
-            ⚠ {conflictGroups.length} conflict{conflictGroups.length !== 1 ? "s" : ""}
-          </Link>
-        )}
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {conflictGroups.length > 0 && (
+            <Link
+              href="/calendar"
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all duration-150 hover:scale-105 hover:brightness-95 active:scale-95"
+              style={{
+                background: "var(--warn-soft)",
+                color: "var(--warn-text)",
+                border: "1px solid color-mix(in srgb, var(--warn-text) 45%, transparent)",
+              }}
+            >
+              ⚠ {conflictGroups.length} conflict{conflictGroups.length !== 1 ? "s" : ""}
+            </Link>
+          )}
+          <DayArc />
+        </div>
       </header>
 
-      {/* Check-in entry / summary */}
+      {/* Hero — morphs with the time of day and how far through the day you are */}
       {!checkin ? (
+        // No check-in yet → the check-in is the one thing to do.
         <Link
           ref={checkinTiltRef}
           href="/checkin"
-          className="card card-interactive animate-pop block p-5 hover:brightness-[1.03]"
+          className="card card-interactive animate-pop block p-6 hover:brightness-[1.03]"
           style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
         >
-          <p className="text-lg font-semibold" style={{ color: "var(--primary)" }}>
-            Ready for a quick check-in? 🌿
+          <p className="text-xl font-semibold" style={{ color: "var(--primary)" }}>
+            {daypart() === "morning"
+              ? "Good morning — start with a check-in 🌿"
+              : "Ready for a quick check-in? 🌿"}
           </p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
+          <p className="mt-1.5 text-sm text-[var(--muted)]">
             Tell me how today feels and I&apos;ll shape a gentle plan with you. ~30 seconds.
           </p>
+          <span className="mt-3 inline-block text-sm font-semibold" style={{ color: "var(--primary)" }}>
+            Start check-in →
+          </span>
+        </Link>
+      ) : wrapped ? (
+        // Day closed → quiet "sealed" state + a one-line sketch of tomorrow.
+        <div
+          className="card animate-pop p-5"
+          style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🌙</span>
+            <div>
+              <p className="text-base font-semibold" style={{ color: "var(--primary)" }}>
+                Day sealed
+              </p>
+              <p className="text-xs text-[var(--muted)]">You closed the loop today. Rest well.</p>
+            </div>
+          </div>
+          {tomorrowChips.length > 0 && (
+            <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--border)" }}>
+              <p className="text-xs font-medium text-[var(--muted)]">Tomorrow looks like</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {tomorrowChips.map((c, i) => (
+                  <span
+                    key={i}
+                    className="rounded-full px-2.5 py-1 text-xs font-medium"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                  >
+                    {c.icon} {c.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : isLateDay ? (
+        // Late in the day, not yet wrapped → nudge to close the loop (peak-end).
+        <Link
+          href="/wrap"
+          className="card card-interactive animate-pop flex items-center gap-3 p-5 hover:brightness-[1.03]"
+          style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
+        >
+          <span className="text-2xl">🌙</span>
+          <div className="flex-1">
+            <p className="text-base font-semibold" style={{ color: "var(--primary)" }}>
+              How did today land?
+            </p>
+            <p className="text-xs text-[var(--muted)]">
+              One tap to close the day{allDone ? " — you finished your plan 🎉" : ""}.
+            </p>
+          </div>
+          <span className="text-sm text-[var(--muted)]">→</span>
         </Link>
       ) : (
+        // Checked in, mid-day → compact summary; the plan below is the focus.
         <div className="card flex items-center gap-4 p-4">
           <span className="text-3xl">{MENTAL_EMOJI[checkin.mental]}</span>
           <div className="flex-1">
@@ -155,24 +259,6 @@ export default function TodayPage() {
             redo
           </Link>
         </div>
-      )}
-
-      {/* Evening wrap prompt — visible after 4pm when wrap not done yet */}
-      {checkin && !checkin.extra?.evening_rating && new Date().getHours() >= 16 && (
-        <Link
-          href="/wrap"
-          className="card card-interactive animate-pop flex items-center gap-3 p-4 hover:brightness-[1.03]"
-          style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
-        >
-          <span className="text-2xl">🌙</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold" style={{ color: "var(--primary)" }}>
-              Close the day
-            </p>
-            <p className="text-xs text-[var(--muted)]">How did today land? One tap.</p>
-          </div>
-          <span className="text-xs text-[var(--muted)]">→</span>
-        </Link>
       )}
 
       {/* Personalised plan */}

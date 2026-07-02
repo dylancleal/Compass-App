@@ -23,6 +23,7 @@ export default function DeadlineRail({ tasks, categories, rangeStart, rangeEnd, 
       {due.map((task) => {
         const cat = categories.find((c) => c.id === task.category_id);
         const accent = accentOf(cat?.color ?? "slate");
+        const overdueAccent = accentOf("rose");
         const isToday = task.due_date === new Date().toISOString().slice(0, 10);
         const isOverdue = task.due_date! < new Date().toISOString().slice(0, 10);
         return (
@@ -31,9 +32,9 @@ export default function DeadlineRail({ tasks, categories, rangeStart, rangeEnd, 
             onClick={() => onSchedule(task)}
             className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all hover:scale-105"
             style={{
-              background: isOverdue ? "#f8ece8" : accent.soft,
-              color: isOverdue ? "#c06b5a" : accent.text,
-              border: `1px solid ${isOverdue ? "#c06b5a33" : accent.accent + "33"}`,
+              background: isOverdue ? overdueAccent.soft : accent.soft,
+              color: isOverdue ? overdueAccent.text : accent.text,
+              border: `1px solid ${(isOverdue ? overdueAccent.accent : accent.accent) + "33"}`,
             }}
           >
             <span>{cat?.icon ?? "📌"}</span>
