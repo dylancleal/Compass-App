@@ -178,7 +178,14 @@ export default function Plan() {
     save.mutate({ date: today, items: draft });
   }
 
-  const visible = suggestions.filter((s) => s.status !== "dismissed" && s.status !== "snoozed");
+  const visibleUnsorted = suggestions.filter(
+    (s) => s.status !== "dismissed" && s.status !== "snoozed",
+  );
+  // Completed items sink to the bottom (stable within each group) so the plan
+  // always leads with what's still to do.
+  const visible = [...visibleUnsorted].sort(
+    (a, b) => (a.status === "accepted" ? 1 : 0) - (b.status === "accepted" ? 1 : 0),
+  );
   const actionable = visible.filter((s) => s.est_minutes !== 0);
   const doneCount = actionable.filter((s) => s.status === "accepted").length;
   const allDone = actionable.length > 0 && doneCount === actionable.length;
@@ -420,6 +427,63 @@ function SuggestionCard({
     .filter((l) => l.trimStart().startsWith("·"))
     .map((l) => l.replace(/^\s*·\s*/, ""));
 
+  // ── Completed → a calm, compact "done" row (settles to the bottom of the plan).
+  if (accepted) {
+    return (
+      <div
+        className="animate-pop rounded-2xl p-3"
+        style={{
+          background: `color-mix(in srgb, ${accent} 8%, var(--surface))`,
+          border: `1px solid ${accent}22`,
+          animationDelay: `${index * 60}ms`,
+        }}
+      >
+        {adjusting && loggedSession && onUpdateSession && cat ? (
+          <SessionEditor
+            categoryName={cat.name}
+            initialType={loggedSession.type}
+            initialDuration={loggedSession.duration_minutes}
+            accent={accent}
+            onCancel={() => setAdjusting(false)}
+            onSave={(patch) => {
+              onUpdateSession(patch);
+              setAdjusting(false);
+            }}
+          />
+        ) : (
+          <div className="flex items-center gap-3">
+            <TickCircle checked accent={accent} size={22} onChange={onToggle} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium" style={{ color: "var(--foreground)" }}>
+                {headerLines[0]}
+              </p>
+              <p className="truncate text-xs" style={{ color: "var(--muted)" }}>
+                {cat ? `${cat.icon} ` : ""}
+                {loggedSession
+                  ? `${loggedSession.type}${loggedSession.duration_minutes ? ` · ${loggedSession.duration_minutes} min` : ""}`
+                  : "done"}
+              </p>
+            </div>
+            <span
+              className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+              style={{ background: accent + "22", color: accent }}
+            >
+              ✓ done
+            </span>
+            {loggedSession && onUpdateSession && (
+              <button
+                onClick={() => setAdjusting(true)}
+                className="shrink-0 text-xs text-[var(--muted)] underline decoration-[var(--border)] underline-offset-2 transition-colors hover:text-[var(--foreground)]"
+              >
+                adjust
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={tiltRef}
@@ -450,7 +514,7 @@ function SuggestionCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className={`text-sm font-semibold strike ${accepted ? "on" : ""}`}>{headerLines[0]}</p>
+          <p className="text-sm font-semibold">{headerLines[0]}</p>
           {headerLines.slice(1).map((line, i) => (
             <p key={i} className="mt-0.5 text-sm text-[var(--muted)]">
               {line}
@@ -486,46 +550,6 @@ function SuggestionCard({
               <Pill color="#5b8a72">{s.personal_insight}</Pill>
             )}
           </div>
-
-          {/* Correct what you actually did after ticking it off */}
-          {accepted && loggedSession && onUpdateSession && cat && (
-            <div
-              className="mt-2 rounded-xl p-2.5"
-              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-            >
-              {adjusting ? (
-                <SessionEditor
-                  categoryName={cat.name}
-                  initialType={loggedSession.type}
-                  initialDuration={loggedSession.duration_minutes}
-                  accent={accent}
-                  onCancel={() => setAdjusting(false)}
-                  onSave={(patch) => {
-                    onUpdateSession(patch);
-                    setAdjusting(false);
-                  }}
-                />
-              ) : (
-                <button
-                  onClick={() => setAdjusting(true)}
-                  className="flex w-full items-center justify-between gap-2 text-xs"
-                >
-                  <span style={{ color: "var(--muted)" }}>
-                    Logged:{" "}
-                    <span className="font-medium" style={{ color: "var(--foreground)" }}>
-                      {loggedSession.type}
-                      {loggedSession.duration_minutes
-                        ? ` · ${loggedSession.duration_minutes} min`
-                        : ""}
-                    </span>
-                  </span>
-                  <span className="shrink-0 font-semibold" style={{ color: accent }}>
-                    did more/less? adjust →
-                  </span>
-                </button>
-              )}
-            </div>
-          )}
 
           {steps.length > 0 && (
             <div className="mt-2.5">
