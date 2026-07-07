@@ -92,5 +92,5 @@ export async function GET(request: Request) {
     await runGoogleSync((conn as { id: string }).id);
   } catch {}
 
-  return NextResponse.redirect(`${base}/settings?oauth_connected=google`);
+  return NextResponse.redirect(`${base}/connected`);
 }

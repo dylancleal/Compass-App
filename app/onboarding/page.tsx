@@ -203,14 +203,13 @@ function StepCalendar({ onConnect, onSkip }: { onConnect: () => void; onSkip: ()
         ))}
       </div>
 
-      <a
-        href="/calendar"
+      <button
+        onClick={onConnect}
         className="block w-full rounded-xl py-3 text-center text-sm font-semibold transition-all hover:brightness-105"
         style={{ background: "var(--primary)", color: "#fffdf9" }}
-        onClick={onConnect}
       >
         Connect calendar →
-      </a>
+      </button>
 
       <button
         onClick={onSkip}
@@ -388,14 +387,26 @@ export default function OnboardingPage() {
     setStep("preview");
   }
 
-  async function handleFinish() {
+  // Persist the "onboarding done" flag, then run a follow-up navigation. Kept as
+  // an awaited mutation (not a fire-and-forget alongside an <a href>) so the flag
+  // is written before we leave — otherwise a user who heads off to connect a
+  // calendar can bounce back into onboarding on return.
+  async function completeOnboarding(next: string) {
     await new Promise<void>((resolve) => {
       saveSettings.mutate(
         { onboarding_completed_at: new Date().toISOString() },
         { onSuccess: () => resolve(), onError: () => resolve() },
       );
     });
-    router.push("/checkin");
+    router.push(next);
+  }
+
+  function handleFinish() {
+    return completeOnboarding("/checkin");
+  }
+
+  function handleConnectCalendar() {
+    return completeOnboarding("/calendar");
   }
 
   return (
@@ -426,11 +437,11 @@ export default function OnboardingPage() {
 
         {step === "setup" && createdCategories.length === 0 && (
           // Nothing to set up — skip straight to calendar
-          <StepCalendar onConnect={handleFinish} onSkip={handleCalendarSkip} />
+          <StepCalendar onConnect={handleConnectCalendar} onSkip={handleCalendarSkip} />
         )}
 
         {step === "calendar" && (
-          <StepCalendar onConnect={handleFinish} onSkip={handleCalendarSkip} />
+          <StepCalendar onConnect={handleConnectCalendar} onSkip={handleCalendarSkip} />
         )}
 
         {step === "preview" && settings && (

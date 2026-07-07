@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   useCategories,
   useCalendarBlocks,
+  useCalendarConnections,
   useCheckin,
   useCreateSession,
   useMetrics,
@@ -54,6 +55,7 @@ export default function TodayPage() {
   );
   const { data: tasks = [] } = useTasks();
   const { data: suggestions = [] } = useSuggestions(today);
+  const { data: connections = [] } = useCalendarConnections();
   const { data: templates } = useSessionTemplates();
   const library = templates ?? BUILTIN_LIBRARY;
   const createSession = useCreateSession();
@@ -135,13 +137,17 @@ export default function TodayPage() {
   }
 
   // Redirect brand-new users to onboarding. Wait for sessions to load first
-  // so existing users without the flag set don't get bounced.
+  // so existing users without the flag set don't get bounced. Also treat anyone
+  // who already logged a session OR connected a calendar as established — this
+  // stops a returning-from-Google-OAuth user (whose flag write may have raced,
+  // or whose PWA cold-restarted to "/") from being thrown back into onboarding.
   useEffect(() => {
     if (!settings || sessionsLoading) return;
     if (settings.onboarding_completed_at) return;
     if (sessions.length > 0) return; // existing user — has activity, skip
+    if (connections.length > 0) return; // has a calendar connection — not new
     router.replace("/onboarding");
-  }, [settings, sessions, sessionsLoading, router]);
+  }, [settings, sessions, sessionsLoading, connections.length, router]);
 
   const activeCats = categories.filter((c) => c.active);
 
