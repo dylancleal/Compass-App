@@ -151,6 +151,32 @@ export default function Plan() {
     return `${count}/${goal}${suffix}${count >= goal ? " ✓" : ""}`;
   }
 
+  // Signature of manually-logged sessions (i.e. not the auto-logs created by
+  // ticking a suggestion). When you back-date a session, edit, or delete one,
+  // this changes — and we re-score today's still-pending plan so it reflects
+  // reality in real time (e.g. logging yesterday's gym drops today's gym nudge).
+  const manualSessionsKey = useMemo(
+    () =>
+      sessions
+        .filter((s) => !(s.payload as { auto_logged?: boolean })?.auto_logged)
+        .map((s) => `${s.id}:${s.date}:${s.category_id}:${s.type}:${s.duration_minutes ?? ""}`)
+        .sort()
+        .join("|"),
+    [sessions],
+  );
+
+  // Build a fresh plan but keep categories you've already acted on today
+  // (accepted/dismissed/snoozed) out of it, so regenerating never duplicates or
+  // undoes a ticked-off item. saveSuggestions only replaces the pending rows.
+  function buildDraftPreserving() {
+    if (!settings || !checkin) return [];
+    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings, calendarBlocks, library });
+    const acted = new Set(
+      suggestions.filter((s) => s.status !== "pending" && s.category_id).map((s) => s.category_id),
+    );
+    return draft.filter((d) => !d.category_id || !acted.has(d.category_id));
+  }
+
   // Commit-to-time: turn a suggested slot into a planned block ("at 9am I will…").
   function commitTime(s: Suggestion, slot: string) {
     const mins = parseSlot(slot);
@@ -215,9 +241,25 @@ export default function Plan() {
 
   function regenerate() {
     if (!settings || !checkin) return;
-    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings, calendarBlocks, library });
-    save.mutate({ date: today, items: draft });
+    save.mutate({ date: today, items: buildDraftPreserving() });
   }
+
+  // Real-time re-score: after the plan exists, any change to manually-logged
+  // sessions (a back-dated log, an edit, a delete) re-scores the still-pending
+  // plan. Auto-logs from ticking are excluded, so normal ticking never churns.
+  const baselineManualKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!settings || !checkin || isLoading) return;
+    if (suggestions.length === 0) return; // initial generation handles this
+    if (baselineManualKey.current === null) {
+      baselineManualKey.current = manualSessionsKey; // capture once the plan is live
+      return;
+    }
+    if (manualSessionsKey === baselineManualKey.current) return;
+    baselineManualKey.current = manualSessionsKey;
+    save.mutate({ date: today, items: buildDraftPreserving() });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manualSessionsKey, settings, checkin, isLoading, suggestions.length]);
 
   const visibleUnsorted = suggestions.filter(
     (s) => s.status !== "dismissed" && s.status !== "snoozed",
@@ -259,7 +301,10 @@ export default function Plan() {
 
   // Plan-reveal moment: arriving fresh from check-in, briefly "build" the day
   // before the cards deal in — turns plan generation into an anticipated reward.
+  // The end time is stored in a ref (not a cleared timeout) so React's dev
+  // double-invoke can't consume the flag and then strand `revealing` on.
   const [revealing, setRevealing] = useState(false);
+  const revealUntil = useRef(0);
   useEffect(() => {
     let flag = false;
     try {
@@ -268,9 +313,11 @@ export default function Plan() {
     } catch {
       /* sessionStorage unavailable — skip the reveal */
     }
-    if (!flag) return;
+    if (flag) revealUntil.current = Date.now() + 1100;
+    const remaining = revealUntil.current - Date.now();
+    if (remaining <= 0) return;
     setRevealing(true);
-    const t = window.setTimeout(() => setRevealing(false), 1100);
+    const t = window.setTimeout(() => setRevealing(false), remaining);
     return () => window.clearTimeout(t);
   }, []);
 
