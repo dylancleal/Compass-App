@@ -228,12 +228,28 @@ body::after {
   100% { transform: translate(22px, -28px) scale(1.25); opacity: 0.3; }
 }
 
-/* compass needle settling to north on day completion */
-@keyframes needle-spin {
-  from { transform: translate(-50%, -50%) rotate(-540deg); }
-  to { transform: translate(-50%, -50%) rotate(0deg); }
+/* compass needle settling to north on day completion — a longer, lazy spin.
+   SVG variant rotates about the viewBox centre. */
+@keyframes needle-spin-svg {
+  from { transform: rotate(-1080deg); }
+  to { transform: rotate(0deg); }
 }
-.animate-needle { animation: needle-spin 1.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-needle-svg {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: needle-spin-svg 2.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* twinkling stars for the day-complete space scene */
+@keyframes twinkle {
+  0%, 100% { opacity: var(--star-o, 0.6); }
+  50% { opacity: 0.12; }
+}
+.star {
+  position: absolute;
+  border-radius: 50%;
+  animation: twinkle 3.2s ease-in-out infinite;
+}
 
 /* expand/collapse — animates height via grid-template-rows */
 .collapsible {
@@ -252,7 +268,7 @@ body::after {
   body::before, body::after { animation: none; }
   .collapsible { transition: none; }
   .card-interactive, .btn-life, .strike { transition: none; }
-  .animate-spin-slow, .animate-needle, .firefly { animation: none; }
+  .animate-spin-slow, .animate-needle-svg, .firefly, .star { animation: none; }
   .card-interactive:hover, .btn-life:hover:not(:disabled) { transform: none; }
   .strike.on { background-size: 100% 1.5px; } /* show final state, no grow */
 }
