@@ -28,6 +28,7 @@ import Plan from "@/components/Plan";
 import TaskList from "@/components/TaskList";
 import LogSheet from "@/components/LogSheet";
 import DayArc from "@/components/DayArc";
+import QuickAddTask from "@/components/QuickAddTask";
 import { ParallaxLeaf } from "@/components/decor";
 import { IconChip, QuietLink } from "@/components/ui";
 import { GoalsOverview } from "@/components/GoalCard";
@@ -419,6 +420,7 @@ export default function TodayPage() {
           hideCompleted
           emptyText="No open tasks — beautifully clear. ✨"
         />
+        <QuickAddTask categories={activeCats} />
       </section>
 
       {logCat && (

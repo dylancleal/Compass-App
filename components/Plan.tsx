@@ -14,6 +14,7 @@ import {
   useSettings,
   useSuggestions,
   useTasks,
+  useUpdateSession,
   useUpdateSuggestion,
 } from "@/lib/queries";
 import { buildPlan } from "@/lib/planner";
@@ -23,8 +24,9 @@ import { findFreeSlot } from "@/lib/timeSlot";
 import { addDays, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import { useTilt } from "@/lib/useTilt";
-import type { Suggestion, Category } from "@/lib/types";
+import type { Suggestion, Category, Session } from "@/lib/types";
 import { Button, Pill } from "./ui";
+import SessionEditor from "./SessionEditor";
 import TickCircle from "./TickCircle";
 import CompassRose from "./CompassRose";
 
@@ -93,8 +95,20 @@ export default function Plan() {
   const update = useUpdateSuggestion(today);
   const createSession = useCreateSession();
   const removeSession = useRemoveSession();
+  const updateSession = useUpdateSession();
   const createBlock = useCreateCalendarBlock();
   const generatedRef = useRef(false);
+
+  // The session auto-logged when a suggestion was accepted — so the card can let
+  // you correct what you actually did (type + duration) after ticking it off.
+  function loggedSessionFor(suggestionId: string): Session | undefined {
+    return sessions.find(
+      (sess) =>
+        (sess.payload as { suggestion_id?: string; auto_logged?: boolean })?.suggestion_id ===
+          suggestionId &&
+        (sess.payload as { auto_logged?: boolean })?.auto_logged === true,
+    );
+  }
 
   // Commit-to-time: turn a suggested slot into a planned block ("at 9am I will…").
   function commitTime(s: Suggestion, slot: string) {
@@ -328,6 +342,11 @@ export default function Plan() {
               isNext={s.id === nextId}
               index={i}
               suggestedTime={slotMap.get(s.id)}
+              loggedSession={loggedSessionFor(s.id)}
+              onUpdateSession={(patch) => {
+                const ls = loggedSessionFor(s.id);
+                if (ls) updateSession.mutate({ id: ls.id, patch });
+              }}
               onCommitTime={
                 slotMap.get(s.id) ? () => commitTime(s, slotMap.get(s.id)!) : undefined
               }
@@ -366,6 +385,8 @@ function SuggestionCard({
   isNext = false,
   index = 0,
   suggestedTime,
+  loggedSession,
+  onUpdateSession,
   onCommitTime,
   onToggle,
   onSnooze,
@@ -377,6 +398,8 @@ function SuggestionCard({
   isNext?: boolean;
   index?: number;
   suggestedTime?: string;
+  loggedSession?: Session;
+  onUpdateSession?: (patch: { type: string; duration_minutes?: number }) => void;
   onCommitTime?: () => void;
   onToggle: (next: boolean) => void;
   onSnooze: () => void;
@@ -385,6 +408,7 @@ function SuggestionCard({
   const accepted = s.status === "accepted";
   const [open, setOpen] = useState(false);
   const [committed, setCommitted] = useState(false);
+  const [adjusting, setAdjusting] = useState(false);
   const highlight = isNext && !accepted;
   const tiltRef = useTilt<HTMLDivElement>(highlight);
 
@@ -462,6 +486,46 @@ function SuggestionCard({
               <Pill color="#5b8a72">{s.personal_insight}</Pill>
             )}
           </div>
+
+          {/* Correct what you actually did after ticking it off */}
+          {accepted && loggedSession && onUpdateSession && cat && (
+            <div
+              className="mt-2 rounded-xl p-2.5"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              {adjusting ? (
+                <SessionEditor
+                  categoryName={cat.name}
+                  initialType={loggedSession.type}
+                  initialDuration={loggedSession.duration_minutes}
+                  accent={accent}
+                  onCancel={() => setAdjusting(false)}
+                  onSave={(patch) => {
+                    onUpdateSession(patch);
+                    setAdjusting(false);
+                  }}
+                />
+              ) : (
+                <button
+                  onClick={() => setAdjusting(true)}
+                  className="flex w-full items-center justify-between gap-2 text-xs"
+                >
+                  <span style={{ color: "var(--muted)" }}>
+                    Logged:{" "}
+                    <span className="font-medium" style={{ color: "var(--foreground)" }}>
+                      {loggedSession.type}
+                      {loggedSession.duration_minutes
+                        ? ` · ${loggedSession.duration_minutes} min`
+                        : ""}
+                    </span>
+                  </span>
+                  <span className="shrink-0 font-semibold" style={{ color: accent }}>
+                    did more/less? adjust →
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
 
           {steps.length > 0 && (
             <div className="mt-2.5">
