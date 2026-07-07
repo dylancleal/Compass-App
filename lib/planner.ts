@@ -133,24 +133,49 @@ export function scoreCategories(input: PlannerInput): Scored[] {
       else if (SCHEDULED[cat.name]) readiness = (mental / 5) * 0.7 + (isScheduledToday(cat, input) ? 0.3 : 0);
       if (isScheduledToday(cat, input)) reasonBits.push("it's on today's schedule");
 
-      // Metadata weekly_goal: if the user is behind on their weekly target,
-      // boost neglect to surface the category sooner.
+      // Weekly-quota pacing: once you've hit your weekly target, ease right off
+      // for the rest of the week; if you're behind with few days left, push
+      // harder. Surplus sessions from last week roll over to lower this week's
+      // effective target — do an extra one now and get one fewer suggested later.
+      // Deficits are NOT carried forward (no guilt pile-up, per the app's ethos).
       const meta = cat.metadata;
       const weeklyGoal =
         meta?.weekly_goal ?? meta?.tennis_weekly_goal ?? meta?.custom_weekly_goal;
-      if (weeklyGoal) {
-        const weekStart = addDays(input.date, -(dayIndex(input.date)));
-        const sessionsThisWeek = input.sessions.filter(
-          (s) => s.category_id === cat.id && s.date >= weekStart,
-        ).length;
-        const weeklyProgress = sessionsThisWeek / weeklyGoal;
-        if (weeklyProgress < 0.5) {
-          reasonBits.push(`${sessionsThisWeek}/${weeklyGoal} sessions this week`);
+      let quotaFactor = 1;
+      if (weeklyGoal && weeklyGoal > 0) {
+        const weekStart = addDays(input.date, -dayIndex(input.date));
+        const countBetween = (from: string, to: string) =>
+          input.sessions.filter(
+            (s) => s.category_id === cat.id && s.date >= from && s.date <= to,
+          ).length;
+
+        const doneThisWeek = countBetween(weekStart, input.date);
+        const lastWeekDone = countBetween(addDays(weekStart, -7), addDays(weekStart, -1));
+        // Cap carried surplus so one big week doesn't wipe out the next entirely.
+        const banked = Math.min(Math.max(0, lastWeekDone - weeklyGoal), Math.ceil(weeklyGoal / 2));
+        const effectiveTarget = Math.max(1, weeklyGoal - banked);
+        const remaining = effectiveTarget - doneThisWeek;
+        const opportunities = 7 - dayIndex(input.date); // days left incl. today
+
+        if (remaining <= 0) {
+          quotaFactor = 0.12; // quota met/exceeded — stand down for the week
+          reasonBits.push(`${doneThisWeek}/${weeklyGoal} this week ✓`);
+        } else if (remaining >= opportunities) {
+          quotaFactor = 1.4; // need nearly every remaining day to hit it
+          reasonBits.push(`${doneThisWeek}/${effectiveTarget} — every day counts now`);
+        } else if (remaining / opportunities >= 0.5) {
+          quotaFactor = 1.15; // a touch behind pace
+          reasonBits.push(`${doneThisWeek}/${effectiveTarget} this week`);
+        } else {
+          quotaFactor = 0.85; // comfortably ahead of pace — no urgency
+        }
+        if (banked > 0 && remaining > 0) {
+          reasonBits.push(`eased — you banked ${banked} extra last week`);
         }
       }
 
       let score =
-        w.neglect * neglect + w.deadline * deadline + w.readiness * readiness;
+        (w.neglect * neglect + w.deadline * deadline + w.readiness * readiness) * quotaFactor;
 
       // If the calendar already has a busy block for this category today,
       // suppress the suggestion — the activity is already happening.
