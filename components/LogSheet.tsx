@@ -11,15 +11,8 @@ import {
 } from "@/lib/queries";
 import { todayKey } from "@/lib/date";
 import { shouldPromptSkillConfidence } from "@/lib/sessionInfer";
+import { sessionTypesFor } from "@/lib/sessionTypes";
 import { Button, ScalePicker, Sheet } from "./ui";
-
-const SESSION_TYPES: Record<string, string[]> = {
-  Gym: ["Push", "Pull", "Legs", "Full body", "Cardio", "Mobility", "Recovery"],
-  Tennis: ["Serve", "Forehand", "Backhand", "Volleys", "Match", "Fitness"],
-  "Uni work": ["Study", "Reading", "Problem set", "Revision", "Past paper", "Group work"],
-  "Job searching": ["Applications", "Follow-ups", "Interview", "Networking"],
-  Finances: ["Review", "Budgeting"],
-};
 
 const ENERGY_EMOJI = ["", "😴", "😕", "😐", "😊", "⚡"];
 
@@ -57,7 +50,7 @@ export default function LogSheet({
   const createLog = useCreateMetricLog();
 
   const isTennis = category.name === "Tennis";
-  const types = SESSION_TYPES[category.name] ?? ["Session"];
+  const types = sessionTypesFor(category.name);
 
   const [step, setStep] = useState<"log" | "feedback">("log");
   const [savedSession, setSavedSession] = useState<Session | null>(null);

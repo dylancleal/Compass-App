@@ -12,6 +12,7 @@ import { accentOf } from "@/lib/palette";
 import { metricSeries, weeklySessionCounts, currentStreak } from "@/lib/stats";
 import TaskList from "@/components/TaskList";
 import LogSheet from "@/components/LogSheet";
+import SessionHistory from "@/components/SessionHistory";
 import { BarTrend, LineTrend } from "@/components/charts";
 import { Button } from "@/components/ui";
 
@@ -69,6 +70,11 @@ export default function CategoryDetail({ params }: { params: Promise<{ id: strin
       <section>
         <h2 className="mb-2 text-sm font-semibold text-[var(--muted)]">Tasks</h2>
         <TaskList categoryId={category.id} accent={accent.accent} />
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-[var(--muted)]">Recent sessions</h2>
+        <SessionHistory sessions={catSessions} categoryName={category.name} accent={accent.accent} />
       </section>
 
       <section className="space-y-4">
