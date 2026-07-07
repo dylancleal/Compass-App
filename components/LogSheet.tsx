@@ -9,7 +9,7 @@ import {
   useSessions,
   useUpdateSession,
 } from "@/lib/queries";
-import { todayKey } from "@/lib/date";
+import { addDays, prettyDate, todayKey } from "@/lib/date";
 import { shouldPromptSkillConfidence } from "@/lib/sessionInfer";
 import { sessionTypesFor } from "@/lib/sessionTypes";
 import { Button, ScalePicker, Sheet } from "./ui";
@@ -285,15 +285,44 @@ export default function LogSheet({
   return (
     <Sheet open={open} onClose={onClose} title={`Log ${category.name}`}>
       <div className="space-y-4">
-        <label className="block text-xs font-medium text-[var(--muted)]">
-          Date
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-[var(--border)] px-2 py-2 text-sm"
-          />
-        </label>
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-[var(--muted)]">When did you do this?</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { label: "Today", d: todayKey() },
+              { label: "Yesterday", d: addDays(todayKey(), -1) },
+            ].map((o) => {
+              const active = date === o.d;
+              return (
+                <button
+                  key={o.label}
+                  type="button"
+                  onClick={() => setDate(o.d)}
+                  className="rounded-full px-3 py-1.5 text-sm font-medium transition-all hover:scale-[1.05] hover:opacity-100"
+                  style={{
+                    background: active ? accent : accent + "1a",
+                    color: active ? "#fff" : accent,
+                  }}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+            <input
+              type="date"
+              value={date}
+              max={todayKey()}
+              onChange={(e) => setDate(e.target.value)}
+              className="rounded-lg border border-[var(--border)] px-2 py-1.5 text-sm"
+              aria-label="Pick a date"
+            />
+          </div>
+          {date !== todayKey() && (
+            <p className="mt-1.5 text-xs" style={{ color: "var(--muted)" }}>
+              Logging for {prettyDate(date)} — your goals and today&apos;s plan update straight away.
+            </p>
+          )}
+        </div>
 
         <div>
           <p className="mb-1.5 text-xs font-medium text-[var(--muted)]">
