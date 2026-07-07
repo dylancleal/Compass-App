@@ -353,10 +353,19 @@ GOOGLE_OAUTH_CLIENT_ID=
 GOOGLE_OAUTH_CLIENT_SECRET=
 MS_OAUTH_CLIENT_ID=
 MS_OAUTH_CLIENT_SECRET=
-OAUTH_REDIRECT_BASE_URL=      # e.g. https://compass.vercel.app
-TOKEN_ENCRYPTION_KEY=         # 32-byte key for AES-GCM
-SUPABASE_SERVICE_ROLE_KEY=    # already exists in Supabase project settings
+OAUTH_REDIRECT_BASE_URL=      # e.g. https://compass.vercel.app (server; Google redirect_uri base)
+NEXT_PUBLIC_OAUTH_REDIRECT_BASE_URL=  # SAME canonical origin as above; makes the
+                             # client "Sign in with Google" link absolute so the PKCE
+                             # cookie and the callback share one origin. Leave unset to
+                             # fall back to a same-origin (relative) link.
+TOKEN_ENCRYPTION_KEY=        # 32-byte key for AES-GCM
+SUPABASE_SERVICE_ROLE_KEY=   # already exists in Supabase project settings
 ```
+
+> **Deploy note:** users must reach the app on the **one** canonical origin that
+> `OAUTH_REDIRECT_BASE_URL` points to (enforce alias → canonical redirects at the
+> host/Vercel level). The Supabase auth session lives in per-origin `localStorage`,
+> so an OAuth round-trip that lands on a different origin appears logged-out.
 
 ---
 

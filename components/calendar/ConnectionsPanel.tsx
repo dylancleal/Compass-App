@@ -13,6 +13,16 @@ import {
 } from "@/lib/queries";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 
+// Build the OAuth start URL against the canonical origin when one is configured,
+// so /start (which sets the PKCE cookie) and the Google callback run on the same
+// domain. Without this, a user on a non-canonical alias (preview URL, www vs
+// apex) sets the cookie on one origin and the callback can't read it → the flow
+// fails with "expired". Falls back to a relative URL (same-origin) when unset.
+function oauthStartUrl(userId: string): string {
+  const base = process.env.NEXT_PUBLIC_OAUTH_REDIRECT_BASE_URL ?? "";
+  return `${base}/api/calendar/oauth/google/start?uid=${encodeURIComponent(userId)}`;
+}
+
 const PROVIDERS = [
   {
     id: "google" as const,
@@ -105,7 +115,7 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
       {/* Reconnect button shown when OAuth token was revoked */}
       {conn.needs_reauth && userId && (
         <a
-          href={`/api/calendar/oauth/google/start?uid=${userId}`}
+          href={oauthStartUrl(userId)}
           className="shrink-0 cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-semibold transition-all duration-150 hover:scale-105 active:scale-95"
           style={{ background: "#f8ece8", color: "#c06b5a" }}
         >
@@ -244,7 +254,7 @@ function GoogleConnectForm({
       </div>
       {!cloudRequired && userId && (
         <a
-          href={`/api/calendar/oauth/google/start?uid=${userId}`}
+          href={oauthStartUrl(userId)}
           className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-[#fffdf9] transition-all duration-150 hover:scale-[1.02] hover:brightness-110 active:scale-[0.98]"
           style={{ background: "var(--primary)" }}
         >
