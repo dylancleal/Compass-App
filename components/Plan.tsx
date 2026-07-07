@@ -21,7 +21,7 @@ import { buildPlan } from "@/lib/planner";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import { inferDurationFromBlocks } from "@/lib/sessionInfer";
 import { findFreeSlot } from "@/lib/timeSlot";
-import { addDays, todayKey } from "@/lib/date";
+import { addDays, dayIndex, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import { useTilt } from "@/lib/useTilt";
 import type { Suggestion, Category, Session } from "@/lib/types";
@@ -108,6 +108,23 @@ export default function Plan() {
           suggestionId &&
         (sess.payload as { auto_logged?: boolean })?.auto_logged === true,
     );
+  }
+
+  // The "N/M … this week" insight is baked into the suggestion at plan-generation
+  // time, so it goes stale the moment you log a session. Recompute the running
+  // count live from today's sessions while preserving the label + ✓.
+  const weekStart = addDays(today, -dayIndex(today));
+  function liveInsight(s: Suggestion): string | undefined {
+    const stored = s.personal_insight;
+    if (!stored || !s.category_id) return stored;
+    const m = stored.match(/^(\d+)\/(\d+)(.*)$/);
+    if (!m) return stored; // avg/streak insight — leave as-is
+    const goal = Number(m[2]);
+    const suffix = m[3].replace(/\s*✓\s*$/, "");
+    const count = sessions.filter(
+      (x) => x.category_id === s.category_id && x.date >= weekStart,
+    ).length;
+    return `${count}/${goal}${suffix}${count >= goal ? " ✓" : ""}`;
   }
 
   // Commit-to-time: turn a suggested slot into a planned block ("at 9am I will…").
@@ -303,14 +320,46 @@ export default function Plan() {
 
       {allDone && (
         <div
-          className="animate-celebrate rounded-2xl p-4 text-center"
-          style={{ background: "linear-gradient(135deg, #5b8a72, #3e6b54)", color: "#fffdf9" }}
+          className="animate-celebrate relative overflow-hidden rounded-2xl p-6 text-center"
+          style={{
+            border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
+            boxShadow: "var(--shadow-3)",
+          }}
         >
-          <div className="mb-1">
-            <CompassRose size={64} spin onDark />
+          {/* The site's biophilic green + apricot, dialled up and blurred into
+              a soft gradient behind a pane of frosted glass. */}
+          <div className="pointer-events-none absolute inset-0" aria-hidden>
+            <div
+              style={{ position: "absolute", top: -70, left: -50, width: 260, height: 260, borderRadius: "50%", background: "var(--primary-mid)", filter: "blur(54px)", opacity: 0.62 }}
+            />
+            <div
+              style={{ position: "absolute", bottom: -80, right: -40, width: 260, height: 260, borderRadius: "50%", background: "var(--accent)", filter: "blur(60px)", opacity: 0.58 }}
+            />
+            <div
+              style={{ position: "absolute", top: 0, right: 60, width: 150, height: 150, borderRadius: "50%", background: "var(--mist)", filter: "blur(48px)", opacity: 0.45 }}
+            />
+            {/* frosted glass */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: "color-mix(in srgb, var(--surface) 38%, transparent)",
+                backdropFilter: "blur(7px)",
+                WebkitBackdropFilter: "blur(7px)",
+              }}
+            />
           </div>
-          <p className="text-base font-bold">{celebration.title}</p>
-          <p className="text-xs opacity-90">{celebration.line}</p>
+
+          <div className="relative">
+            <div className="mb-1.5">
+              <CompassRose size={80} spin onDark />
+            </div>
+            <p className="text-base font-bold" style={{ color: "var(--foreground)" }}>
+              {celebration.title}
+            </p>
+            <p className="text-xs" style={{ color: "var(--muted)" }}>
+              {celebration.line}
+            </p>
+          </div>
         </div>
       )}
 
@@ -349,6 +398,7 @@ export default function Plan() {
               isNext={s.id === nextId}
               index={i}
               suggestedTime={slotMap.get(s.id)}
+              personalInsight={liveInsight(s)}
               loggedSession={loggedSessionFor(s.id)}
               onUpdateSession={(patch) => {
                 const ls = loggedSessionFor(s.id);
@@ -392,6 +442,7 @@ function SuggestionCard({
   isNext = false,
   index = 0,
   suggestedTime,
+  personalInsight,
   loggedSession,
   onUpdateSession,
   onCommitTime,
@@ -405,6 +456,7 @@ function SuggestionCard({
   isNext?: boolean;
   index?: number;
   suggestedTime?: string;
+  personalInsight?: string;
   loggedSession?: Session;
   onUpdateSession?: (patch: { type: string; duration_minutes?: number }) => void;
   onCommitTime?: () => void;
@@ -468,7 +520,13 @@ function SuggestionCard({
               className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold"
               style={{ background: accent + "22", color: accent }}
             >
-              ✓ done
+              {(() => {
+                // Show the live weekly count (e.g. "1/4 ✓") so ticking visibly
+                // moves the goal; fall back to a plain done marker otherwise.
+                const m = personalInsight?.match(/^(\d+\/\d+)/);
+                if (!m) return "✓ done";
+                return m[1] + (/✓\s*$/.test(personalInsight ?? "") ? " ✓" : "");
+              })()}
             </span>
             {loggedSession && onUpdateSession && (
               <button
@@ -546,8 +604,8 @@ function SuggestionCard({
               ) : (
                 <Pill color="#7a9bb5">🕐 {suggestedTime}</Pill>
               ))}
-            {s.personal_insight && (
-              <Pill color="#5b8a72">{s.personal_insight}</Pill>
+            {personalInsight && (
+              <Pill color="#5b8a72">{personalInsight}</Pill>
             )}
           </div>
 

@@ -228,12 +228,12 @@ body::after {
   100% { transform: translate(22px, -28px) scale(1.25); opacity: 0.3; }
 }
 
-/* compass needle settling to north on day completion */
+/* compass needle settling to north on day completion — a longer, lazy spin */
 @keyframes needle-spin {
-  from { transform: translate(-50%, -50%) rotate(-540deg); }
+  from { transform: translate(-50%, -50%) rotate(-1080deg); }
   to { transform: translate(-50%, -50%) rotate(0deg); }
 }
-.animate-needle { animation: needle-spin 1.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-needle { animation: needle-spin 2.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 /* expand/collapse — animates height via grid-template-rows */
 .collapsible {
