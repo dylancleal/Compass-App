@@ -36,12 +36,15 @@ export default function LogSheet({
   category,
   metrics,
   accent,
+  initialDate,
 }: {
   open: boolean;
   onClose: () => void;
   category: Category;
   metrics: Metric[];
   accent: string;
+  /** Pre-select a date other than today — used when logging for a past/missed day. */
+  initialDate?: string;
 }) {
   const { data: allLogs = [] } = useMetricLogs();
   const { data: allSessions = [] } = useSessions();
@@ -56,7 +59,7 @@ export default function LogSheet({
   const [savedSession, setSavedSession] = useState<Session | null>(null);
 
   // Log form state
-  const [date, setDate] = useState(todayKey());
+  const [date, setDate] = useState(initialDate ?? todayKey());
   const [type, setType] = useState(types[0]);
   const [duration, setDuration] = useState("");
   const [notes, setNotes] = useState("");
