@@ -8,6 +8,7 @@ import {
   useCalendarBlocks,
   useCalendarConnections,
   useCheckin,
+  useCheckins,
   useCreateSession,
   useMetrics,
   useRemoveSession,
@@ -22,6 +23,7 @@ import { addDays, daypart, greeting, prettyDate, startOfWeek, todayKey } from "@
 import { accentOf } from "@/lib/palette";
 import { useTilt } from "@/lib/useTilt";
 import { buildPlan } from "@/lib/planner";
+import { findMissedDays } from "@/lib/missedDays";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import type { Category } from "@/lib/types";
 import Plan from "@/components/Plan";
@@ -57,6 +59,7 @@ export default function TodayPage() {
   const { data: tasks = [] } = useTasks();
   const { data: suggestions = [] } = useSuggestions(today);
   const { data: connections = [] } = useCalendarConnections();
+  const { data: checkins = [] } = useCheckins();
   const { data: templates } = useSessionTemplates();
   const library = templates ?? BUILTIN_LIBRARY;
   const createSession = useCreateSession();
@@ -82,6 +85,17 @@ export default function TodayPage() {
     (s) => s.date >= lastWeekStart && s.date <= lastWeekEnd,
   ).length;
   const freshWeek = showFreshWeek && lastWeekCount > 0;
+
+  // Gentle catch-up nudge: days in the last week with no session, no completed
+  // task, and no deliberate close-out (evening wrap or an earlier catch-up
+  // dismissal). Recomputed live so it clears itself once you've caught up.
+  const missedDays = useMemo(
+    () =>
+      settings
+        ? findMissedDays(sessions, tasks, checkins, settings.onboarding_completed_at, today)
+        : [],
+    [settings, sessions, tasks, checkins, today],
+  );
 
   // One-line sketch of tomorrow — planted tonight to seed intention.
   const tomorrow = addDays(today, 1);
@@ -278,6 +292,27 @@ export default function TodayPage() {
           </div>
           <QuietLink href="/checkin">redo</QuietLink>
         </div>
+      )}
+
+      {/* Gentle catch-up nudge — never guilt-toned, just an easy way to backfill */}
+      {missedDays.length > 0 && (
+        <Link
+          href="/catchup"
+          className="card card-interactive flex items-center gap-3 p-4 hover:brightness-[1.03]"
+          style={{ background: "var(--info-soft)", borderColor: "var(--mist)" }}
+        >
+          <span className="text-2xl">📋</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color: "var(--info-text)" }}>
+              {missedDays.length === 1 ? "1 day to catch up" : `${missedDays.length} days to catch up`}
+            </p>
+            <p className="text-xs text-[var(--muted)]">
+              Log what you remember from {prettyDate(missedDays[0].date)}
+              {missedDays.length > 1 ? " onward" : ""} — takes a minute.
+            </p>
+          </div>
+          <span className="text-sm text-[var(--muted)]">→</span>
+        </Link>
       )}
 
       {/* Fresh-week ritual */}
