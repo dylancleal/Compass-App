@@ -82,14 +82,28 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     <div className="grid min-h-dvh place-items-center bg-[var(--background)] p-4">
       <div className="card w-full max-w-sm space-y-5 p-6">
         <div className="space-y-1">
-          <span
-            className="mb-1 grid h-11 w-11 place-items-center rounded-2xl text-2xl"
-            style={{ background: "var(--primary-soft)" }}
-            aria-hidden
+          {APP_VARIANT.logoStyle === "classic" && (
+            <span
+              className="mb-1 grid h-11 w-11 place-items-center rounded-2xl text-2xl"
+              style={{ background: "var(--primary-soft)" }}
+              aria-hidden
+            >
+              🧭
+            </span>
+          )}
+          <h1
+            className="text-xl font-bold"
+            style={
+              APP_VARIANT.logoStyle === "glow"
+                ? {
+                    textShadow:
+                      "0 0 14px color-mix(in srgb, var(--primary-mid) 55%, transparent), 0 0 28px color-mix(in srgb, var(--accent) 28%, transparent)",
+                  }
+                : undefined
+            }
           >
-            🧭
-          </span>
-          <h1 className="text-xl font-bold">{APP_VARIANT.welcomeTitle}</h1>
+            {APP_VARIANT.welcomeTitle}
+          </h1>
           {APP_VARIANT.heroLine && (
             <p className="text-sm font-medium" style={{ color: "var(--accent)" }}>
               {APP_VARIANT.heroLine}

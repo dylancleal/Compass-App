@@ -22,7 +22,7 @@ interface TourStep {
 const STEPS: TourStep[] = [
   {
     path: "/",
-    title: `Welcome to ${APP_VARIANT.name} 🧭`,
+    title: APP_VARIANT.logoStyle === "classic" ? `Welcome to ${APP_VARIANT.name} 🧭` : `Welcome to ${APP_VARIANT.name}`,
     body: "A calm daily companion that shapes your plan around your energy and goals. Let's take a 60-second look around.",
   },
   {

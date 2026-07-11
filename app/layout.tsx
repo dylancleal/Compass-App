@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import Providers from "./providers";
 import Nav from "@/components/Nav";
@@ -8,6 +9,22 @@ import Fireflies from "@/components/Fireflies";
 import { APP_VARIANT } from "@/lib/appVariant";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+
+// Runs before first paint so switching themes (or loading with a saved
+// preference) never flashes the wrong colours. Kept as a plain, unbundled
+// string — it has to run standalone, before React/hydration, so it can't
+// import from lib/theme.ts; ThemeToggle.tsx mirrors this same logic in TS.
+const THEME_INIT_SCRIPT = `
+(function () {
+  try {
+    var stored = localStorage.getItem("compass-theme");
+    var theme = stored === "light" || stored === "dark"
+      ? stored
+      : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  } catch (e) {}
+})();
+`;
 
 export const metadata: Metadata = {
   title: `${APP_VARIANT.name} — your calm life dashboard`,
@@ -28,8 +45,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
+    <html lang="en" className={`${geistSans.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full">
+        <Script id="theme-init" strategy="beforeInteractive">
+          {THEME_INIT_SCRIPT}
+        </Script>
         <Providers>
           <Fireflies />
           <Nav />
