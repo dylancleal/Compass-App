@@ -43,8 +43,12 @@
   --blob-b: rgba(232, 168, 124, 0.24); /* apricot */
 }
 
+/* Dark values apply either when the OS prefers dark (and the user hasn't
+   overridden it) or when data-theme="dark" is explicitly set by the in-app
+   toggle (see components/ThemeToggle.tsx). The inline script in layout.tsx
+   stamps data-theme on <html> before first paint, so there's no flash. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #1a211c; /* deep forest charcoal */
     --surface: #222b25;
     --foreground: #e8ede7; /* soft sage white */
@@ -77,6 +81,41 @@
     --blob-a: rgba(111, 165, 136, 0.4);
     --blob-b: rgba(224, 160, 121, 0.26);
   }
+}
+
+/* Same dark values, but forced regardless of OS preference — the explicit
+   "dark" choice from the in-app toggle. Kept as a literal duplicate (not a
+   shared mixin) since plain CSS custom properties can't be composed across a
+   @media block and a plain selector. */
+:root[data-theme="dark"] {
+  --background: #1a211c;
+  --surface: #222b25;
+  --foreground: #e8ede7;
+  --muted: #94a096;
+  --border: #313b33;
+  --ring: rgba(111, 165, 136, 0.32);
+
+  --primary: #6fa588;
+  --primary-mid: #5b8a72;
+  --primary-soft: #2a3830;
+  --mist: #3c5447;
+  --accent: #e0a079;
+  --accent-soft: #33291f;
+
+  --success-soft: #1e3a30;
+  --success-text: #7fd0b0;
+  --info-soft: #1c3348;
+  --info-text: #8fbfe8;
+  --warn-soft: #3a2f1c;
+  --warn-text: #e0b877;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.28), 0 6px 16px rgba(0, 0, 0, 0.34);
+  --shadow-3: 0 6px 14px rgba(0, 0, 0, 0.34), 0 18px 40px rgba(0, 0, 0, 0.46);
+  --card-highlight: rgba(255, 255, 255, 0.045);
+
+  --blob-a: rgba(111, 165, 136, 0.4);
+  --blob-b: rgba(224, 160, 121, 0.26);
 }
 
 @theme inline {
@@ -213,11 +252,14 @@ body::after {
 }
 .animate-breathe { animation: breathe 3.4s ease-in-out infinite; }
 
-/* dark-mode fireflies — slow drifting motes behind content (see Fireflies.tsx) */
+/* dark-mode fireflies — slow drifting motes behind content (see Fireflies.tsx).
+   Same override logic as the colour tokens above: system dark (unless
+   explicitly forced light) or the explicit dark override. */
 .fireflies { display: none; }
 @media (prefers-color-scheme: dark) {
-  .fireflies { display: block; }
+  html:not([data-theme="light"]) .fireflies { display: block; }
 }
+html[data-theme="dark"] .fireflies { display: block; }
 .firefly {
   position: absolute;
   border-radius: 50%;

@@ -422,13 +422,27 @@ export default function OnboardingPage() {
       <div className="mx-auto max-w-lg">
         {/* Logo */}
         <div className="mb-8 flex items-center gap-2">
+          {APP_VARIANT.logoStyle === "classic" && (
+            <span
+              className="grid h-8 w-8 place-items-center rounded-full text-base"
+              style={{ background: "var(--primary-soft)" }}
+            >
+              🧭
+            </span>
+          )}
           <span
-            className="grid h-8 w-8 place-items-center rounded-full text-base"
-            style={{ background: "var(--primary-soft)" }}
+            className="font-bold tracking-tight"
+            style={
+              APP_VARIANT.logoStyle === "glow"
+                ? {
+                    textShadow:
+                      "0 0 14px color-mix(in srgb, var(--primary-mid) 60%, transparent), 0 0 30px color-mix(in srgb, var(--accent) 32%, transparent)",
+                  }
+                : undefined
+            }
           >
-            🧭
+            {APP_VARIANT.name}
           </span>
-          <span className="font-bold tracking-tight">{APP_VARIANT.name}</span>
         </div>
 
         {step === "pick" && <StepPick onNext={handlePick} />}
