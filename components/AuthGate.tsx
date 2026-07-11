@@ -90,6 +90,11 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             🧭
           </span>
           <h1 className="text-xl font-bold">{APP_VARIANT.welcomeTitle}</h1>
+          {APP_VARIANT.heroLine && (
+            <p className="text-sm font-medium" style={{ color: "var(--accent)" }}>
+              {APP_VARIANT.heroLine}
+            </p>
+          )}
           <p className="text-sm text-[var(--muted)]">
             Sign in with a magic link — no password needed.
           </p>

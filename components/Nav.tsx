@@ -63,17 +63,33 @@ export default function Nav() {
         WebkitBackdropFilter: "blur(12px)",
       }}
     >
-      {/* Logo */}
-      <Link href="/" className="flex shrink-0 items-center gap-1.5 text-sm font-bold tracking-tight">
-        <span
-          className="grid h-6 w-6 place-items-center rounded-full text-[13px]"
-          style={{ background: "var(--primary-soft)" }}
-          aria-hidden
+      {/* Logo — the classic lockup for Compass, or a bigger icon-free glowing
+          wordmark for variants (like Lodestone) where a compass emoji no
+          longer fits the brand. */}
+      {APP_VARIANT.logoStyle === "glow" ? (
+        <Link
+          href="/"
+          className="shrink-0 text-xl font-bold tracking-tight"
+          style={{
+            color: "var(--foreground)",
+            textShadow:
+              "0 0 14px color-mix(in srgb, var(--primary-mid) 60%, transparent), 0 0 30px color-mix(in srgb, var(--accent) 32%, transparent)",
+          }}
         >
-          🧭
-        </span>
-        {APP_VARIANT.name}
-      </Link>
+          {APP_VARIANT.name}
+        </Link>
+      ) : (
+        <Link href="/" className="flex shrink-0 items-center gap-1.5 text-sm font-bold tracking-tight">
+          <span
+            className="grid h-6 w-6 place-items-center rounded-full text-[13px]"
+            style={{ background: "var(--primary-soft)" }}
+            aria-hidden
+          >
+            🧭
+          </span>
+          {APP_VARIANT.name}
+        </Link>
+      )}
 
       {/* Divider */}
       <div className="h-4 w-px shrink-0 bg-[var(--border)]" />
