@@ -1,0 +1,53 @@
+name: Deploy Lodestone
+
+# This repo's ORIGINAL Vercel project deploys itself automatically via Vercel's
+# native GitHub integration (set up through the dashboard "Import" flow) — it
+# needs no workflow here.
+#
+# The SECOND project (the Lodestone/study-variant deployment) can't use that
+# same native integration, because Vercel's dashboard refuses to link a GitHub
+# repo to two projects at once ("The repository is already linked to the
+# project"). This workflow replaces that missing piece: it runs the Vercel CLI
+# directly, so pushing to main deploys Lodestone too, same as before.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   VERCEL_TOKEN      — vercel.com/account/tokens, create a token
+#   VERCEL_ORG_ID     — from .vercel/project.json after `vercel link`
+#   VERCEL_PROJECT_ID — from .vercel/project.json after `vercel link`
+#                       (this must be the SECOND project's id, not the first)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel environment info
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
