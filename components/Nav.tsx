@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { APP_VARIANT } from "@/lib/appVariant";
 
 // Consolidated top nav: Today · Calendar · Progress · Areas, with Settings as a
 // right-aligned gear. "Progress" is the hub for both the weekly summary (/review)
@@ -71,7 +72,7 @@ export default function Nav() {
         >
           🧭
         </span>
-        Compass
+        {APP_VARIANT.name}
       </Link>
 
       {/* Divider */}

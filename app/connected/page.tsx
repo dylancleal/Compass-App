@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { APP_VARIANT } from "@/lib/appVariant";
 
 // Landing page after a successful Google Calendar OAuth connect. Deliberately
 // simple and self-contained: it confirms success without depending on the
@@ -27,8 +28,8 @@ export default function ConnectedPage() {
           Calendar connected
         </h1>
         <p className="text-sm text-[var(--muted)]">
-          Your Google Calendar is linked. Compass will now plan around your real schedule
-          and surface deadlines automatically.
+          Your Google Calendar is linked. {APP_VARIANT.name} will now plan around your real
+          schedule and surface deadlines automatically.
         </p>
       </div>
 
@@ -38,7 +39,7 @@ export default function ConnectedPage() {
           className="btn-life w-full rounded-xl py-3 text-sm font-semibold"
           style={{ background: "var(--primary)", color: "#fffdf9" }}
         >
-          Continue to Compass →
+          Continue to {APP_VARIANT.name} →
         </Link>
         <Link
           href="/settings"

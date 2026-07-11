@@ -5,19 +5,20 @@ import Providers from "./providers";
 import Nav from "@/components/Nav";
 import IntroTour from "@/components/IntroTour";
 import Fireflies from "@/components/Fireflies";
+import { APP_VARIANT } from "@/lib/appVariant";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Compass — your calm life dashboard",
-  description: "An affirming to-do list and life tracker.",
-  manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "Compass" },
+  title: `${APP_VARIANT.name} — your calm life dashboard`,
+  description: APP_VARIANT.tagline,
+  // manifest link is auto-injected by the app/manifest.ts route convention
+  appleWebApp: { capable: true, statusBarStyle: "default", title: APP_VARIANT.name },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f1ea" },
+    { media: "(prefers-color-scheme: light)", color: APP_VARIANT.backgroundColor },
     { media: "(prefers-color-scheme: dark)", color: "#1a211c" },
   ],
   width: "device-width",

@@ -1,4 +1,9 @@
+import { APP_VARIANT } from "@/lib/appVariant";
+
+// Mechanical name-substitution only. Before this variant goes live for paying
+// customers, the full content needs real legal review — not just a rebrand.
 export default function PrivacyPage() {
+  const name = APP_VARIANT.name;
   return (
     <div className="space-y-8 pb-16">
       <header className="space-y-1">
@@ -8,9 +13,9 @@ export default function PrivacyPage() {
         </p>
       </header>
 
-      <Section title="What Compass is">
+      <Section title={`What ${name} is`}>
         <P>
-          Compass is a personal life dashboard that helps you plan your day, track your goals,
+          {name} is a personal life dashboard that helps you plan your day, track your goals,
           and stay on top of what matters — study, fitness, finances, and more. It is built for
           individual personal use.
         </P>
@@ -35,12 +40,12 @@ export default function PrivacyPage() {
 
       <Section title="Google Calendar data">
         <P>
-          If you connect Google Calendar, Compass requests <strong>read-only</strong> access to
+          If you connect Google Calendar, {name} requests <strong>read-only</strong> access to
           your calendar events. We use this access solely to:
         </P>
         <ul className="mt-2 space-y-1.5 text-sm" style={{ color: "var(--muted)" }}>
           {[
-            "Display your events in your Compass calendar view",
+            `Display your events in your ${name} calendar view`,
             "Detect scheduling conflicts between events",
             "Avoid suggesting activities that are already in your schedule",
             "Surface deadline-like events (assignments, exams) as task reminders",
@@ -54,11 +59,11 @@ export default function PrivacyPage() {
         <P className="mt-3">
           We do <strong>not</strong> modify, delete, or create events in your Google Calendar.
           We do not share your calendar data with any third party. Calendar event data is stored
-          only in your personal Compass account database and is not used for advertising,
+          only in your personal {name} account database and is not used for advertising,
           analytics, or any purpose beyond the features described above.
         </P>
         <P>
-          Your Google OAuth token is encrypted at rest. You can revoke Compass&apos;s access to
+          Your Google OAuth token is encrypted at rest. You can revoke {name}&apos;s access to
           your Google Calendar at any time from your{" "}
           <a
             href="https://myaccount.google.com/permissions"
@@ -69,12 +74,12 @@ export default function PrivacyPage() {
           >
             Google account permissions page
           </a>
-          , or by removing the connection inside Compass.
+          , or by removing the connection inside {name}.
         </P>
       </Section>
 
       <Section title="How we use your data">
-        <P>Your data is used exclusively to make Compass work for you:</P>
+        <P>Your data is used exclusively to make {name} work for you:</P>
         <ul className="mt-2 space-y-1.5 text-sm" style={{ color: "var(--muted)" }}>
           {[
             "Generating your personalised daily plan based on your check-in, tasks, and schedule",
@@ -104,7 +109,7 @@ export default function PrivacyPage() {
         </P>
         <P>
           The app is hosted on Vercel. Neither Vercel nor Supabase have access to your personal
-          Compass data beyond what is technically required to host and operate the service.
+          {" "}{name} data beyond what is technically required to host and operate the service.
         </P>
       </Section>
 
