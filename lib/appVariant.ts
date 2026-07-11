@@ -22,6 +22,13 @@ export interface AppVariant {
   backgroundColor: string;
   /** Category names the onboarding tile-picker offers. null = show everything. */
   onboardingTiles: string[] | null;
+  /** "classic" = the small compass-emoji + text lockup Compass has always used.
+   *  "glow" = a bigger, icon-free wordmark with a soft glow — used where the
+   *  brand isn't literally a compass, so the emoji no longer fits. */
+  logoStyle: "classic" | "glow";
+  /** Short evocative line shown under the welcome title on the sign-in screen.
+   *  Undefined = no subheader (Compass's welcome screen is unchanged). */
+  heroLine?: string;
 }
 
 const VARIANTS: Record<AppVariantId, AppVariant> = {
@@ -34,6 +41,7 @@ const VARIANTS: Record<AppVariantId, AppVariant> = {
     themeColor: "#3e6b54",
     backgroundColor: "#f4f1ea",
     onboardingTiles: null,
+    logoStyle: "classic",
   },
   study: {
     id: "study",
@@ -44,6 +52,8 @@ const VARIANTS: Record<AppVariantId, AppVariant> = {
     themeColor: "#3e6b54",
     backgroundColor: "#f4f1ea",
     onboardingTiles: ["Uni work", "Gym"],
+    logoStyle: "glow",
+    heroLine: "Study, training, and the pull that keeps you on course.",
   },
 };
 
