@@ -14,6 +14,7 @@ import {
 import { addDays, todayKey } from "@/lib/date";
 import { buildPlan } from "@/lib/planner";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
+import { APP_VARIANT } from "@/lib/appVariant";
 import { Button } from "@/components/ui";
 
 const RATINGS = [
@@ -175,7 +176,7 @@ export default function WrapPage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">Close the day</h1>
         <p className="text-sm text-[var(--muted)]">
-          One tap — then you&apos;re done. Compass uses this to shape tomorrow.
+          One tap — then you&apos;re done. {APP_VARIANT.name} uses this to shape tomorrow.
         </p>
       </header>
 

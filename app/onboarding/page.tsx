@@ -16,6 +16,7 @@ import { accentOf, PALETTE_KEYS } from "@/lib/palette";
 import CategorySetupSheet from "@/components/CategorySetupSheet";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import { buildWeekPreview } from "@/lib/preview";
+import { APP_VARIANT } from "@/lib/appVariant";
 import type { AppSettings, Category, CategoryMetadata, SessionTemplate, Task } from "@/lib/types";
 
 // ── Curated starter tiles ─────────────────────────────────────────────────────
@@ -35,6 +36,13 @@ const TILES = [
 ] as const;
 
 type TileName = (typeof TILES)[number]["name"];
+
+// A narrowed variant (e.g. the study+gym commercial build) only shows a subset
+// of tiles here; TILES itself stays the full canonical list since handlePick
+// still matches selected names against it to build categories.
+const VISIBLE_TILES = APP_VARIANT.onboardingTiles
+  ? TILES.filter((t) => APP_VARIANT.onboardingTiles!.includes(t.name))
+  : TILES;
 
 // ── Step 1 — Category picker ──────────────────────────────────────────────────
 
@@ -67,7 +75,7 @@ function StepPick({
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {TILES.map((tile) => {
+        {VISIBLE_TILES.map((tile) => {
           const accent = accentOf(tile.color);
           const active = selected.has(tile.name);
           return (
@@ -185,8 +193,8 @@ function StepCalendar({ onConnect, onSkip }: { onConnect: () => void; onSkip: ()
       <div className="space-y-1">
         <h1 className="text-2xl font-bold">Connect your calendar</h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Compass reads your schedule so the planner never suggests the gym on a day you
-          already booked a class, and surfaces deadline events automatically.
+          {APP_VARIANT.name} reads your schedule so the planner never suggests the gym on a
+          day you already booked a class, and surfaces deadline events automatically.
         </p>
       </div>
 
@@ -420,7 +428,7 @@ export default function OnboardingPage() {
           >
             🧭
           </span>
-          <span className="font-bold tracking-tight">Compass</span>
+          <span className="font-bold tracking-tight">{APP_VARIANT.name}</span>
         </div>
 
         {step === "pick" && <StepPick onNext={handlePick} />}

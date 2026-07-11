@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSaveSettings, useSettings } from "@/lib/queries";
+import { APP_VARIANT } from "@/lib/appVariant";
 
 interface IntroTourProps {
   forceOpen?: boolean;
@@ -21,14 +22,14 @@ interface TourStep {
 const STEPS: TourStep[] = [
   {
     path: "/",
-    title: "Welcome to Compass 🧭",
+    title: `Welcome to ${APP_VARIANT.name} 🧭`,
     body: "A calm daily companion that shapes your plan around your energy and goals. Let's take a 60-second look around.",
   },
   {
     path: "/checkin",
     selector: "[data-tour='checkin-card']",
     title: "Start every morning here",
-    body: "Tell Compass how you feel today — takes 30 seconds. It adjusts your suggestions to match: lighter on a rough day, more ambitious on a big one.",
+    body: `Tell ${APP_VARIANT.name} how you feel today — takes 30 seconds. It adjusts your suggestions to match: lighter on a rough day, more ambitious on a big one.`,
   },
   {
     path: "/",
@@ -40,7 +41,7 @@ const STEPS: TourStep[] = [
     path: "/calendar",
     selector: "[data-tour='calendar-connect']",
     title: "Connect your calendar",
-    body: "Link Google or Apple Calendar. Compass reads your schedule and never suggests the gym on a day you're already booked — no conflicts, no guilt.",
+    body: `Link Google or Apple Calendar. ${APP_VARIANT.name} reads your schedule and never suggests the gym on a day you're already booked — no conflicts, no guilt.`,
   },
   {
     path: "/review",

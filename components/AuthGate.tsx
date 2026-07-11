@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { APP_VARIANT } from "@/lib/appVariant";
 
 // Auth is only required when we're running against Supabase. Local mode
 // (no env vars / NEXT_PUBLIC_DATA_BACKEND != "supabase") bypasses this entirely.
@@ -88,7 +89,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           >
             🧭
           </span>
-          <h1 className="text-xl font-bold">Welcome to Compass</h1>
+          <h1 className="text-xl font-bold">{APP_VARIANT.welcomeTitle}</h1>
           <p className="text-sm text-[var(--muted)]">
             Sign in with a magic link — no password needed.
           </p>

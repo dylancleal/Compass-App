@@ -12,6 +12,7 @@ import {
 import { addDays, prettyDate, todayKey } from "@/lib/date";
 import { shouldPromptSkillConfidence } from "@/lib/sessionInfer";
 import { sessionTypesFor } from "@/lib/sessionTypes";
+import { APP_VARIANT } from "@/lib/appVariant";
 import { Button, ScalePicker, Sheet } from "./ui";
 
 const ENERGY_EMOJI = ["", "😴", "😕", "😐", "😊", "⚡"];
@@ -262,7 +263,7 @@ export default function LogSheet({
 
           <p className="text-xs text-[var(--muted)]">
             {isTennis
-              ? "Your answers help Compass know which skills need the most attention next time."
+              ? `Your answers help ${APP_VARIANT.name} know which skills need the most attention next time.`
               : "Your answers personalise future suggestions — the more you log, the better they get."}
           </p>
 

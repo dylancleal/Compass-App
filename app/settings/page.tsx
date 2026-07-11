@@ -14,6 +14,7 @@ import {
 import { PALETTE, PALETTE_KEYS, accentOf } from "@/lib/palette";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Category, DayIndex } from "@/lib/types";
+import { APP_VARIANT } from "@/lib/appVariant";
 import { Button } from "@/components/ui";
 import ConnectionsPanel from "@/components/calendar/ConnectionsPanel";
 
@@ -62,7 +63,7 @@ export default function SettingsPage() {
     <div className="space-y-8">
       <header>
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-sm text-[var(--muted)]">Make Compass yours.</p>
+        <p className="text-sm text-[var(--muted)]">Make {APP_VARIANT.name} yours.</p>
       </header>
 
       {/* Profile */}
@@ -244,7 +245,7 @@ export default function SettingsPage() {
         <div className="card p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">How Compass works</p>
+              <p className="text-sm font-medium">How {APP_VARIANT.name} works</p>
               <p className="text-xs text-[var(--muted)]">Replay the intro tour any time.</p>
             </div>
             <button
