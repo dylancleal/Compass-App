@@ -1,7 +1,10 @@
 "use client";
 
 // A small day-arc: a sun (or moon) tracing a horizon arc by time of day.
-// Purely decorative — gives the header a living, time-aware "companion" feel.
+// Purely decorative — gives the header a living, time-aware "companion" feel,
+// and doubles as the anchor point for the top-right glow that now runs
+// through the rest of the app (see the boosted body::before blob in
+// globals.css) — same visual language as the day-complete celebration card.
 export default function DayArc({ width = 132, height = 46 }: { width?: number; height?: number }) {
   const now = new Date();
   const h = now.getHours() + now.getMinutes() / 60;
@@ -41,15 +44,17 @@ export default function DayArc({ width = 132, height = 46 }: { width?: number; h
         strokeDasharray="3 4"
         strokeLinecap="round"
       />
-      {/* glow */}
-      <circle cx={px} cy={py} r={9} fill={bodyColor} opacity={0.18} />
+      {/* outer glow halo — wider and brighter so the marker reads as a real
+          glow source, matching the compass rose's halo treatment */}
+      <circle cx={px} cy={py} r={16} fill={bodyColor} opacity={0.14} />
+      <circle cx={px} cy={py} r={10} fill={bodyColor} opacity={0.22} />
       {/* body */}
       <circle
         cx={px}
         cy={py}
         r={5}
         fill={bodyColor}
-        style={{ filter: `drop-shadow(0 0 6px color-mix(in srgb, ${bodyColor} 60%, transparent))` }}
+        style={{ filter: `drop-shadow(0 0 9px color-mix(in srgb, ${bodyColor} 75%, transparent))` }}
       />
     </svg>
   );

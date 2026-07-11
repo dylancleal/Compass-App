@@ -71,8 +71,11 @@
     --shadow-3: 0 6px 14px rgba(0, 0, 0, 0.34), 0 18px 40px rgba(0, 0, 0, 0.46);
     --card-highlight: rgba(255, 255, 255, 0.045);
 
-    --blob-a: rgba(111, 165, 136, 0.18);
-    --blob-b: rgba(224, 160, 121, 0.11);
+    /* Boosted to match the day-complete celebration card's nebula intensity —
+       the app should feel like it lives in that same glowing space all the
+       time, not just for one moment a day. */
+    --blob-a: rgba(111, 165, 136, 0.4);
+    --blob-b: rgba(224, 160, 121, 0.26);
   }
 }
 
@@ -116,7 +119,11 @@ body::before {
   height: 460px;
   top: -170px;
   right: -130px;
-  background: var(--blob-a);
+  /* layered like the celebration card's nebula: a tighter saturated core
+     inside the same soft broad bloom, so it reads as a genuine glow source
+     anchored top-right (where DayArc's sun/moon already lives) rather than a
+     flat wash of colour. */
+  background: radial-gradient(circle at 38% 38%, var(--blob-a), transparent 62%), var(--blob-a);
 }
 body::after {
   width: 380px;
@@ -215,17 +222,17 @@ body::after {
   position: absolute;
   border-radius: 50%;
   background: var(--primary-mid);
-  filter: blur(2px);
-  box-shadow: 0 0 8px 2px color-mix(in srgb, var(--primary-mid) 50%, transparent);
+  filter: blur(1.5px);
+  box-shadow: 0 0 11px 3px color-mix(in srgb, var(--primary-mid) 60%, transparent);
   animation-name: firefly-drift;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
   animation-direction: alternate;
 }
 @keyframes firefly-drift {
-  0% { transform: translate(0, 0) scale(1); opacity: 0.18; }
-  50% { opacity: 0.5; }
-  100% { transform: translate(22px, -28px) scale(1.25); opacity: 0.3; }
+  0% { transform: translate(0, 0) scale(1); opacity: 0.26; }
+  50% { opacity: 0.7; }
+  100% { transform: translate(22px, -28px) scale(1.25); opacity: 0.42; }
 }
 
 /* compass needle settling to north on day completion — a longer, lazy spin.
