@@ -150,9 +150,12 @@ create table if not exists calendar_connections (
   created_at timestamptz not null default now()
 );
 
+-- Full (non-partial) index — PostgREST's upsert(onConflict) can only infer a
+-- plain column-list unique index, not a partial one. Still safe for manual
+-- rows (external_id null): Postgres treats each NULL as distinct, so they
+-- never conflict with each other.
 create unique index if not exists calendar_blocks_external_uq
-  on calendar_blocks (user_id, external_calendar_id, external_id)
-  where external_id is not null;
+  on calendar_blocks (user_id, external_calendar_id, external_id);
 
 create index if not exists calendar_blocks_range_idx
   on calendar_blocks (user_id, start_at);
