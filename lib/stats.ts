@@ -206,6 +206,112 @@ export function defaultWeeklyTarget(
   return 3;
 }
 
+// Longest run of consecutive calendar days ever, across a full history — not
+// capped to a recent window like currentStreak. Paid-tier "all-time bests".
+export function longestStreakEver(dates: string[]): number {
+  const unique = [...new Set(dates)].sort();
+  if (unique.length === 0) return 0;
+  let longest = 1;
+  let run = 1;
+  for (let i = 1; i < unique.length; i++) {
+    run = addDays(unique[i - 1], 1) === unique[i] ? run + 1 : 1;
+    longest = Math.max(longest, run);
+  }
+  return longest;
+}
+
+// Best single ISO week ever for a category, by session count. Unbounded —
+// unlike weeklySessionCounts, which only looks at the last N weeks.
+export function bestWeek(sessions: Session[], categoryId: string): { week: string; count: number } | null {
+  const buckets: Record<string, number> = {};
+  for (const s of sessions) {
+    if (s.category_id !== categoryId) continue;
+    const wk = startOfWeek(s.date);
+    buckets[wk] = (buckets[wk] ?? 0) + 1;
+  }
+  const entries = Object.entries(buckets);
+  if (entries.length === 0) return null;
+  const [week, count] = entries.reduce((best, cur) => (cur[1] > best[1] ? cur : best));
+  return { week, count };
+}
+
+// Best calendar month ever for a category, by session count.
+export function bestMonth(sessions: Session[], categoryId: string): { month: string; count: number } | null {
+  const buckets: Record<string, number> = {};
+  for (const s of sessions) {
+    if (s.category_id !== categoryId) continue;
+    const mo = s.date.slice(0, 7);
+    buckets[mo] = (buckets[mo] ?? 0) + 1;
+  }
+  const entries = Object.entries(buckets);
+  if (entries.length === 0) return null;
+  const [month, count] = entries.reduce((best, cur) => (cur[1] > best[1] ? cur : best));
+  return { month, count };
+}
+
+// Running total of minutes logged, one point per ISO week the category has
+// ever had activity in (oldest → newest) — always climbing, feeds an
+// AreaTrend as a "time invested" retention visual.
+export function cumulativeMinutesSeries(
+  sessions: Session[],
+  categoryId: string,
+): { date: string; value: number }[] {
+  const buckets: Record<string, number> = {};
+  for (const s of sessions) {
+    if (s.category_id !== categoryId) continue;
+    const wk = startOfWeek(s.date);
+    buckets[wk] = (buckets[wk] ?? 0) + (s.duration_minutes ?? 0);
+  }
+  const weeks = Object.keys(buckets).sort();
+  let running = 0;
+  return weeks.map((wk) => {
+    running += buckets[wk];
+    return { date: wk.slice(5), value: running };
+  });
+}
+
+export interface MonthlyRecap {
+  month: string;
+  totalSessions: number;
+  totalMinutes: number;
+  byCategory: { categoryId: string; count: number }[];
+  comparedToPrevMonth: { sessionsDelta: number; minutesDelta: number };
+}
+
+// Aggregate stats for one calendar month (e.g. "2026-07"), compared to the
+// month before it. Paid-tier "monthly recap".
+export function monthlyRecap(sessions: Session[], month: string): MonthlyRecap {
+  const [y, m] = month.split("-").map(Number);
+  const prevDate = new Date(y, m - 2, 1); // m is 1-indexed; m-2 → previous month, 0-indexed
+  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
+
+  function summarize(mo: string) {
+    const inMonth = sessions.filter((s) => s.date.startsWith(mo));
+    const totalMinutes = inMonth.reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0);
+    const byCategory = new Map<string, number>();
+    for (const s of inMonth) byCategory.set(s.category_id, (byCategory.get(s.category_id) ?? 0) + 1);
+    return {
+      totalSessions: inMonth.length,
+      totalMinutes,
+      byCategory: [...byCategory.entries()].map(([categoryId, count]) => ({ categoryId, count })),
+    };
+  }
+
+  const current = summarize(month);
+  const previous = summarize(prevMonth);
+
+  return {
+    month,
+    totalSessions: current.totalSessions,
+    totalMinutes: current.totalMinutes,
+    byCategory: current.byCategory,
+    comparedToPrevMonth: {
+      sessionsDelta: current.totalSessions - previous.totalSessions,
+      minutesDelta: current.totalMinutes - previous.totalMinutes,
+    },
+  };
+}
+
 export function currentStreak(dates: string[]): number {
   const set = new Set(dates);
   let streak = 0;

@@ -48,7 +48,7 @@ export function defaultMetrics(categories: Category[]): Metric[] {
   return metrics.map((m) => ({ id: uid(), ...m }));
 }
 
-export function defaultSettings(): AppSettings {
+export function defaultSettings(opts?: { startTrial?: boolean }): AppSettings {
   return {
     greetingName: "",
     weeklySchedule: {
@@ -62,5 +62,8 @@ export function defaultSettings(): AppSettings {
       deadline: 1.5,
       balance: 1,
     },
+    ...(opts?.startTrial
+      ? { trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() }
+      : {}),
   };
 }

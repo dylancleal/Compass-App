@@ -20,10 +20,12 @@ import {
   skillConfidenceBySkill,
   weeklySessionCounts,
 } from "@/lib/stats";
-import { daysBetween, startOfWeek, todayKey } from "@/lib/date";
-import { BarTrend, LineTrend } from "@/components/charts";
+import { addDays, daysBetween, startOfWeek, todayKey } from "@/lib/date";
+import { BarTrend, LineTrend, SectionLabel, StatRow } from "@/components/charts";
 import { GoalCard, GoalsOverview } from "@/components/GoalCard";
 import ProgressTabs from "@/components/ProgressTabs";
+import DeepInsights from "@/components/DeepInsights";
+import { useAccessLevel, type AccessLevel } from "@/lib/subscription";
 import type { Category, Metric, MetricLog, Session } from "@/lib/types";
 
 // ── Tiny helpers ─────────────────────────────────────────────────────────────
@@ -36,37 +38,18 @@ function Empty({ text }: { text: string }) {
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="mb-2 text-xs font-medium text-[var(--muted)]">{children}</p>;
-}
-
-// ── Stat row ─────────────────────────────────────────────────────────────────
-
-function StatRow({ stats }: { stats: { value: string | number; label: string; color?: string }[] }) {
-  return (
-    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${stats.length}, 1fr)` }}>
-      {stats.map((s) => (
-        <div key={s.label}>
-          <p className="text-2xl font-medium leading-none" style={{ color: s.color ?? "var(--foreground)" }}>
-            {s.value}
-          </p>
-          <p className="mt-1 text-xs text-[var(--muted)]">{s.label}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── Activity heatmap ─────────────────────────────────────────────────────────
 
 function HeatmapChart({
   sessions,
   categories,
+  days = 28,
 }: {
   sessions: Session[];
   categories: Category[];
+  days?: number;
 }) {
-  const rows = activityHeatmap(sessions, categories);
+  const rows = activityHeatmap(sessions, categories, days);
   if (rows.length === 0) return <Empty text="Log sessions to see your activity pattern." />;
 
   return (
@@ -103,7 +86,7 @@ function HeatmapChart({
           );
         })}
       </div>
-      <p className="mt-2 text-[10px] text-[var(--muted)]">last 28 days · darker = more sessions</p>
+      <p className="mt-2 text-[10px] text-[var(--muted)]">last {days} days · darker = more sessions</p>
     </div>
   );
 }
@@ -114,12 +97,14 @@ function EnergyChart({
   sessions,
   categories,
   categoryId,
+  days = 14,
 }: {
   sessions: Session[];
   categories: Category[];
   categoryId?: string;
+  days?: number;
 }) {
-  const data = energyByDay(sessions, 14, categoryId);
+  const data = energyByDay(sessions, days, categoryId);
   const hasData = data.some((d) => d.energy > 0);
   if (!hasData) return <Empty text="Rate your energy after sessions and it'll show here." />;
 
@@ -303,11 +288,13 @@ function TennisPanel({
   sessions,
   categories,
   checkins,
+  accessLevel,
 }: {
   cat: Category;
   sessions: Session[];
   categories: Category[];
   checkins: { date: string; mental: number }[];
+  accessLevel: AccessLevel;
 }) {
   const { accent } = accentOf(cat.color);
   const catSessions = sessions.filter((s) => s.category_id === cat.id);
@@ -333,13 +320,14 @@ function TennisPanel({
       </div>
       <div>
         <SectionLabel>Sessions per week</SectionLabel>
-        <BarTrend data={weeklySessionCounts(sessions, cat.id, 8)} color={accent} />
+        <BarTrend data={weeklySessionCounts(sessions, cat.id, accessLevel === "free" ? 1 : 8)} color={accent} />
       </div>
       <div>
         <SectionLabel>Energy after sessions</SectionLabel>
-        <EnergyChart sessions={sessions} categories={categories} categoryId={cat.id} />
+        <EnergyChart sessions={sessions} categories={categories} categoryId={cat.id} days={accessLevel === "free" ? 7 : 14} />
       </div>
       <ForecastCard sessions={sessions} checkins={checkins} />
+      {accessLevel !== "free" && <DeepInsights cat={cat} sessions={sessions} accent={accent} />}
     </div>
   );
 }
@@ -349,11 +337,13 @@ function UniPanel({
   sessions,
   categories,
   checkins,
+  accessLevel,
 }: {
   cat: Category;
   sessions: Session[];
   categories: Category[];
   checkins: { date: string; mental: number }[];
+  accessLevel: AccessLevel;
 }) {
   const { accent } = accentOf(cat.color);
   const catSessions = sessions.filter((s) => s.category_id === cat.id);
@@ -379,13 +369,14 @@ function UniPanel({
       </div>
       <div>
         <SectionLabel>Sessions per week</SectionLabel>
-        <BarTrend data={weeklySessionCounts(sessions, cat.id, 8)} color={accent} />
+        <BarTrend data={weeklySessionCounts(sessions, cat.id, accessLevel === "free" ? 1 : 8)} color={accent} />
       </div>
       <div>
         <SectionLabel>Energy after sessions</SectionLabel>
-        <EnergyChart sessions={sessions} categories={categories} categoryId={cat.id} />
+        <EnergyChart sessions={sessions} categories={categories} categoryId={cat.id} days={accessLevel === "free" ? 7 : 14} />
       </div>
       <ForecastCard sessions={sessions} checkins={checkins} />
+      {accessLevel !== "free" && <DeepInsights cat={cat} sessions={sessions} accent={accent} />}
     </div>
   );
 }
@@ -397,6 +388,7 @@ function GymPanel({
   logs,
   categories,
   checkins,
+  accessLevel,
 }: {
   cat: Category;
   sessions: Session[];
@@ -404,6 +396,7 @@ function GymPanel({
   logs: MetricLog[];
   categories: Category[];
   checkins: { date: string; mental: number }[];
+  accessLevel: AccessLevel;
 }) {
   const { accent } = accentOf(cat.color);
   const catSessions = sessions.filter((s) => s.category_id === cat.id);
@@ -426,7 +419,7 @@ function GymPanel({
       />
       <div>
         <SectionLabel>Sessions per week</SectionLabel>
-        <BarTrend data={weeklySessionCounts(sessions, cat.id, 8)} color={accent} />
+        <BarTrend data={weeklySessionCounts(sessions, cat.id, accessLevel === "free" ? 1 : 8)} color={accent} />
       </div>
       {numeric.map((m) => (
         <div key={m.id}>
@@ -436,9 +429,10 @@ function GymPanel({
       ))}
       <div>
         <SectionLabel>Energy after sessions</SectionLabel>
-        <EnergyChart sessions={sessions} categories={categories} categoryId={cat.id} />
+        <EnergyChart sessions={sessions} categories={categories} categoryId={cat.id} days={accessLevel === "free" ? 7 : 14} />
       </div>
       <ForecastCard sessions={sessions} checkins={checkins} />
+      {accessLevel !== "free" && <DeepInsights cat={cat} sessions={sessions} accent={accent} />}
     </div>
   );
 }
@@ -450,6 +444,7 @@ function GenericPanel({
   logs,
   categories,
   checkins,
+  accessLevel,
 }: {
   cat: Category;
   sessions: Session[];
@@ -457,6 +452,7 @@ function GenericPanel({
   logs: MetricLog[];
   categories: Category[];
   checkins: { date: string; mental: number }[];
+  accessLevel: AccessLevel;
 }) {
   const { accent } = accentOf(cat.color);
   const catSessions = sessions.filter((s) => s.category_id === cat.id);
@@ -478,7 +474,7 @@ function GenericPanel({
       />
       <div>
         <SectionLabel>Sessions per week</SectionLabel>
-        <BarTrend data={weeklySessionCounts(sessions, cat.id, 8)} color={accent} />
+        <BarTrend data={weeklySessionCounts(sessions, cat.id, accessLevel === "free" ? 1 : 8)} color={accent} />
       </div>
       {numeric.map((m) => (
         <div key={m.id}>
@@ -488,9 +484,10 @@ function GenericPanel({
       ))}
       <div>
         <SectionLabel>Energy after sessions</SectionLabel>
-        <EnergyChart sessions={sessions} categories={categories} categoryId={cat.id} />
+        <EnergyChart sessions={sessions} categories={categories} categoryId={cat.id} days={accessLevel === "free" ? 7 : 14} />
       </div>
       <ForecastCard sessions={sessions} checkins={checkins} />
+      {accessLevel !== "free" && <DeepInsights cat={cat} sessions={sessions} accent={accent} />}
     </div>
   );
 }
@@ -502,20 +499,25 @@ function OverviewPanel({
   tasks,
   checkins,
   categories,
+  accessLevel,
 }: {
   sessions: Session[];
   tasks: { completed_at?: string | null }[];
   checkins: { date: string; mental: number }[];
   categories: Category[];
+  accessLevel: AccessLevel;
 }) {
   const today = todayKey();
   const weekStart = startOfWeek(today);
   const thisMonth = today.slice(0, 7);
   const sessionsThisMonth = sessions.filter((s) => s.date.startsWith(thisMonth)).length;
   const tasksDoneThisWeek = tasks.filter((t) => t.completed_at && t.completed_at.slice(0, 10) >= weekStart).length;
-  const studyCat = categories.find((c) => c.name === "Uni work");
-  const studySessions = sessions.filter((s) => s.category_id === studyCat?.id);
-  const streak = currentStreak(studySessions.map((s) => s.date));
+  // Combines every active category, not one hardcoded area — degrades to
+  // single-category behavior for a free-tier or Compass account.
+  const activeCats = categories.filter((c) => c.active);
+  const activeSessions = sessions.filter((s) => activeCats.some((c) => c.id === s.category_id));
+  const streak = currentStreak(activeSessions.map((s) => s.date));
+  const heatmapDays = accessLevel === "free" ? 7 : 28;
 
   return (
     <div className="space-y-4">
@@ -524,16 +526,16 @@ function OverviewPanel({
         stats={[
           { value: sessionsThisMonth, label: "sessions this month" },
           { value: tasksDoneThisWeek, label: "tasks done this week" },
-          { value: streak > 0 ? `${streak}d` : "—", label: "study streak", color: streak >= 3 ? "#1d9e75" : undefined },
+          { value: streak > 0 ? `${streak}d` : "—", label: "current streak", color: streak >= 3 ? "#1d9e75" : undefined },
         ]}
       />
       <div>
-        <SectionLabel>Activity — last 28 days</SectionLabel>
-        <HeatmapChart sessions={sessions} categories={categories} />
+        <SectionLabel>Activity — last {heatmapDays} days</SectionLabel>
+        <HeatmapChart sessions={sessions} categories={categories} days={heatmapDays} />
       </div>
       <div>
         <SectionLabel>Energy after sessions</SectionLabel>
-        <EnergyChart sessions={sessions} categories={categories} />
+        <EnergyChart sessions={sessions} categories={categories} days={accessLevel === "free" ? 7 : 14} />
       </div>
       <ForecastCard sessions={sessions} checkins={checkins} />
     </div>
@@ -575,10 +577,16 @@ function TrendsContent() {
   const { data: checkins = [] } = useCheckins();
   const { data: metrics = [] } = useMetrics();
   const { data: logs = [] } = useMetricLogs();
+  const accessLevel = useAccessLevel();
 
   const searchParams = useSearchParams();
   const [selected, setSelected] = useState(() => searchParams.get("area") ?? "overview");
   const activeCats = categories.filter((c) => c.active);
+
+  // Free tier: cap what's visible to the last 7 days, matching the free
+  // tier's history window everywhere else in the app.
+  const visibleSessions =
+    accessLevel === "free" ? sessions.filter((s) => s.date >= addDays(todayKey(), -6)) : sessions;
 
   // Deep link: ?area=<id> from elsewhere in the app jumps straight to that tab.
   useEffect(() => {
@@ -624,23 +632,23 @@ function TrendsContent() {
       </div>
 
       {selected === "overview" && (
-        <OverviewPanel sessions={sessions} tasks={tasks} checkins={checkinData} categories={activeCats} />
+        <OverviewPanel sessions={visibleSessions} tasks={tasks} checkins={checkinData} categories={activeCats} accessLevel={accessLevel} />
       )}
 
       {selectedCat?.name === "Tennis" && (
-        <TennisPanel cat={selectedCat} sessions={sessions} categories={activeCats} checkins={checkinData} />
+        <TennisPanel cat={selectedCat} sessions={visibleSessions} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
       )}
 
       {selectedCat?.name === "Uni work" && (
-        <UniPanel cat={selectedCat} sessions={sessions} categories={activeCats} checkins={checkinData} />
+        <UniPanel cat={selectedCat} sessions={visibleSessions} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
       )}
 
       {selectedCat?.name === "Gym" && (
-        <GymPanel cat={selectedCat} sessions={sessions} metrics={metrics} logs={logs} categories={activeCats} checkins={checkinData} />
+        <GymPanel cat={selectedCat} sessions={visibleSessions} metrics={metrics} logs={logs} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
       )}
 
       {selectedCat && !["Tennis", "Uni work", "Gym"].includes(selectedCat.name) && (
-        <GenericPanel cat={selectedCat} sessions={sessions} metrics={metrics} logs={logs} categories={activeCats} checkins={checkinData} />
+        <GenericPanel cat={selectedCat} sessions={visibleSessions} metrics={metrics} logs={logs} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
       )}
     </div>
   );

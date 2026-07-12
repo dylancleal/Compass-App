@@ -60,7 +60,7 @@ export class LocalDB implements CompassDB {
     const metrics = defaultMetrics(cats);
     write(KEYS.categories, cats);
     write(KEYS.metrics, metrics);
-    write(KEYS.settings, defaultSettings());
+    write(KEYS.settings, defaultSettings({ startTrial: APP_VARIANT.id === "study" }));
     write(KEYS.sessionTemplates, BUILTIN_LIBRARY);
     window.localStorage.setItem(KEYS.seeded, "1");
   }

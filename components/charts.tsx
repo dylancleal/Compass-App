@@ -105,3 +105,22 @@ function Empty({ text }: { text: string }) {
     </div>
   );
 }
+
+export function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <p className="mb-2 text-xs font-medium text-[var(--muted)]">{children}</p>;
+}
+
+export function StatRow({ stats }: { stats: { value: string | number; label: string; color?: string }[] }) {
+  return (
+    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${stats.length}, 1fr)` }}>
+      {stats.map((s) => (
+        <div key={s.label}>
+          <p className="text-2xl font-medium leading-none" style={{ color: s.color ?? "var(--foreground)" }}>
+            {s.value}
+          </p>
+          <p className="mt-1 text-xs text-[var(--muted)]">{s.label}</p>
+        </div>
+      ))}
+    </div>
+  );
+}

@@ -39,6 +39,10 @@ export interface CategoryMetadata {
   // Generic / Custom
   success_description?: string;
   custom_weekly_goal?: number;
+  // Set by the free-tier downgrade mechanism when this category was
+  // auto-paused for having more than one active area on a free account.
+  // Cleared on reactivation (trial/paid regained).
+  paused_reason?: "downgrade";
 }
 
 export interface Category {
@@ -202,6 +206,16 @@ export interface SessionTemplate {
   weekly_default?: number;
 }
 
+export type StripeSubscriptionStatus =
+  | "active"
+  | "trialing"
+  | "past_due"
+  | "canceled"
+  | "incomplete"
+  | "incomplete_expired"
+  | "unpaid"
+  | "paused";
+
 export interface AppSettings {
   greetingName: string;
   weeklySchedule: WeeklySchedule;
@@ -209,4 +223,12 @@ export interface AppSettings {
   weeklyTargets?: Record<string, number>; // category_id → sessions/week goal
   onboarding_completed_at?: string; // ISO datetime — null means new user
   tour_completed_at?: string;       // ISO datetime — unset means intro tour hasn't been seen
+  // Subscription (Lodestone only — see lib/subscription.ts for the derived
+  // access-level logic that reads these).
+  trial_ends_at?: string;               // ISO datetime, set once at account creation
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
+  stripe_subscription_status?: StripeSubscriptionStatus;
+  stripe_current_period_end?: string;   // ISO datetime, display-only (renewal date)
+  downgraded_at?: string;               // ISO datetime, audit only — not used for gating
 }

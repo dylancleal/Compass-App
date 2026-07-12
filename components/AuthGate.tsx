@@ -5,6 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { APP_VARIANT } from "@/lib/appVariant";
+import { useApplyFreeDowngrade, useReactivateOnUpgrade } from "@/lib/subscription";
 
 // Auth is only required when we're running against Supabase. Local mode
 // (no env vars / NEXT_PUBLIC_DATA_BACKEND != "supabase") bypasses this entirely.
@@ -20,6 +21,13 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [err, setErr] = useState("");
   const [sending, setSending] = useState(false);
   const queryClient = useQueryClient();
+
+  // Runs on every load regardless of which page the user lands on. Both are
+  // no-ops for Compass (getAccessLevel always resolves "paid" there) and
+  // no-ops before settings have loaded (permissive default), so it's safe
+  // to mount unconditionally ahead of the auth-gate's early returns below.
+  useApplyFreeDowngrade();
+  useReactivateOnUpgrade();
 
   useEffect(() => {
     if (!needsAuth) return;
