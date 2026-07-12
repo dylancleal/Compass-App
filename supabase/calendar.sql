@@ -30,10 +30,14 @@ create table if not exists calendar_connections (
   created_at timestamptz not null default now()
 );
 
--- Dedupe imported events per source calendar (Phase 2 upserts rely on this).
+-- Dedupe imported events per source calendar. Full (non-partial) index —
+-- PostgREST's upsert(onConflict: "...") can only infer a plain column-list
+-- unique index, not a partial one, so a `where external_id is not null`
+-- predicate here makes every sync's ON CONFLICT silently unmatchable. This
+-- is still safe for manually-created rows (external_id null): Postgres
+-- treats each NULL as distinct, so they never conflict with each other.
 create unique index if not exists calendar_blocks_external_uq
-  on calendar_blocks (user_id, external_calendar_id, external_id)
-  where external_id is not null;
+  on calendar_blocks (user_id, external_calendar_id, external_id);
 
 -- Fast range queries for a visible week/day.
 create index if not exists calendar_blocks_range_idx

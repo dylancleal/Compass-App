@@ -229,14 +229,15 @@ export class SupabaseDB implements CompassDB {
     if (blocks.length === 0) return { synced: 0 };
     // Upsert using the partial unique index (user_id, external_calendar_id, external_id).
     // ignoreDuplicates: false means existing rows get updated.
-    const { data } = await sb()
+    const { data, error } = await sb()
       .from("calendar_blocks")
       .upsert(blocks, {
         onConflict: "user_id,external_calendar_id,external_id",
         ignoreDuplicates: false,
       })
       .select("id");
-    return { synced: data?.length ?? blocks.length };
+    if (error) throw new Error(error.message);
+    return { synced: data?.length ?? 0 };
   }
 
   async listCalendarConnections(): Promise<CalendarConnection[]> {

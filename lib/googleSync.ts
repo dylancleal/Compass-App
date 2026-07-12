@@ -131,10 +131,11 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
     );
 
     if (dedupedUpsert.length > 0) {
-      await sb.from("calendar_blocks").upsert(dedupedUpsert, {
+      const { error } = await sb.from("calendar_blocks").upsert(dedupedUpsert, {
         onConflict: "user_id,external_calendar_id,external_id",
         ignoreDuplicates: false,
       });
+      if (error) throw new Error(error.message);
     }
   }
 
