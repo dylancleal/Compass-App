@@ -114,6 +114,7 @@ function tooltipStyle(rect: DOMRect | null): React.CSSProperties {
   const W = typeof window !== "undefined" ? window.innerWidth : 400;
   const H = typeof window !== "undefined" ? window.innerHeight : 700;
   const TW = 300; // tooltip width
+  const EST_TH = 260; // rough tooltip height — used to keep it fully on-screen
 
   if (!rect) {
     // Centred modal
@@ -135,11 +136,17 @@ function tooltipStyle(rect: DOMRect | null): React.CSSProperties {
   const rawLeft = spotCentreX - TW / 2;
   const left = Math.max(12, Math.min(rawLeft, W - TW - 12));
 
-  // Vertical: go below if spotlight is in the top half, else go above
+  // Vertical: go below if spotlight is in the top half, else go above. Both
+  // branches are clamped to the viewport — a spotlighted element taller than
+  // the viewport (e.g. Lodestone's day-timeline) gets centred by scrollIntoView
+  // with both edges off-screen, which otherwise pushed the tooltip far below
+  // the fold with no way to reach its Next button.
   if (spotTop < H / 2) {
-    return { position: "fixed", top: spotBottom + 12, left, width: TW, zIndex: 60 };
+    const top = Math.min(Math.max(spotBottom + 12, 12), H - EST_TH - 12);
+    return { position: "fixed", top, left, width: TW, zIndex: 60 };
   }
-  return { position: "fixed", bottom: H - spotTop + 12, left, width: TW, zIndex: 60 };
+  const bottom = Math.min(Math.max(H - spotTop + 12, 12), H - EST_TH - 12);
+  return { position: "fixed", bottom, left, width: TW, zIndex: 60 };
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
