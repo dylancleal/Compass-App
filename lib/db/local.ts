@@ -14,6 +14,7 @@ import type {
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import type { CompassDB } from "./types";
 import { uid } from "@/lib/date";
+import { APP_VARIANT } from "@/lib/appVariant";
 import { defaultCategories, defaultMetrics, defaultSettings } from "./seed";
 
 // localStorage-backed implementation. Everything lives under the keys below as
@@ -55,7 +56,7 @@ export class LocalDB implements CompassDB {
   async ensureSeeded(): Promise<void> {
     if (typeof window === "undefined") return;
     if (window.localStorage.getItem(KEYS.seeded)) return;
-    const cats = defaultCategories();
+    const cats = defaultCategories(APP_VARIANT.onboardingTiles);
     const metrics = defaultMetrics(cats);
     write(KEYS.categories, cats);
     write(KEYS.metrics, metrics);

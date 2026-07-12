@@ -14,6 +14,7 @@ import type {
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import type { CompassDB } from "./types";
 import { getSupabase } from "@/lib/supabaseClient";
+import { APP_VARIANT } from "@/lib/appVariant";
 import { defaultCategories, defaultMetrics, defaultSettings } from "./seed";
 
 // Supabase implementation of the same contract as LocalDB. RLS + column
@@ -44,7 +45,7 @@ export class SupabaseDB implements CompassDB {
   private async _seed(): Promise<void> {
     const { count } = await sb().from("categories").select("id", { count: "exact", head: true });
     if (count && count > 0) return;
-    const cats = defaultCategories().map(({ id: _id, order, ...rest }) => ({ ...rest, order }));
+    const cats = defaultCategories(APP_VARIANT.onboardingTiles).map(({ id: _id, order, ...rest }) => ({ ...rest, order }));
     const { data: inserted } = await sb().from("categories").insert(cats).select();
     if (inserted) {
       const metrics = defaultMetrics(inserted as Category[]).map(({ id: _id, ...m }) => m);

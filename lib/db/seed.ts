@@ -2,14 +2,17 @@ import type { Category, Metric, AppSettings } from "@/lib/types";
 import { uid } from "@/lib/date";
 
 // Default categories from SPEC §4. Metrics are data-driven and editable later.
-export function defaultCategories(): Category[] {
+// `only`, when given, narrows the starter set to just those names — used to
+// keep a scoped variant (e.g. Lodestone's Study+Gym-only product) from
+// silently seeding categories its own onboarding never offers picking.
+export function defaultCategories(only?: string[] | null): Category[] {
   const base = [
     { name: "Uni work", color: "blue", icon: "📘" },
     { name: "Job searching", color: "violet", icon: "💼" },
     { name: "Tennis", color: "green", icon: "🎾" },
     { name: "Gym", color: "amber", icon: "🏋️" },
     { name: "Finances", color: "teal", icon: "💰" },
-  ];
+  ].filter((c) => !only || only.includes(c.name));
   return base.map((c, i) => ({
     id: uid(),
     name: c.name,
