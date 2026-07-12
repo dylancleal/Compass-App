@@ -33,6 +33,13 @@ export interface AppVariant {
    *  "timeline" = a calendar-shaped day view where suggestions are fitted
    *  into free gaps around real calendar events, instead of a plain list. */
   layout: "list" | "timeline";
+  /** Whether to offer "Sign in with Google" for calendar sync. The Google
+   *  Cloud project is still in unverified "Testing" mode (capped at 100
+   *  manually-added test-user emails), so it only works for known accounts —
+   *  showing it to real Lodestone customers would just dead-end them in a
+   *  Google warning screen. Compass's own account is already a test user, so
+   *  it keeps working there. Flip this back on once verification is done. */
+  googleOAuth: boolean;
 }
 
 const VARIANTS: Record<AppVariantId, AppVariant> = {
@@ -47,6 +54,7 @@ const VARIANTS: Record<AppVariantId, AppVariant> = {
     onboardingTiles: null,
     logoStyle: "classic",
     layout: "list",
+    googleOAuth: true,
   },
   study: {
     id: "study",
@@ -60,6 +68,7 @@ const VARIANTS: Record<AppVariantId, AppVariant> = {
     logoStyle: "glow",
     heroLine: "Study, training, and the pull that keeps you on course.",
     layout: "timeline",
+    googleOAuth: false,
   },
 };
 
