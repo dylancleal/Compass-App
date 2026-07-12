@@ -1,19 +1,18 @@
 "use client";
 
-import type { CalendarBlock, Category, Task } from "@/lib/types";
-import type { DraftSuggestion } from "@/lib/planner";
+import type { CalendarBlock, Category, Suggestion, Task } from "@/lib/types";
+import type { PlacedIntention } from "@/lib/schedule";
 import { proposePlacementsForDay } from "@/lib/calendarPlan";
 import { accentOf } from "@/lib/palette";
 import { Button } from "@/components/ui";
-import { todayKey } from "@/lib/date";
 
 interface Props {
-  suggestions: DraftSuggestion[];
+  suggestions: Suggestion[];
   tasks: Task[];
   categories: Category[];
   existingBlocks: CalendarBlock[];
   dayKey: string;
-  onConfirmAll: (blocks: Omit<CalendarBlock, "id" | "created_at">[]) => void;
+  onConfirmAll: (placed: PlacedIntention[]) => void;
 }
 
 export default function ProposedBlocks({
@@ -33,17 +32,7 @@ export default function ProposedBlocks({
   }
 
   function handleConfirmAll() {
-    const blocks: Omit<CalendarBlock, "id" | "created_at">[] = placed.map((p) => ({
-      title: p.title,
-      category_id: p.category_id,
-      task_id: p.task_id,
-      start_at: p.start_at,
-      end_at: p.end_at,
-      source: "compass" as const,
-      busy: true,
-      status: "planned" as const,
-    }));
-    onConfirmAll(blocks);
+    onConfirmAll(placed);
   }
 
   return (

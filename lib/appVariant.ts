@@ -29,6 +29,10 @@ export interface AppVariant {
   /** Short evocative line shown under the welcome title on the sign-in screen.
    *  Undefined = no subheader (Compass's welcome screen is unchanged). */
   heroLine?: string;
+  /** "list" = Compass's suggestion-card list (unchanged).
+   *  "timeline" = a calendar-shaped day view where suggestions are fitted
+   *  into free gaps around real calendar events, instead of a plain list. */
+  layout: "list" | "timeline";
 }
 
 const VARIANTS: Record<AppVariantId, AppVariant> = {
@@ -42,6 +46,7 @@ const VARIANTS: Record<AppVariantId, AppVariant> = {
     backgroundColor: "#f4f1ea",
     onboardingTiles: null,
     logoStyle: "classic",
+    layout: "list",
   },
   study: {
     id: "study",
@@ -54,6 +59,7 @@ const VARIANTS: Record<AppVariantId, AppVariant> = {
     onboardingTiles: ["Uni work", "Gym"],
     logoStyle: "glow",
     heroLine: "Study, training, and the pull that keeps you on course.",
+    layout: "timeline",
   },
 };
 

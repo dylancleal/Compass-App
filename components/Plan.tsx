@@ -7,7 +7,6 @@ import {
   useCheckin,
   useCreateCalendarBlock,
   useCreateSession,
-  useRemoveSession,
   useSaveSuggestions,
   useSessions,
   useSessionTemplates,
@@ -19,7 +18,8 @@ import {
 } from "@/lib/queries";
 import { buildPlan } from "@/lib/planner";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
-import { inferDurationFromBlocks } from "@/lib/sessionInfer";
+import { useAcceptSuggestion } from "@/lib/suggestionActions";
+import { useGeneratePlan } from "@/lib/planGeneration";
 import { findFreeSlot } from "@/lib/timeSlot";
 import { addDays, dayIndex, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
@@ -118,21 +118,11 @@ export default function Plan() {
   const save = useSaveSuggestions();
   const update = useUpdateSuggestion(today);
   const createSession = useCreateSession();
-  const removeSession = useRemoveSession();
   const updateSession = useUpdateSession();
   const createBlock = useCreateCalendarBlock();
-  const generatedRef = useRef(false);
-
-  // The session auto-logged when a suggestion was accepted — so the card can let
-  // you correct what you actually did (type + duration) after ticking it off.
-  function loggedSessionFor(suggestionId: string): Session | undefined {
-    return sessions.find(
-      (sess) =>
-        (sess.payload as { suggestion_id?: string; auto_logged?: boolean })?.suggestion_id ===
-          suggestionId &&
-        (sess.payload as { auto_logged?: boolean })?.auto_logged === true,
-    );
-  }
+  const acceptSuggestion = useAcceptSuggestion(today);
+  const { loggedSessionFor } = acceptSuggestion;
+  useGeneratePlan(today);
 
   // The "N/M … this week" insight is baked into the suggestion at plan-generation
   // time, so it goes stale the moment you log a session. Recompute the running
@@ -195,48 +185,8 @@ export default function Plan() {
     });
   }
 
-  // Generate the plan once per day after check-in, persisting it so accept/
-  // dismiss choices survive reloads. Regeneration keeps prior feedback.
-  useEffect(() => {
-    if (!settings || !checkin || isLoading) return;
-    if (generatedRef.current) return;
-    if (suggestions.length > 0) return;
-    generatedRef.current = true;
-    const draft = buildPlan({ date: today, checkin, categories, tasks, sessions, settings, calendarBlocks, library });
-    save.mutate({ date: today, items: draft });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings, checkin, isLoading, suggestions.length]);
-
   function handleToggle(s: (typeof suggestions)[number], accepted: boolean) {
-    update.mutate({ id: s.id, patch: { status: accepted ? "accepted" : "pending" } });
-    if (!s.category_id || (s.est_minutes ?? 0) === 0) return;
-
-    if (accepted) {
-      const alreadyLogged = sessions.some(
-        (sess) =>
-          (sess.payload as { suggestion_id?: string; auto_logged?: boolean })
-            ?.suggestion_id === s.id &&
-          (sess.payload as { auto_logged?: boolean })?.auto_logged === true,
-      );
-      if (!alreadyLogged) {
-        createSession.mutate({
-          category_id: s.category_id,
-          date: today,
-          type: s.session_type ?? "Session",
-          duration_minutes:
-            inferDurationFromBlocks(s.category_id, calendarBlocks) ?? s.est_minutes,
-          payload: { auto_logged: true, suggestion_id: s.id },
-        });
-      }
-    } else {
-      const toRemove = sessions.find(
-        (sess) =>
-          (sess.payload as { suggestion_id?: string; auto_logged?: boolean })
-            ?.suggestion_id === s.id &&
-          (sess.payload as { auto_logged?: boolean })?.auto_logged === true,
-      );
-      if (toRemove) removeSession.mutate(toRemove.id);
-    }
+    acceptSuggestion.setAccepted(s, accepted, { calendarBlocks });
   }
 
   function regenerate() {
