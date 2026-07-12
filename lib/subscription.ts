@@ -24,10 +24,17 @@ export type AccessLevel = "trial" | "paid" | "free" | "past_due";
 // Compass (personal variant) always resolves to "paid" — this is the single
 // choke point that keeps Compass's UI byte-for-byte unaffected by any of
 // this; no other call site needs its own APP_VARIANT check.
+//
+// NEXT_PUBLIC_DISABLE_PAYWALL is a temporary, reversible kill-switch for
+// early friend-testing before Stripe is live — set it on the Lodestone
+// Vercel project and everyone gets full access regardless of trial/sub
+// status. No per-user data is touched; unset it later and real access
+// levels apply immediately on next load.
 export function getAccessLevel(
   settings: Pick<AppSettings, "trial_ends_at" | "stripe_subscription_status"> | undefined | null,
   now: Date = new Date(),
 ): AccessLevel {
+  if (process.env.NEXT_PUBLIC_DISABLE_PAYWALL === "true") return "paid";
   if (APP_VARIANT.id !== "study") return "paid";
   if (!settings) return "paid"; // permissive while loading — a flash of full access beats a flash of the free UI for a paying user
   const status = settings.stripe_subscription_status;
