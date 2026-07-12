@@ -12,6 +12,11 @@ import {
   useGoogleSync,
 } from "@/lib/queries";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { APP_VARIANT } from "@/lib/appVariant";
+
+const GOOGLE_ICS_INSTRUCTIONS =
+  "In Google Calendar, open Settings → click your calendar under \"Settings for my calendars\" → scroll to \"Secret address in iCal format\" and copy that URL. It starts with https://calendar.google.com/calendar/ical/… " +
+  "Don't use the \"Export\" button at the top of Settings — that downloads a one-time .zip file that won't stay in sync.";
 
 // Build the OAuth start URL against the canonical origin when one is configured,
 // so /start (which sets the PKCE cookie) and the Google callback run on the same
@@ -28,8 +33,8 @@ const PROVIDERS = [
     id: "google" as const,
     label: "Google Calendar",
     icon: "🗓️",
-    oauth: true,
-    instructions: null,
+    oauth: APP_VARIANT.googleOAuth,
+    instructions: APP_VARIANT.googleOAuth ? null : GOOGLE_ICS_INSTRUCTIONS,
   },
   {
     id: "microsoft" as const,
@@ -216,7 +221,9 @@ function GoogleConnectForm({
         >
           In Google Calendar, open Settings → your calendar → scroll to{" "}
           <strong>Secret address in iCal format</strong> and copy that URL. It
-          starts with <code>https://calendar.google.com/calendar/ical/…</code>
+          starts with <code>https://calendar.google.com/calendar/ical/…</code>{" "}
+          Don&apos;t use the &quot;Export&quot; button — that downloads a
+          one-time .zip file that won&apos;t stay in sync.
         </div>
         <input
           className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]"
