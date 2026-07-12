@@ -10,6 +10,13 @@ import { APP_VARIANT } from "@/lib/appVariant";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
+// Every screen here sits behind AuthGate and is per-user — there's no static
+// shell worth prerendering. Forcing dynamic rendering stops Vercel's edge
+// from caching the HTML (including the variant-dependent <title>) across
+// deployments, which otherwise kept serving Compass's shell on Lodestone's
+// domain long after a fresh build had gone out.
+export const dynamic = "force-dynamic";
+
 // Runs before first paint so switching themes (or loading with a saved
 // preference) never flashes the wrong colours. Kept as a plain, unbundled
 // string — it has to run standalone, before React/hydration, so it can't
