@@ -25,6 +25,7 @@ import { useTilt } from "@/lib/useTilt";
 import { buildPlan } from "@/lib/planner";
 import { findMissedDays } from "@/lib/missedDays";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
+import { APP_VARIANT } from "@/lib/appVariant";
 import type { Category } from "@/lib/types";
 import Plan from "@/components/Plan";
 import TaskList from "@/components/TaskList";
@@ -35,6 +36,7 @@ import { ParallaxLeaf } from "@/components/decor";
 import { IconChip, QuietLink } from "@/components/ui";
 import { GoalsOverview } from "@/components/GoalCard";
 import DeadlineChip from "@/components/calendar/DeadlineChip";
+import DayTimeline from "@/components/calendar/DayTimeline";
 import { isDeadlineLike } from "@/lib/categoryMatcher";
 
 const MENTAL_EMOJI = ["", "😞", "😕", "😐", "🙂", "😄"];
@@ -337,7 +339,20 @@ export default function TodayPage() {
 
       {/* Personalised plan */}
       <div data-tour="suggestions">
-        <Plan />
+        {APP_VARIANT.layout === "timeline" ? (
+          <DayTimeline
+            dayKey={today}
+            categories={categories}
+            tasks={tasks}
+            suggestions={suggestions}
+            existingBlocks={allBlocks}
+            conflictIds={conflictIds}
+            onToggleBlockDone={toggleBlockDone}
+            isBlockDone={(id) => !!blockDoneSession(id)}
+          />
+        ) : (
+          <Plan />
+        )}
       </div>
 
       {/* Weekly goals — glanceable here, tap through to Trends for detail */}
@@ -377,8 +392,9 @@ export default function TodayPage() {
         </div>
       </section>
 
-      {/* Today's schedule — calendar blocks */}
-      {todayBlocks.length > 0 && (
+      {/* Today's schedule — calendar blocks (list variant only; the timeline
+          variant absorbs this into DayTimeline above) */}
+      {APP_VARIANT.layout === "list" && todayBlocks.length > 0 && (
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--muted)]">Today&apos;s schedule</h2>

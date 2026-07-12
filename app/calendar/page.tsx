@@ -12,8 +12,9 @@ import {
   useSyncCalendarConnection,
   useGoogleSync,
 } from "@/lib/queries";
+import { useAcceptSuggestion } from "@/lib/suggestionActions";
 import { addDays, startOfWeek, todayKey } from "@/lib/date";
-import { findConflictPairs, findConflictGroups } from "@/lib/schedule";
+import { findConflictPairs, findConflictGroups, type PlacedIntention } from "@/lib/schedule";
 import type { CalendarBlock, Task } from "@/lib/types";
 import WeekGrid from "@/components/calendar/WeekGrid";
 import AgendaView from "@/components/calendar/AgendaView";
@@ -54,6 +55,7 @@ function CalendarInner() {
   const removeBlock = useRemoveCalendarBlock();
   const syncConnection = useSyncCalendarConnection();
   const googleSync = useGoogleSync();
+  const acceptSuggestion = useAcceptSuggestion(today);
 
   // Auto-sync stale connections on page load.
   useEffect(() => {
@@ -85,8 +87,27 @@ function CalendarInner() {
     createBlock.mutate(input);
   }
 
-  function handleConfirmAll(proposed: Omit<CalendarBlock, "id" | "created_at">[]) {
-    proposed.forEach((b) => createBlock.mutate(b));
+  function handleConfirmAll(proposed: PlacedIntention[]) {
+    proposed.forEach((p) => {
+      createBlock.mutate(
+        {
+          title: p.title,
+          category_id: p.category_id,
+          task_id: p.task_id,
+          start_at: p.start_at,
+          end_at: p.end_at,
+          source: "compass",
+          busy: true,
+          status: "planned",
+        },
+        {
+          onSuccess: () => {
+            const s = pendingSuggestions.find((sugg) => sugg.id === p.id);
+            if (s) acceptSuggestion.setAccepted(s, true, { durationMin: p.durationMin });
+          },
+        },
+      );
+    });
   }
 
   function handleClickSlot(dayKey: string, hour: number) {

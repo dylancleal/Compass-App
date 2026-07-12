@@ -2,8 +2,7 @@
 // then places them using the scheduling algorithm. Called by ProposedBlocks.
 // Never auto-writes — returns ghost placements the user must confirm.
 
-import type { DraftSuggestion } from "@/lib/planner";
-import type { Task, CalendarBlock } from "@/lib/types";
+import type { Suggestion, Task, CalendarBlock } from "@/lib/types";
 import { placeIntentions, dayWindowFor } from "@/lib/schedule";
 
 export interface DayWindow {
@@ -12,7 +11,7 @@ export interface DayWindow {
 }
 
 export function suggestionsToIntentions(
-  suggestions: DraftSuggestion[],
+  suggestions: Suggestion[],
   tasks: Task[],
 ) {
   return suggestions
@@ -22,7 +21,7 @@ export function suggestionsToIntentions(
         (t) => t.category_id === s.category_id && t.status !== "complete" && t.due_date,
       );
       return {
-        id: crypto.randomUUID(),
+        id: s.id,
         title: s.text.split("\n")[0],
         durationMin: s.est_minutes ?? 30,
         category_id: s.category_id,
@@ -36,7 +35,7 @@ export function suggestionsToIntentions(
 }
 
 export function proposePlacementsForDay(
-  suggestions: DraftSuggestion[],
+  suggestions: Suggestion[],
   tasks: Task[],
   existingBlocks: CalendarBlock[],
   dayKey: string,
