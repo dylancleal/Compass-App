@@ -15,8 +15,10 @@ import { PALETTE, PALETTE_KEYS, accentOf } from "@/lib/palette";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Category, DayIndex } from "@/lib/types";
 import { APP_VARIANT } from "@/lib/appVariant";
+import { canActivateCategory, useAccessLevel, useOpenBillingPortal, useStartCheckout } from "@/lib/subscription";
 import { Button } from "@/components/ui";
 import ConnectionsPanel from "@/components/calendar/ConnectionsPanel";
+import UpgradeCallout from "@/components/UpgradeCallout";
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const SCHEDULE_ROWS: { key: "gym" | "tennis" | "study"; label: string }[] = [
@@ -39,9 +41,13 @@ export default function SettingsPage() {
   const removeCat = useRemoveCategory();
   const reorder = useReorderCategories();
   const saveSettings = useSaveSettings();
+  const accessLevel = useAccessLevel();
+  const startCheckout = useStartCheckout();
+  const openBillingPortal = useOpenBillingPortal();
 
   const [newName, setNewName] = useState("");
   const [tourOpen, setTourOpen] = useState(false);
+  const canAddArea = canActivateCategory(categories, accessLevel);
 
   function move(cat: Category, dir: -1 | 1) {
     const ordered = [...categories].sort((a, b) => a.order - b.order);
@@ -136,31 +142,35 @@ export default function SettingsPage() {
             })}
         </div>
 
-        <div className="card flex items-center gap-2 p-3">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newName.trim()) {
+        {canAddArea ? (
+          <div className="card flex items-center gap-2 p-3">
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newName.trim()) {
+                  createCat.mutate({ name: newName.trim(), color: "slate", icon: "⭐", active: true });
+                  setNewName("");
+                }
+              }}
+              placeholder="Add a new area…"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            />
+            <Button
+              variant="soft"
+              color="#3e6b54"
+              disabled={!newName.trim()}
+              onClick={() => {
                 createCat.mutate({ name: newName.trim(), color: "slate", icon: "⭐", active: true });
                 setNewName("");
-              }
-            }}
-            placeholder="Add a new area…"
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-          />
-          <Button
-            variant="soft"
-            color="#3e6b54"
-            disabled={!newName.trim()}
-            onClick={() => {
-              createCat.mutate({ name: newName.trim(), color: "slate", icon: "⭐", active: true });
-              setNewName("");
-            }}
-          >
-            Add
-          </Button>
-        </div>
+              }}
+            >
+              Add
+            </Button>
+          </div>
+        ) : (
+          <UpgradeCallout feature="A second area" />
+        )}
       </section>
 
       {/* Weekly schedule */}
@@ -234,10 +244,81 @@ export default function SettingsPage() {
       {/* Calendar connections */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-[var(--muted)]">Calendar connections</h2>
-        <div className="card p-4">
-          <ConnectionsPanel />
-        </div>
+        {accessLevel !== "free" ? (
+          <div className="card p-4">
+            <ConnectionsPanel />
+          </div>
+        ) : (
+          <UpgradeCallout feature="Calendar sync" />
+        )}
       </section>
+
+      {/* Subscription — Lodestone only, never rendered for Compass */}
+      {APP_VARIANT.id === "study" && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-[var(--muted)]">Subscription</h2>
+          <div className="card space-y-3 p-4 text-sm">
+            {accessLevel === "trial" && settings?.trial_ends_at && (
+              <Row
+                label="Free trial"
+                status="Active"
+                on
+                note={`Full access until ${new Date(settings.trial_ends_at).toLocaleDateString()}.`}
+              />
+            )}
+            {accessLevel === "paid" && (
+              <Row
+                label={`${APP_VARIANT.name} Plus`}
+                status="Active"
+                on
+                note={
+                  settings?.stripe_current_period_end
+                    ? `Renews ${new Date(settings.stripe_current_period_end).toLocaleDateString()}.`
+                    : "Full access to both areas, the calendar timeline, sync, and full history."
+                }
+              />
+            )}
+            {accessLevel === "past_due" && (
+              <Row
+                label={`${APP_VARIANT.name} Plus`}
+                status="Payment issue"
+                on={false}
+                note="We couldn't process your last payment — update your card to keep full access."
+              />
+            )}
+            {accessLevel === "free" && (
+              <Row
+                label="Free"
+                status="Limited"
+                on={false}
+                note="One area, 7-day history, list view only. Upgrade for both areas, the calendar timeline, sync, and full history."
+              />
+            )}
+            <div className="flex gap-2 pt-1">
+              {accessLevel === "free" && (
+                <button
+                  onClick={() => startCheckout.mutate()}
+                  disabled={startCheckout.isPending}
+                  className="rounded-xl px-3 py-2 text-xs font-semibold text-[#fffdf9] transition-all hover:brightness-105 disabled:opacity-60"
+                  style={{ background: "var(--primary)" }}
+                >
+                  {startCheckout.isPending ? "…" : `Upgrade — $4.99/mo`}
+                </button>
+              )}
+              {(accessLevel === "paid" || accessLevel === "past_due") && (
+                <button
+                  onClick={() => openBillingPortal.mutate()}
+                  disabled={openBillingPortal.isPending}
+                  className="rounded-xl px-3 py-2 text-xs font-semibold transition-all hover:brightness-105 disabled:opacity-60"
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                >
+                  {openBillingPortal.isPending ? "…" : "Manage billing"}
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Help */}
       <section className="space-y-3">

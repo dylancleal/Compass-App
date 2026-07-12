@@ -4,7 +4,8 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useCategories, useCheckins, useSessions, useSettings, useSessionTemplates } from "@/lib/queries";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
-import { protectedStreak } from "@/lib/stats";
+import { monthlyRecap, protectedStreak } from "@/lib/stats";
+import { useAccessLevel } from "@/lib/subscription";
 import { buildWeekPreview } from "@/lib/preview";
 import { addDays, daysBetween, prettyDate, startOfWeek, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
@@ -37,6 +38,8 @@ export default function ReviewPage() {
   const { data: settings } = useSettings();
   const { data: templates } = useSessionTemplates();
   const library = templates ?? BUILTIN_LIBRARY;
+  const accessLevel = useAccessLevel();
+  const recap = useMemo(() => monthlyRecap(sessions, today.slice(0, 7)), [sessions, today]);
 
   const thisWeek = useMemo(
     () => sessions.filter((s) => s.date >= weekStart && s.date <= weekEnd),
@@ -62,15 +65,18 @@ export default function ReviewPage() {
     [thisWeek],
   );
 
-  // Study streak — a day with no study still counts as long as it was a
-  // deliberate rest (a Light check-in or a "Rough" evening). Respect over guilt.
-  const studyCat = categories.find((c) => c.name === "Uni work");
+  // Active-area streak — a day with no session still counts as long as it
+  // was a deliberate rest (a Light check-in or a "Rough" evening). Respect
+  // over guilt. Combines every active category (not just one hardcoded
+  // area), so this degrades correctly to single-category behavior for a
+  // free-tier or Compass account and generalizes for multi-area accounts.
+  const activeCats = categories.filter((c) => c.active);
   const studyDays = useMemo(
     () =>
       new Set(
-        sessions.filter((s) => s.category_id === studyCat?.id).map((s) => s.date),
+        sessions.filter((s) => activeCats.some((c) => c.id === s.category_id)).map((s) => s.date),
       ),
-    [sessions, studyCat],
+    [sessions, activeCats],
   );
   const protectedDays = useMemo(
     () =>
@@ -85,9 +91,6 @@ export default function ReviewPage() {
     () => protectedStreak(studyDays, protectedDays, today),
     [studyDays, protectedDays, today],
   );
-
-  // Active categories with sessions or goals this week
-  const activeCats = categories.filter((c) => c.active);
 
   // Next week preview
   const nextWeekBase = {
@@ -245,6 +248,64 @@ export default function ReviewPage() {
                 )}
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Monthly recap — paid-tier only, the kind of thing that only means
+          something once you've been at this a while. */}
+      {accessLevel !== "free" && recap.totalSessions > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold text-[var(--muted)]">This month</h2>
+          <div className="card space-y-3 p-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-2xl font-medium leading-none" style={{ color: "var(--primary)" }}>
+                  {recap.totalSessions}
+                </p>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  sessions
+                  {recap.comparedToPrevMonth.sessionsDelta !== 0 && (
+                    <span style={{ color: recap.comparedToPrevMonth.sessionsDelta > 0 ? "#1d9e75" : "#c06b5a" }}>
+                      {" "}
+                      {recap.comparedToPrevMonth.sessionsDelta > 0 ? "+" : ""}
+                      {recap.comparedToPrevMonth.sessionsDelta} vs last month
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-2xl font-medium leading-none" style={{ color: "var(--primary)" }}>
+                  {fmtMin(recap.totalMinutes)}
+                </p>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  total time
+                  {recap.comparedToPrevMonth.minutesDelta !== 0 && (
+                    <span style={{ color: recap.comparedToPrevMonth.minutesDelta > 0 ? "#1d9e75" : "#c06b5a" }}>
+                      {" "}
+                      {recap.comparedToPrevMonth.minutesDelta > 0 ? "+" : ""}
+                      {fmtMin(Math.abs(recap.comparedToPrevMonth.minutesDelta))} vs last month
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+            {recap.byCategory.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 border-t pt-3" style={{ borderColor: "var(--border)" }}>
+                {recap.byCategory.map(({ categoryId, count }) => {
+                  const cat = categories.find((c) => c.id === categoryId);
+                  return (
+                    <span
+                      key={categoryId}
+                      className="rounded-full px-2.5 py-1 text-xs font-medium"
+                      style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                    >
+                      {cat?.icon ?? "📋"} {cat?.name ?? "Other"} · {count}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
       )}

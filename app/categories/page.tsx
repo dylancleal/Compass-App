@@ -8,12 +8,17 @@ import { taskProgress, openTasks } from "@/lib/stats";
 import { ProgressRing } from "@/components/ui";
 import { detectDomain, isSetupComplete } from "@/lib/categorySetup";
 import CategorySetupSheet from "@/components/CategorySetupSheet";
+import { useStartCheckout, useSwitchActiveCategory } from "@/lib/subscription";
 import type { Category } from "@/lib/types";
 
 export default function CategoriesPage() {
   const { data: categories = [], isLoading } = useCategories();
   const { data: tasks = [] } = useTasks();
   const [setupCat, setSetupCat] = useState<Category | null>(null);
+  const { switchTo } = useSwitchActiveCategory();
+  const startCheckout = useStartCheckout();
+  const pausedCats = categories.filter((c) => c.metadata?.paused_reason === "downgrade");
+  const currentActive = categories.find((c) => c.active);
 
   return (
     <div className="space-y-5">
@@ -79,6 +84,48 @@ export default function CategoriesPage() {
             );
           })}
       </div>
+
+      {pausedCats.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-[var(--muted)]">Paused areas</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {pausedCats.map((cat) => (
+              <div
+                key={cat.id}
+                className="card flex items-center gap-3 p-4 opacity-70"
+                style={{ background: "var(--surface)", border: "1px dashed var(--border)" }}
+              >
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg" style={{ background: "var(--background)" }}>
+                  {cat.icon}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">{cat.name}</p>
+                  <p className="text-xs text-[var(--muted)]">
+                    Paused — upgrade to use both areas, or switch to this one for free.
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => switchTo(cat, currentActive)}
+                      className="rounded-full px-2.5 py-1 text-xs font-semibold transition-all hover:scale-105"
+                      style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                    >
+                      Switch to this area
+                    </button>
+                    <button
+                      onClick={() => startCheckout.mutate()}
+                      disabled={startCheckout.isPending}
+                      className="rounded-full px-2.5 py-1 text-xs font-semibold transition-all hover:scale-105 disabled:opacity-60"
+                      style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+                    >
+                      Upgrade
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {setupCat && (
         <CategorySetupSheet

@@ -331,8 +331,14 @@ export default function OnboardingPage() {
   const [setupIndex, setSetupIndex] = useState(0);
 
   async function handlePick(selected: TileName[], customName?: string) {
-    // Create categories that don't already exist (stale check — may miss seeded ones)
-    const existingNames = new Set(existingCategories.map((c) => c.name));
+    // Refetch first — ensureSeeded() may have just created some of these
+    // categories in the background, and the cached existingCategories prop
+    // can still be stale at this exact moment, which previously let this
+    // create duplicate rows for anything seeding got to first.
+    await qc.refetchQueries({ queryKey: queryKeys.categories });
+    const existingNames = new Set(
+      (qc.getQueryData<Category[]>(queryKeys.categories) ?? existingCategories).map((c) => c.name),
+    );
     const toCreate = [
       ...TILES.filter((t) => selected.includes(t.name) && !existingNames.has(t.name)),
       ...(customName && !existingNames.has(customName)

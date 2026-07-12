@@ -26,6 +26,7 @@ import { buildPlan } from "@/lib/planner";
 import { findMissedDays } from "@/lib/missedDays";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import { APP_VARIANT } from "@/lib/appVariant";
+import { useAccessLevel } from "@/lib/subscription";
 import type { Category } from "@/lib/types";
 import Plan from "@/components/Plan";
 import TaskList from "@/components/TaskList";
@@ -50,6 +51,7 @@ export default function TodayPage() {
   const today = todayKey();
   const router = useRouter();
   const { data: settings } = useSettings();
+  const accessLevel = useAccessLevel();
   const { data: sessions = [], isLoading: sessionsLoading } = useSessions();
   const { data: checkin } = useCheckin(today);
   const { data: categories = [] } = useCategories();
@@ -167,6 +169,7 @@ export default function TodayPage() {
   }, [settings, sessions, sessionsLoading, connections.length, router]);
 
   const activeCats = categories.filter((c) => c.active);
+  const pausedCats = categories.filter((c) => c.metadata?.paused_reason === "downgrade");
 
   // Only timed, non-ghost blocks for today's schedule display
   const todayBlocks = useMemo(
@@ -337,9 +340,30 @@ export default function TodayPage() {
         </Link>
       )}
 
+      {/* Free-tier downgrade notice — explicit, not silent: a category got
+          paused because only one area is included on the free tier. */}
+      {pausedCats.length > 0 && (
+        <Link
+          href="/categories"
+          className="card card-interactive flex items-center gap-3 p-4 hover:brightness-[1.03]"
+          style={{ background: "var(--info-soft)", borderColor: "var(--mist)" }}
+        >
+          <span className="text-2xl">⏸</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold" style={{ color: "var(--info-text)" }}>
+              Trial ended — {pausedCats.map((c) => c.name).join(", ")} paused
+            </p>
+            <p className="text-xs text-[var(--muted)]">
+              {activeCats.map((c) => c.name).join(", ") || "Your other area"} is still fully yours. Switch areas or upgrade anytime.
+            </p>
+          </div>
+          <span className="text-sm text-[var(--muted)]">→</span>
+        </Link>
+      )}
+
       {/* Personalised plan */}
       <div data-tour="suggestions">
-        {APP_VARIANT.layout === "timeline" ? (
+        {APP_VARIANT.layout === "timeline" && accessLevel !== "free" ? (
           <DayTimeline
             dayKey={today}
             categories={categories}
@@ -394,7 +418,7 @@ export default function TodayPage() {
 
       {/* Today's schedule — calendar blocks (list variant only; the timeline
           variant absorbs this into DayTimeline above) */}
-      {APP_VARIANT.layout === "list" && todayBlocks.length > 0 && (
+      {(APP_VARIANT.layout === "list" || accessLevel === "free") && todayBlocks.length > 0 && (
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--muted)]">Today&apos;s schedule</h2>

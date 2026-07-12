@@ -51,7 +51,7 @@ export class SupabaseDB implements CompassDB {
       const metrics = defaultMetrics(inserted as Category[]).map(({ id: _id, ...m }) => m);
       await sb().from("metrics").insert(metrics);
     }
-    await sb().from("settings").upsert({ data: defaultSettings() });
+    await sb().from("settings").upsert({ data: defaultSettings({ startTrial: APP_VARIANT.id === "study" }) });
     // Seed session templates — idempotent: only runs when table is empty for this user.
     const { count: tplCount } = await sb()
       .from("session_templates")
