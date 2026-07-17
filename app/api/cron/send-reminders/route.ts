@@ -41,6 +41,8 @@ export async function GET(request: Request) {
     .lte("start_at", windowEnd.toISOString());
 
   let sent = 0;
+  let failed = 0;
+  const errors: string[] = [];
   for (const block of blocks ?? []) {
     const { data: subs } = await supabase
       .from("push_subscriptions")
@@ -62,6 +64,11 @@ export async function GET(request: Request) {
         );
         sent++;
       } catch (err) {
+        failed++;
+        const status = (err as WebPushError | undefined)?.statusCode;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[send-reminders] push failed (status ${status ?? "?"}) for sub ${sub.id}: ${msg}`);
+        errors.push(`${sub.id}: ${status ?? "?"} ${msg}`);
         if (isGone(err)) {
           await supabase.from("push_subscriptions").delete().eq("id", sub.id);
         }
@@ -72,5 +79,5 @@ export async function GET(request: Request) {
     await supabase.from("calendar_blocks").update({ reminder_sent_at: now.toISOString() }).eq("id", block.id);
   }
 
-  return NextResponse.json({ blocks: blocks?.length ?? 0, sent });
+  return NextResponse.json({ blocks: blocks?.length ?? 0, sent, failed, errors });
 }
