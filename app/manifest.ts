@@ -15,9 +15,15 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     background_color: APP_VARIANT.backgroundColor,
     theme_color: APP_VARIANT.themeColor,
-    icons: [
-      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-      { src: "/icon-maskable.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
-    ],
+    icons:
+      APP_VARIANT.id === "study"
+        ? [
+            { src: "/icon-lodestone.png", sizes: "512x512", type: "image/png", purpose: "any" },
+            { src: "/icon-lodestone-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          ]
+        : [
+            { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+            { src: "/icon-maskable.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
+          ],
   };
 }
