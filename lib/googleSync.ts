@@ -73,7 +73,10 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
     if (syncToken) {
       params.set("syncToken", syncToken);
     } else {
-      params.set("timeMin", new Date().toISOString());
+      // Start from 24h back, not the exact current moment — otherwise a
+      // recurring event whose time-of-day already passed today drops out
+      // of today entirely (same bug fixed in app/api/ics-sync/route.ts).
+      params.set("timeMin", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
       params.set("timeMax", new Date(Date.now() + SYNC_DAYS * 86_400_000).toISOString());
       params.set("orderBy", "startTime");
     }
