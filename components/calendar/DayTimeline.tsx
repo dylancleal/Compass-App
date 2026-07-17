@@ -56,7 +56,11 @@ export default function DayTimeline({
   const dayInterval = dayWindowFor(dayKey, DAY_WIN);
   const pending = suggestions.filter((s) => s.status === "pending" && (s.est_minutes ?? 0) > 0);
   const affirmations = suggestions.filter((s) => s.status === "pending" && (s.est_minutes ?? 0) === 0);
-  const { placed, unplaced } = proposePlacementsForDay(pending, tasks, existingBlocks, dayKey, DAY_WIN);
+  // Wider-than-default buffer: each placement renders with a ~34px minimum
+  // height (room for a title + Add/Skip) on this 64px/hr grid, which needs
+  // ~32 real minutes of separation to never visually collide with the next
+  // placement — the scheduler's normal 10-minute buffer isn't enough here.
+  const { placed, unplaced } = proposePlacementsForDay(pending, tasks, existingBlocks, dayKey, DAY_WIN, 30);
 
   const acceptSuggestion = useAcceptSuggestion(dayKey);
   const updateSuggestion = useUpdateSuggestion(dayKey);
@@ -175,11 +179,13 @@ export default function DayTimeline({
                 dayInterval,
               );
               return (
-                <GhostChip
+                <BlockChip
                   key={p.id}
-                  placement={p}
+                  block={{ title: p.title, start_at: p.start_at, end_at: p.end_at, source: "manual" } as CalendarBlock}
                   categoryColor={cat?.color}
                   topPct={box.topPct}
+                  heightPct={box.heightPct}
+                  isGhost
                   onConfirm={() => confirmPlacement(p)}
                   onDismiss={() => dismissPlacement(p)}
                 />
@@ -259,62 +265,6 @@ export default function DayTimeline({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// A ghost placement's own actionable chip — unlike BlockChip, this never
-// collapses to a buttonless "compact"/"tiny" size. Suggested sessions are
-// usually 30-60 min, well under BlockChip's 1hr full-mode threshold, which
-// would otherwise hide the Add/Skip buttons entirely on a single-day (tall
-// hour rows) timeline. Fixed min-height instead of the real duration's
-// height — a deliberate legibility trade-off for a handful of daily items.
-function GhostChip({
-  placement,
-  categoryColor,
-  topPct,
-  onConfirm,
-  onDismiss,
-}: {
-  placement: PlacedIntention;
-  categoryColor?: string;
-  topPct: number;
-  onConfirm: () => void;
-  onDismiss: () => void;
-}) {
-  const accent = accentOf(categoryColor ?? "slate");
-  return (
-    <div
-      className="absolute left-0.5 right-0.5 overflow-hidden rounded-lg px-2 py-1.5"
-      style={{
-        top: `${topPct}%`,
-        minHeight: 58,
-        background: "transparent",
-        border: `1.5px dashed ${accent.accent}`,
-        color: accent.text,
-        zIndex: 2,
-      }}
-    >
-      <p className="truncate text-xs font-semibold leading-tight">{placement.title}</p>
-      <p className="mt-0.5 text-[11px] opacity-60 leading-tight">
-        {fmtTime(placement.start_at)}–{fmtTime(placement.end_at)}
-      </p>
-      <div className="mt-1 flex gap-1">
-        <button
-          className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white hover:scale-105 hover:brightness-110"
-          style={{ background: accent.accent }}
-          onClick={(e) => { e.stopPropagation(); onConfirm(); }}
-        >
-          Add
-        </button>
-        <button
-          className="rounded px-1.5 py-0.5 text-[10px] font-medium opacity-60 hover:opacity-100"
-          style={{ color: accent.text }}
-          onClick={(e) => { e.stopPropagation(); onDismiss(); }}
-        >
-          Skip
-        </button>
-      </div>
     </div>
   );
 }

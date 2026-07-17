@@ -59,6 +59,9 @@ export default function BlockChip({
       style={{
         top: `${topPct}%`,
         height: `${Math.max(heightPct, 1.2)}%`,
+        // Ghosts need Add/Skip to stay tappable even at a short duration —
+        // real blocks (no buttons to fit) can shrink all the way down.
+        minHeight: isGhost ? 34 : undefined,
         background: isConflict ? "#fef9ec" : isGhost ? "transparent" : accent.soft,
         color: isConflict ? "#8a6800" : accent.text,
         border: isConflict
@@ -73,20 +76,57 @@ export default function BlockChip({
       }}
       onClick={!isGhost ? onClick : undefined}
     >
-      {tiny ? (
+      {tiny && isGhost ? (
+        /* Short suggestion — cramped, but Add/Skip must stay reachable. */
+        <div className="flex items-center gap-1.5 overflow-hidden">
+          <p className="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight">{block.title}</p>
+          <button
+            className="shrink-0 rounded px-1 py-0.5 text-[9px] font-semibold text-white hover:scale-105 hover:brightness-110"
+            style={{ background: accent.accent }}
+            onClick={(e) => { e.stopPropagation(); onConfirm?.(); }}
+          >
+            Add
+          </button>
+          <button
+            className="shrink-0 rounded px-1 py-0.5 text-[9px] font-medium opacity-60 hover:opacity-100"
+            style={{ color: accent.text }}
+            onClick={(e) => { e.stopPropagation(); onDismiss?.(); }}
+          >
+            Skip
+          </button>
+        </div>
+      ) : tiny ? (
         /* Very short block — single cramped line */
         <p className="truncate text-[11px] font-semibold leading-tight" style={{ color: isConflict ? "#8a6800" : accent.text }}>
           {isConflict && <span className="mr-0.5">⚠</span>}
           {block.title}
         </p>
       ) : compact ? (
-        /* Compact — title + time side by side */
-        <div className="flex items-baseline gap-1 overflow-hidden">
-          <p className="truncate text-xs font-semibold leading-tight" style={{ color: isConflict ? "#8a6800" : accent.text }}>
+        /* Compact — title + time side by side (+ Add/Skip inline for ghosts) */
+        <div className="flex items-center gap-1.5 overflow-hidden">
+          <p className="min-w-0 flex-1 truncate text-xs font-semibold leading-tight" style={{ color: isConflict ? "#8a6800" : accent.text }}>
             {isConflict && <span className="mr-0.5">⚠</span>}
             {block.title}
           </p>
-          <p className="shrink-0 text-[10px] opacity-60 leading-tight">{fmtTime(block.start_at)}</p>
+          {!isGhost && <p className="shrink-0 text-[10px] opacity-60 leading-tight">{fmtTime(block.start_at)}</p>}
+          {isGhost && (
+            <>
+              <button
+                className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold text-white hover:scale-105 hover:brightness-110"
+                style={{ background: accent.accent }}
+                onClick={(e) => { e.stopPropagation(); onConfirm?.(); }}
+              >
+                Add
+              </button>
+              <button
+                className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium opacity-60 hover:opacity-100"
+                style={{ color: accent.text }}
+                onClick={(e) => { e.stopPropagation(); onDismiss?.(); }}
+              >
+                Skip
+              </button>
+            </>
+          )}
         </div>
       ) : (
         /* Full — title on its own line, then time + badge row */

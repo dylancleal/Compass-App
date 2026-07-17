@@ -40,8 +40,9 @@ export function proposePlacementsForDay(
   existingBlocks: CalendarBlock[],
   dayKey: string,
   win: DayWindow = { startHour: 8, endHour: 21 },
+  bufferMin?: number,
 ) {
   const intentions = suggestionsToIntentions(suggestions, tasks);
   const day = dayWindowFor(dayKey, win);
-  return placeIntentions(intentions, existingBlocks, day, { notBefore: Date.now() });
+  return placeIntentions(intentions, existingBlocks, day, { notBefore: Date.now(), bufferMin });
 }

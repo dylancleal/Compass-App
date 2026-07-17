@@ -633,7 +633,11 @@ export function buildPlan(input: PlannerInput): DraftSuggestion[] {
   const cap = input.checkin?.capacity ?? input.assume?.capacity ?? "medium";
   const mental = input.checkin?.mental ?? input.assume?.mental ?? 3;
   const uniReadiness = input.checkin?.uni_readiness ?? input.assume?.uni_readiness ?? 3;
-  const lowReadiness = mental <= 2 || uniReadiness <= 2 || cap === "light";
+  // Capacity is the user's direct, explicit "how much can I take on" answer —
+  // it shouldn't get overridden by a single so-so mood/readiness score. Only
+  // force the rest-day framing when they picked "Light day" outright, or when
+  // BOTH mood and readiness are down (not just one dipping to "Low").
+  const lowReadiness = cap === "light" || (mental <= 2 && uniReadiness <= 2);
 
   const budget = CAPACITY_BUDGET[cap];
   const scored = scoreCategories(input);

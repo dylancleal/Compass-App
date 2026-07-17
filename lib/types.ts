@@ -231,4 +231,8 @@ export interface AppSettings {
   stripe_subscription_status?: StripeSubscriptionStatus;
   stripe_current_period_end?: string;   // ISO datetime, display-only (renewal date)
   downgraded_at?: string;               // ISO datetime, audit only — not used for gating
+  // AI coach (Lodestone paid tier — see lib/coach.ts). Cached per ISO week so
+  // repeat page views don't re-spend a model call on the same week's data.
+  coach_weekly_insight?: string;
+  coach_weekly_insight_week?: string;
 }
