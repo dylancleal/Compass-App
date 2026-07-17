@@ -47,10 +47,12 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-// Calendar reminder push notifications (Lodestone). Payload shape sent by
-// app/api/cron/send-reminders/route.ts: { title, body, url }.
+// Calendar reminder push notifications. Payload shape sent by
+// app/api/cron/send-reminders/route.ts: { title, body, url, icon } — icon is
+// chosen server-side per APP_VARIANT since this worker file is shared
+// between Compass and Lodestone with no per-variant build step of its own.
 self.addEventListener("push", (event) => {
-  let data = { title: "Lodestone", body: "You have an upcoming event.", url: "/" };
+  let data = { title: "Reminder", body: "You have an upcoming event.", url: "/", icon: "/icon.svg" };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {
@@ -59,7 +61,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: "/icon.svg",
+      icon: data.icon,
       data: { url: data.url },
     }),
   );

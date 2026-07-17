@@ -66,10 +66,11 @@ export function useEnablePush() {
         }));
 
       const json = sub.toJSON();
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
-        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys, timezone }),
       });
       if (!res.ok) throw new Error("Could not save your subscription");
     },

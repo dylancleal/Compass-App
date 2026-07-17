@@ -10,13 +10,13 @@ export async function POST(request: Request) {
   if (userErr || !userData.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const userId = userData.user.id;
 
-  let body: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+  let body: { endpoint?: string; keys?: { p256dh?: string; auth?: string }; timezone?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
-  const { endpoint, keys } = body;
+  const { endpoint, keys, timezone } = body;
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
     return NextResponse.json({ error: "Missing subscription fields" }, { status: 400 });
   }
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   const { error } = await supabase
     .from("push_subscriptions")
     .upsert(
-      { user_id: userId, endpoint, p256dh: keys.p256dh, auth: keys.auth },
+      { user_id: userId, endpoint, p256dh: keys.p256dh, auth: keys.auth, timezone: timezone ?? null },
       { onConflict: "endpoint" },
     );
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

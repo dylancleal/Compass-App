@@ -6,8 +6,14 @@ create table if not exists push_subscriptions (
   endpoint text not null,
   p256dh text not null,
   auth text not null,
+  -- IANA name (e.g. "Australia/Sydney"), captured client-side via
+  -- Intl.DateTimeFormat — the reminder cron has no browser context of its
+  -- own, so this is the only way it can show a correct local clock time.
+  timezone text,
   created_at timestamptz not null default now()
 );
+
+alter table push_subscriptions add column if not exists timezone text;
 
 -- A user can have multiple subscriptions (one per browser/device); dedupe on
 -- the endpoint itself, which is unique per registration.
