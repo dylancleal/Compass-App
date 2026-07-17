@@ -25,6 +25,7 @@ import { BarTrend, LineTrend, SectionLabel, StatRow } from "@/components/charts"
 import { GoalCard, GoalsOverview } from "@/components/GoalCard";
 import ProgressTabs from "@/components/ProgressTabs";
 import DeepInsights from "@/components/DeepInsights";
+import CoachPanel from "@/components/CoachPanel";
 import { useAccessLevel, type AccessLevel } from "@/lib/subscription";
 import type { Category, Metric, MetricLog, Session } from "@/lib/types";
 
@@ -522,6 +523,7 @@ function OverviewPanel({
   return (
     <div className="space-y-4">
       <GoalsOverview categories={categories} />
+      {accessLevel !== "free" && <CoachPanel />}
       <StatRow
         stats={[
           { value: sessionsThisMonth, label: "sessions this month" },

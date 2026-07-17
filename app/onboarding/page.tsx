@@ -185,52 +185,7 @@ function StepSetup({
   );
 }
 
-// ── Step 3 — Connect calendar ─────────────────────────────────────────────────
-
-function StepCalendar({ onConnect, onSkip }: { onConnect: () => void; onSkip: () => void }) {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold">Connect your calendar</h1>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
-          {APP_VARIANT.name} reads your schedule so the planner never suggests the gym on a
-          day you already booked a class, and surfaces deadline events automatically.
-        </p>
-      </div>
-
-      <div className="card space-y-3 p-5">
-        {[
-          { icon: "⚡", text: "Suggestions avoid your already-busy blocks" },
-          { icon: "📌", text: "Assignment deadlines become task prompts" },
-          { icon: "⚠", text: "Overlapping events flagged as conflicts" },
-        ].map(({ icon, text }) => (
-          <div key={text} className="flex items-start gap-3 text-sm">
-            <span className="mt-0.5 shrink-0">{icon}</span>
-            <span>{text}</span>
-          </div>
-        ))}
-      </div>
-
-      <button
-        onClick={onConnect}
-        className="block w-full rounded-xl py-3 text-center text-sm font-semibold transition-all hover:brightness-105"
-        style={{ background: "var(--primary)", color: "#fffdf9" }}
-      >
-        Connect calendar →
-      </button>
-
-      <button
-        onClick={onSkip}
-        className="w-full py-2 text-sm"
-        style={{ color: "var(--muted)" }}
-      >
-        Skip for now — show me my week preview
-      </button>
-    </div>
-  );
-}
-
-// ── Step 4 — 7-day preview ────────────────────────────────────────────────────
+// ── Step 3 — 7-day preview ────────────────────────────────────────────────────
 
 function StepPreview({
   categories,
@@ -313,7 +268,7 @@ function StepPreview({
 
 // ── Main orchestrator ─────────────────────────────────────────────────────────
 
-type Step = "pick" | "setup" | "calendar" | "preview";
+type Step = "pick" | "setup" | "preview";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -377,8 +332,14 @@ export default function OnboardingPage() {
     });
 
     setCreatedCategories(allForSetup);
-    setSetupIndex(0);
-    setStep("setup");
+    if (allForSetup.length === 0) {
+      // Nothing to walk through (e.g. every selected tile already existed
+      // from seeding) — skip straight to the preview.
+      setStep("preview");
+    } else {
+      setSetupIndex(0);
+      setStep("setup");
+    }
   }
 
   async function handleSetupNext() {
@@ -393,12 +354,8 @@ export default function OnboardingPage() {
       const fresh = qc.getQueryData<Category[]>(queryKeys.categories) ?? [];
       const ids = new Set(createdCategories.map((c) => c.id));
       setCreatedCategories(fresh.filter((c) => ids.has(c.id)));
-      setStep("calendar");
+      setStep("preview");
     }
-  }
-
-  function handleCalendarSkip() {
-    setStep("preview");
   }
 
   // Persist the "onboarding done" flag, then run a follow-up navigation. Kept as
@@ -417,10 +374,6 @@ export default function OnboardingPage() {
 
   function handleFinish() {
     return completeOnboarding("/checkin");
-  }
-
-  function handleConnectCalendar() {
-    return completeOnboarding("/calendar");
   }
 
   return (
@@ -461,15 +414,6 @@ export default function OnboardingPage() {
             onNext={handleSetupNext}
             onSkip={handleSetupNext}
           />
-        )}
-
-        {step === "setup" && createdCategories.length === 0 && (
-          // Nothing to set up — skip straight to calendar
-          <StepCalendar onConnect={handleConnectCalendar} onSkip={handleCalendarSkip} />
-        )}
-
-        {step === "calendar" && (
-          <StepCalendar onConnect={handleConnectCalendar} onSkip={handleCalendarSkip} />
         )}
 
         {step === "preview" && settings && (
