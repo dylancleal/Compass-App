@@ -235,4 +235,7 @@ export interface AppSettings {
   // repeat page views don't re-spend a model call on the same week's data.
   coach_weekly_insight?: string;
   coach_weekly_insight_week?: string;
+  // Server-side daily rate limit on /api/coach — see app/api/coach/route.ts.
+  coach_calls_date?: string;  // YYYY-MM-DD
+  coach_calls_count?: number;
 }

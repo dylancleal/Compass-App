@@ -18,7 +18,10 @@ export function useAskCoach() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ question }),
       });
-      if (!res.ok) throw new Error("Could not reach your coach");
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error || "Could not reach your coach");
+      }
       const { reply } = (await res.json()) as { reply: string };
       return reply;
     },

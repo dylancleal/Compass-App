@@ -3,6 +3,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getServiceSupabase } from "@/lib/supabaseService";
 import { buildCoachContext } from "@/lib/coachContext";
 
+// Bounds worst-case spend from a runaway client or scripted abuse — nowhere
+// near what a real user hits (one weekly insight + a handful of asks/day).
+const MAX_CALLS_PER_DAY = 20;
+
 const SYSTEM_PROMPT =
   "You are Lodestone's habit coach — calm, warm, and specific. Lodestone tracks two life areas: " +
   "Study and Gym. You're given the user's own aggregated stats (streaks, session counts, best " +
@@ -33,6 +37,22 @@ export async function POST(request: Request) {
     supabase.from("sessions").select("category_id, date, duration_minutes").eq("user_id", userId),
     supabase.from("settings").select("data").eq("user_id", userId).maybeSingle(),
   ]);
+
+  // Daily rate limit, enforced server-side (a client-side cap is trivially
+  // bypassed). Read-modify-write here is fine even under a race — worst case
+  // a couple of concurrent requests both land under the cap, which is a
+  // non-issue for a rate limit (unlike settings.saveSettings, nothing here
+  // needs the stricter serialized-write guarantee).
+  const today = new Date().toISOString().slice(0, 10);
+  const settingsData = settingsRow?.data ?? {};
+  const callsToday = settingsData.coach_calls_date === today ? (settingsData.coach_calls_count ?? 0) : 0;
+  if (callsToday >= MAX_CALLS_PER_DAY) {
+    return NextResponse.json({ error: "Daily coach limit reached — try again tomorrow." }, { status: 429 });
+  }
+  await supabase
+    .from("settings")
+    .update({ data: { ...settingsData, coach_calls_date: today, coach_calls_count: callsToday + 1 } })
+    .eq("user_id", userId);
 
   const context = buildCoachContext(categories ?? [], sessions ?? [], settingsRow?.data);
 
