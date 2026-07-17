@@ -246,6 +246,15 @@ export const useGoogleSync = () => {
       qc.invalidateQueries({ queryKey: keys.calendarBlocks });
       qc.invalidateQueries({ queryKey: keys.calendarConnections });
     },
+    // A failed sync can still change server-side state worth refreshing —
+    // getFreshGoogleToken() sets needs_reauth on the connection row *before*
+    // throwing NEEDS_REAUTH, but onSuccess alone never runs to pick that up,
+    // so the UI kept showing the raw "NEEDS_REAUTH" error text next to the
+    // sync button instead of the intended "Access revoked — reconnect" state
+    // until the next full page load.
+    onError: () => {
+      qc.invalidateQueries({ queryKey: keys.calendarConnections });
+    },
   });
 };
 

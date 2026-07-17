@@ -85,6 +85,19 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
     ? (googleSync.error instanceof Error ? googleSync.error.message : "")
     : (icsSync.error instanceof Error ? icsSync.error.message : "");
 
+  // The sync count is the whole point here — a sync that quietly finds 0
+  // events (wrong Google account, ICS URL pointed at an empty calendar,
+  // the 90-day window missing where the events actually are) previously
+  // looked identical to a real sync: no error, "Synced just now", nothing
+  // to show it actually did nothing.
+  const syncResult = (isOAuth ? googleSync.data : icsSync.data) as { synced?: number } | undefined;
+  const syncedMsg =
+    syncResult && !isSyncing
+      ? syncResult.synced === 0
+        ? "Synced — found 0 events. Wrong Google account, or nothing in range?"
+        : `✓ Synced ${syncResult.synced} event${syncResult.synced === 1 ? "" : "s"}`
+      : null;
+
   function handleSync() {
     if (isOAuth) {
       googleSync.mutate(conn.id);
@@ -115,6 +128,11 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
             </span>
           )}
         </p>
+        {syncedMsg && !syncError && !conn.needs_reauth && (
+          <p className="text-xs" style={{ color: syncResult?.synced === 0 ? "#c06b5a" : "var(--primary)" }}>
+            {syncedMsg}
+          </p>
+        )}
       </div>
 
       {/* Reconnect button shown when OAuth token was revoked */}
