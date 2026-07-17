@@ -258,7 +258,7 @@ export default function SettingsPage() {
       </section>
 
       {/* Notifications */}
-      <section className="space-y-3">
+      <section className="space-y-3" data-tour="notifications-section">
         <h2 className="text-sm font-semibold text-[var(--muted)]">Notifications</h2>
         {accessLevel !== "free" ? (
           pushSupported() ? (
@@ -267,10 +267,12 @@ export default function SettingsPage() {
                 <p className="text-sm font-medium">Event reminders</p>
                 <p className="text-xs text-[var(--muted)]">
                   A push notification ~15 minutes before something on your calendar starts.
+                  You&apos;ll get a browser permission prompt the first time you turn this on.
                 </p>
                 {(enablePush.error || disablePush.error) && (
                   <p className="text-xs" style={{ color: "#c06b5a" }}>
                     {(enablePush.error as Error | null)?.message || (disablePush.error as Error | null)?.message}
+                    {" — check that your browser allows notifications for this site, then try again."}
                   </p>
                 )}
               </div>
@@ -304,7 +306,7 @@ export default function SettingsPage() {
 
       {/* Subscription — Lodestone only, never rendered for Compass */}
       {APP_VARIANT.id === "study" && (
-        <section className="space-y-3">
+        <section className="space-y-3" data-tour="subscription-section">
           <h2 className="text-sm font-semibold text-[var(--muted)]">Subscription</h2>
           <div className="card space-y-3 p-4 text-sm">
             {accessLevel === "trial" && settings?.trial_ends_at && (
