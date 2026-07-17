@@ -40,17 +40,25 @@ export async function POST(request: Request) {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.client_reference_id;
       if (userId) {
+        const subscriptionId =
+          typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+        // Fetch the subscription directly rather than waiting on a
+        // customer.subscription.created event — checkout.session.completed
+        // is the one event guaranteed to fire exactly once on a successful
+        // signup, so activation shouldn't depend on subscribing to (and
+        // correctly handling) a second event type too.
+        const subscription = subscriptionId ? await stripe.subscriptions.retrieve(subscriptionId) : null;
         await saveSettingsForUser(supabase, userId, {
           stripe_customer_id:
             typeof session.customer === "string" ? session.customer : (session.customer?.id ?? undefined),
-          stripe_subscription_id:
-            typeof session.subscription === "string"
-              ? session.subscription
-              : (session.subscription?.id ?? undefined),
+          stripe_subscription_id: subscription?.id,
+          stripe_subscription_status: subscription?.status as StripeSubscriptionStatus | undefined,
+          stripe_current_period_end: subscription ? periodEnd(subscription) : undefined,
         });
       }
       break;
     }
+    case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
