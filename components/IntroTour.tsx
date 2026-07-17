@@ -49,6 +49,24 @@ const STEPS: TourStep[] = [
     title: "Close the loop here",
     body: "The Review tab shows sessions, streaks, and a preview of what next week could look like. Worth a glance at the end of each week.",
   },
+  // Lodestone-only — Compass has no subscription/paywall, so these steps
+  // would be irrelevant (and confusing) for it.
+  ...(APP_VARIANT.id === "study"
+    ? ([
+        {
+          path: "/settings",
+          selector: "[data-tour='subscription-section']",
+          title: "Free vs. Plus",
+          body: "Free gets you one area and a 7-day view. Lodestone Plus ($4.99/mo) unlocks both areas, the calendar timeline, sync, notifications, and your AI coach — with a 7-day free trial to try it all first.",
+        },
+        {
+          path: "/settings",
+          selector: "[data-tour='notifications-section']",
+          title: "Never miss a session",
+          body: "Turn on event reminders here and get a push notification shortly before something on your calendar starts — even if the app's closed.",
+        },
+      ] satisfies TourStep[])
+    : []),
 ];
 
 // ── Spotlight overlay ─────────────────────────────────────────────────────────

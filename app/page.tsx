@@ -210,6 +210,19 @@ export default function TodayPage() {
               ⚠ {conflictGroups.length} conflict{conflictGroups.length !== 1 ? "s" : ""}
             </Link>
           )}
+          {APP_VARIANT.id === "study" && accessLevel !== "free" && (
+            <Link
+              href="/trends"
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all duration-150 hover:scale-105 hover:brightness-95 active:scale-95"
+              style={{
+                background: "var(--primary-soft)",
+                color: "var(--primary)",
+                border: "1px solid var(--mist)",
+              }}
+            >
+              ✨ Ask coach
+            </Link>
+          )}
           <DayArc />
         </div>
       </header>
