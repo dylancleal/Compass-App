@@ -10,8 +10,16 @@ export interface ParsedICSEvent {
   all_day: boolean;
 }
 
-// Expand recurring events 90 days into the future.
-const EXPAND_FROM = new Date();
+// Expand recurring events from the start of "today" through 90 days out.
+// Starting from the exact current moment (rather than the start of today)
+// excluded a recurring event's occurrence for today once its time-of-day
+// had already passed — e.g. sync in the afternoon and a morning gym class
+// looked like it "only starts next week", since next week's occurrence is
+// still in the future while today's already isn't. Backing off a generous
+// 24h (rather than computing an exact local midnight) covers every
+// timezone without needing to know the user's — a same-day event syncing
+// in as "yesterday" would be a display quirk, not a missing event.
+const EXPAND_FROM = new Date(Date.now() - 24 * 60 * 60 * 1000);
 const EXPAND_TO = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
 
 function isoOf(d: Date): string {
