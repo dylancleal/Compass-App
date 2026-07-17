@@ -142,6 +142,7 @@ export interface CalendarBlock {
   busy: boolean; // true = counts against free time
   status: BlockStatus;
   notes?: string;
+  reminder_sent_at?: string; // set by the reminder cron sweep — see app/api/cron/send-reminders/route.ts
   created_at: string;
 }
 
