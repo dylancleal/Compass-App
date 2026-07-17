@@ -35,6 +35,16 @@ function sb() {
 // One pending promise shared across all callers prevents that.
 let seedingPromise: Promise<void> | null = null;
 
+// Module-level queue for settings writes. saveSettings is read-modify-write
+// (fetch current row, merge the patch, upsert the merged result) — with no
+// serialization, two calls close together (e.g. IntroTour's finish() and
+// useApplyFreeDowngrade both fire on load) can each read the same stale
+// snapshot, and whichever upserts second silently clobbers the first one's
+// change. Chaining every call after the previous one's settle (success or
+// failure) guarantees each read sees the prior write, at the cost of no
+// longer racing — settings writes are infrequent enough that this is free.
+let settingsChain: Promise<unknown> = Promise.resolve();
+
 export class SupabaseDB implements CompassDB {
   async ensureSeeded(): Promise<void> {
     if (seedingPromise) return seedingPromise;
@@ -197,10 +207,16 @@ export class SupabaseDB implements CompassDB {
     return { ...defaultSettings(), ...(data?.data ?? {}) } as AppSettings;
   }
   async saveSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
-    const current = await this.getSettings();
-    const next = { ...current, ...patch };
-    await sb().from("settings").upsert({ data: next });
-    return next;
+    const task = settingsChain.then(async () => {
+      const current = await this.getSettings();
+      const next = { ...current, ...patch };
+      await sb().from("settings").upsert({ data: next });
+      return next;
+    });
+    // Keep the chain alive even if this write fails, so it doesn't wedge
+    // every later saveSettings call behind a permanently-rejected promise.
+    settingsChain = task.catch(() => undefined);
+    return task;
   }
 
   async listCalendarBlocks(rangeStart: string, rangeEnd: string): Promise<CalendarBlock[]> {
