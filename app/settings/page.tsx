@@ -19,6 +19,7 @@ import { canActivateCategory, useAccessLevel, useOpenBillingPortal, useStartChec
 import { Button } from "@/components/ui";
 import ConnectionsPanel from "@/components/calendar/ConnectionsPanel";
 import UpgradeCallout from "@/components/UpgradeCallout";
+import { pushSupported, useDisablePush, useEnablePush, usePushSubscribed } from "@/lib/pushNotifications";
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const SCHEDULE_ROWS: { key: "gym" | "tennis" | "study"; label: string }[] = [
@@ -44,6 +45,9 @@ export default function SettingsPage() {
   const accessLevel = useAccessLevel();
   const startCheckout = useStartCheckout();
   const openBillingPortal = useOpenBillingPortal();
+  const { subscribed: pushSubscribed, refresh: refreshPushSubscribed } = usePushSubscribed();
+  const enablePush = useEnablePush();
+  const disablePush = useDisablePush();
 
   const [newName, setNewName] = useState("");
   const [tourOpen, setTourOpen] = useState(false);
@@ -250,6 +254,51 @@ export default function SettingsPage() {
           </div>
         ) : (
           <UpgradeCallout feature="Calendar sync" />
+        )}
+      </section>
+
+      {/* Notifications */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-[var(--muted)]">Notifications</h2>
+        {accessLevel !== "free" ? (
+          pushSupported() ? (
+            <div className="card flex items-center justify-between gap-3 p-4">
+              <div>
+                <p className="text-sm font-medium">Event reminders</p>
+                <p className="text-xs text-[var(--muted)]">
+                  A push notification ~15 minutes before something on your calendar starts.
+                </p>
+                {(enablePush.error || disablePush.error) && (
+                  <p className="text-xs" style={{ color: "#c06b5a" }}>
+                    {(enablePush.error as Error | null)?.message || (disablePush.error as Error | null)?.message}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  const action = pushSubscribed ? disablePush : enablePush;
+                  action.mutate(undefined, { onSuccess: refreshPushSubscribed });
+                }}
+                disabled={enablePush.isPending || disablePush.isPending || pushSubscribed === null}
+                className="shrink-0 rounded-xl px-3 py-2 text-xs font-semibold transition-all hover:brightness-105 disabled:opacity-60"
+                style={
+                  pushSubscribed
+                    ? { background: "var(--primary-soft)", color: "var(--primary)" }
+                    : { background: "var(--primary)", color: "#fffdf9" }
+                }
+              >
+                {enablePush.isPending || disablePush.isPending ? "…" : pushSubscribed ? "Turn off" : "Turn on"}
+              </button>
+            </div>
+          ) : (
+            <div className="card p-4">
+              <p className="text-sm text-[var(--muted)]">
+                Push notifications aren&apos;t supported in this browser.
+              </p>
+            </div>
+          )
+        ) : (
+          <UpgradeCallout feature="Event reminders" />
         )}
       </section>
 

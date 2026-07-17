@@ -46,3 +46,33 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// Calendar reminder push notifications (Lodestone). Payload shape sent by
+// app/api/cron/send-reminders/route.ts: { title, body, url }.
+self.addEventListener("push", (event) => {
+  let data = { title: "Lodestone", body: "You have an upcoming event.", url: "/" };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch {
+    // Ignore malformed payloads rather than crashing the worker.
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/icon.svg",
+      data: { url: data.url },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((c) => c.url.includes(self.location.origin));
+      if (existing) return existing.focus().then(() => existing.navigate(url));
+      return self.clients.openWindow(url);
+    }),
+  );
+});
