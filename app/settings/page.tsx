@@ -316,6 +316,12 @@ export default function SettingsPage() {
                 </button>
               )}
             </div>
+            {(startCheckout.error || openBillingPortal.error) && (
+              <p className="text-xs" style={{ color: "#c06b5a" }}>
+                {(startCheckout.error as Error | null)?.message ||
+                  (openBillingPortal.error as Error | null)?.message}
+              </p>
+            )}
           </div>
         </section>
       )}
