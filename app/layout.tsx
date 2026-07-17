@@ -38,6 +38,12 @@ export const metadata: Metadata = {
   description: APP_VARIANT.tagline,
   // manifest link is auto-injected by the app/manifest.ts route convention
   appleWebApp: { capable: true, statusBarStyle: "default", title: APP_VARIANT.name },
+  // Overrides the shared app/favicon.ico (Compass's icon) for Lodestone only —
+  // app/favicon.ico has no per-variant equivalent, so this <link rel="icon">
+  // takes priority in browsers that support it instead.
+  ...(APP_VARIANT.id === "study" && {
+    icons: { icon: "/favicon-lodestone.png", apple: "/apple-icon-lodestone.png" },
+  }),
 };
 
 export const viewport: Viewport = {
