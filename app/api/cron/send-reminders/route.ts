@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabaseService";
 import { getWebPush } from "@/lib/webpush";
+import { APP_VARIANT } from "@/lib/appVariant";
 import type { WebPushError } from "web-push";
+
+// The service worker is shared between Compass and Lodestone (one static
+// public/sw.js, no per-variant build step for it), so the icon has to be
+// chosen server-side, where APP_VARIANT is actually known, and passed
+// through the payload rather than hardcoded in the worker.
+const NOTIFICATION_ICON = APP_VARIANT.id === "study" ? "/icon-lodestone.png" : "/icon.svg";
 
 export const runtime = "nodejs";
 
@@ -46,17 +53,26 @@ export async function GET(request: Request) {
   for (const block of blocks ?? []) {
     const { data: subs } = await supabase
       .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth")
+      .select("id, endpoint, p256dh, auth, timezone")
       .eq("user_id", block.user_id);
 
     const minutesUntil = Math.max(1, Math.round((new Date(block.start_at).getTime() - now.getTime()) / 60_000));
-    const payload = JSON.stringify({
-      title: block.title,
-      body: `Starts in ${minutesUntil} minute${minutesUntil === 1 ? "" : "s"}`,
-      url: "/today",
-    });
+    const relative = `in ${minutesUntil} minute${minutesUntil === 1 ? "" : "s"}`;
 
     for (const sub of subs ?? []) {
+      // Formatted per-subscription, not once per block — the cron has no
+      // browser context of its own, so the clock time is only as correct as
+      // the timezone each subscription captured at "Turn on" time (older
+      // subscriptions predating that field fall back to relative-only).
+      const body = sub.timezone
+        ? `Starts at ${new Date(block.start_at).toLocaleTimeString("en-US", {
+            timeZone: sub.timezone,
+            hour: "numeric",
+            minute: "2-digit",
+          })} (${relative})`
+        : `Starts ${relative}`;
+      const payload = JSON.stringify({ title: block.title, body, url: "/today", icon: NOTIFICATION_ICON });
+
       try {
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
