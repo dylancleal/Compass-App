@@ -36,7 +36,15 @@ create table if not exists calendar_connections (
 -- predicate here makes every sync's ON CONFLICT silently unmatchable. This
 -- is still safe for manually-created rows (external_id null): Postgres
 -- treats each NULL as distinct, so they never conflict with each other.
-create unique index if not exists calendar_blocks_external_uq
+--
+-- Drop-then-create, not `if not exists`: an earlier version of this file
+-- created this same index name as a PARTIAL index (`where external_id is
+-- not null`). `create ... if not exists` only checks the name, not the
+-- definition — on a database that still has the old partial index, it
+-- silently no-ops and the broken index never gets replaced. Re-running
+-- this file is safe either way (no data loss — it's just an index).
+drop index if exists calendar_blocks_external_uq;
+create unique index calendar_blocks_external_uq
   on calendar_blocks (user_id, external_calendar_id, external_id);
 
 -- Fast range queries for a visible week/day.
