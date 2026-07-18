@@ -133,12 +133,20 @@
 html {
   -webkit-text-size-adjust: 100%;
   background: var(--background);
+  overflow-x: hidden;
 }
 
 body {
   background: transparent;
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  /* The decorative glow blobs below intentionally bleed past the viewport
+     edge (negative left/right offsets), which otherwise creates a real
+     horizontal scroll region — invisible with a mouse, but a swipe on a
+     touch device (the Android shell in particular) drags the whole page
+     sideways into it. Clamp it here rather than resizing the blobs. */
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 /* Biophilic depth — soft organic forms drifting behind all content. Fixed and
