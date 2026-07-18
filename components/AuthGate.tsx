@@ -77,7 +77,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   // time, so it's the reliable path (works everywhere, not just wrapped
   // native apps) rather than a mobile-only special case.
   async function verifyCode() {
-    if (verifying || code.length < 6) return;
+    if (verifying || code.length < 4) return;
     setVerifying(true);
     setErr("");
     const { error } = await getSupabase()!.auth.verifyOtp({ email, token: code, type: "email" });
@@ -163,16 +163,21 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               type="text"
               inputMode="numeric"
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              // Not hardcoded to a specific digit count — Supabase's OTP
+              // length is a project-level setting (this one's currently 8,
+              // not the more common 6), so a fixed cap here would silently
+              // truncate a valid code the moment that setting differs or
+              // changes. 10 is just a generous sanity ceiling.
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
               onKeyDown={(e) => e.key === "Enter" && verifyCode()}
-              placeholder="6-digit code"
+              placeholder="Enter code"
               autoFocus
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-center text-lg tracking-[0.3em] outline-none focus:border-[var(--primary)]"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-center text-lg tracking-[0.3em] outline-none placeholder:tracking-normal focus:border-[var(--primary)]"
             />
             {err && <p className="text-xs text-red-500">{err}</p>}
             <button
               onClick={verifyCode}
-              disabled={code.length < 6 || verifying}
+              disabled={code.length < 4 || verifying}
               className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
               style={{ background: "var(--primary)" }}
             >
