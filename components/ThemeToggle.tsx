@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { APP_VARIANT } from "@/lib/appVariant";
 
 type ThemePref = "light" | "dark" | "system";
 
 const STORAGE_KEY = "compass-theme";
 
+// Lodestone defaults to dark regardless of OS preference — "system" still
+// tracks live OS changes for Compass, but for Lodestone it's pinned to dark
+// until the user explicitly cycles to "light" themselves.
 function systemPrefersDark(): boolean {
+  if (APP_VARIANT.id === "study") return true;
   return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
