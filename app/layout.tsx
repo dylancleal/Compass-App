@@ -21,13 +21,18 @@ export const dynamic = "force-dynamic";
 // preference) never flashes the wrong colours. Kept as a plain, unbundled
 // string — it has to run standalone, before React/hydration, so it can't
 // import from lib/theme.ts; ThemeToggle.tsx mirrors this same logic in TS.
+// Lodestone defaults to dark regardless of OS preference (baked in at build
+// time here, since APP_VARIANT is resolved server-side) — Compass keeps
+// following the OS setting as before.
+const FALLBACK_THEME_EXPR =
+  APP_VARIANT.id === "study" ? `"dark"` : `(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")`;
 const THEME_INIT_SCRIPT = `
 (function () {
   try {
     var stored = localStorage.getItem("compass-theme");
     var theme = stored === "light" || stored === "dark"
       ? stored
-      : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      : ${FALLBACK_THEME_EXPR};
     document.documentElement.setAttribute("data-theme", theme);
   } catch (e) {}
 })();

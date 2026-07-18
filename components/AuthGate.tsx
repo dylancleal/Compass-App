@@ -20,6 +20,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState("");
   const [sending, setSending] = useState(false);
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const queryClient = useQueryClient();
 
   // Runs on every load regardless of which page the user lands on. Both are
@@ -66,6 +68,21 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     setSending(false);
     if (error) setErr(error.message);
     else setSent(true);
+  }
+
+  // A clicked magic link opens in the phone's system browser, not back
+  // inside the app's own WebView — separate storage contexts, so the app
+  // itself stays signed out even though the browser tab authenticates fine.
+  // Typing the code in the same email keeps the user in the app the whole
+  // time, so it's the reliable path (works everywhere, not just wrapped
+  // native apps) rather than a mobile-only special case.
+  async function verifyCode() {
+    if (verifying || code.length < 6) return;
+    setVerifying(true);
+    setErr("");
+    const { error } = await getSupabase()!.auth.verifyOtp({ email, token: code, type: "email" });
+    setVerifying(false);
+    if (error) setErr(error.message);
   }
 
   const isDev = process.env.NODE_ENV === "development";
@@ -133,15 +150,38 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         )}
 
         {sent ? (
-          <div className="space-y-1.5 rounded-xl p-4 text-sm" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
-            <p className="font-semibold">Check your email ✉️</p>
-            <p>
-              A sign-in link is on its way to <strong>{email}</strong>. Click it and
-              you&apos;re in.
-            </p>
+          <div className="space-y-3">
+            <div className="space-y-1.5 rounded-xl p-4 text-sm" style={{ background: "var(--primary-soft)", color: "var(--primary)" }}>
+              <p className="font-semibold">Check your email ✉️</p>
+              <p>
+                We sent a code to <strong>{email}</strong>. Enter it below — or, if
+                you&apos;re checking email on this same device, tapping the link in it
+                works too.
+              </p>
+            </div>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onKeyDown={(e) => e.key === "Enter" && verifyCode()}
+              placeholder="6-digit code"
+              autoFocus
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-center text-lg tracking-[0.3em] outline-none focus:border-[var(--primary)]"
+            />
+            {err && <p className="text-xs text-red-500">{err}</p>}
             <button
-              className="mt-1 text-xs underline hover:text-[var(--primary)] hover:opacity-100"
-              onClick={() => { setSent(false); setEmail(""); }}
+              onClick={verifyCode}
+              disabled={code.length < 6 || verifying}
+              className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+              style={{ background: "var(--primary)" }}
+            >
+              {verifying ? "Verifying…" : "Verify code"}
+            </button>
+            <button
+              className="w-full text-xs underline hover:text-[var(--primary)] hover:opacity-100"
+              style={{ color: "var(--muted)" }}
+              onClick={() => { setSent(false); setEmail(""); setCode(""); setErr(""); }}
             >
               Try a different email
             </button>
