@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { APP_VARIANT } from "@/lib/appVariant";
 import { useApplyFreeDowngrade, useReactivateOnUpgrade } from "@/lib/subscription";
+import { useIsNativePlatform } from "@/lib/platform";
+import NativeAuthScreen from "@/components/NativeAuthScreen";
 
 // Auth is only required when we're running against Supabase. Local mode
 // (no env vars / NEXT_PUBLIC_DATA_BACKEND != "supabase") bypasses this entirely.
@@ -23,6 +25,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const queryClient = useQueryClient();
+  const isNative = useIsNativePlatform();
 
   // Runs on every load regardless of which page the user lands on. Both are
   // no-ops for Compass (getAccessLevel always resolves "paid" there) and
@@ -44,8 +47,10 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
-  // Loading state while we check for an existing session.
-  if (session === "loading") {
+  // Loading state while we check for an existing session (and, since it
+  // resolves in an effect to avoid a hydration mismatch, which sign-in
+  // screen to show).
+  if (session === "loading" || isNative === null) {
     return (
       <div className="grid min-h-dvh place-items-center text-sm text-[var(--muted)]">
         Loading…
@@ -101,6 +106,26 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     } catch (e) {
       setErr(String(e));
     }
+  }
+
+  if (isNative) {
+    return (
+      <NativeAuthScreen
+        email={email}
+        setEmail={setEmail}
+        sendLink={sendLink}
+        sending={sending}
+        sent={sent}
+        code={code}
+        setCode={setCode}
+        verifyCode={verifyCode}
+        verifying={verifying}
+        err={err}
+        onTryDifferentEmail={() => { setSent(false); setEmail(""); setCode(""); setErr(""); }}
+        isDev={isDev}
+        devLogin={devLogin}
+      />
+    );
   }
 
   return (
