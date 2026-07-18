@@ -56,14 +56,21 @@ export default function Nav() {
 
   return (
     <header
-      className="fixed inset-x-0 top-0 z-40 flex h-13 items-center gap-3 px-4"
+      className="fixed inset-x-0 top-0 z-40"
       style={{
         background: "var(--surface)",
         borderBottom: "1px solid var(--border)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
+        // Pushes the actual nav row below the status bar/notch instead of
+        // rendering under it — without this, edge-to-edge viewport-fit=cover
+        // (needed for the app to draw behind the status bar at all) lets the
+        // OS status bar icons overlap the wordmark and nav items directly.
+        // Resolves to 0 on the web, where there's no inset to account for.
+        paddingTop: "env(safe-area-inset-top)",
       }}
     >
+      <div className="flex h-13 items-center gap-3 px-4">
       {/* Logo — the classic lockup for Compass, or a bigger icon-free glowing
           wordmark for variants (like Lodestone) where a compass emoji no
           longer fits the brand. */}
@@ -153,6 +160,7 @@ export default function Nav() {
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
       </Link>
+      </div>
     </header>
   );
 }
