@@ -28,6 +28,22 @@ const config: CapacitorConfig = {
     // http://10.0.2.2 override above, never for the real HTTPS production URL.
     cleartext: Boolean(devServerUrl),
   },
+  // targetSdk 36 makes edge-to-edge mandatory app-wide — without this, the
+  // WebView draws underneath the status bar on every device, and the exact
+  // overlap depends on that device's own status bar height (notch, punch-hole,
+  // plain bar all differ), which CSS safe-area insets alone don't reliably
+  // pick up inside an Android WebView. overlaysWebView: false has Android
+  // reserve that space natively per-device instead, so the WebView content
+  // simply never extends under it — no per-device tuning needed. Initial
+  // colour/style here matches Lodestone's dark default (see ThemeToggle.tsx,
+  // which keeps this in sync if the user switches to light).
+  plugins: {
+    StatusBar: {
+      overlaysWebView: false,
+      style: 'DARK',
+      backgroundColor: '#1a211c',
+    },
+  },
 };
 
 export default config;
