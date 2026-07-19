@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
 import { APP_VARIANT } from "@/lib/appVariant";
 
 type ThemePref = "light" | "dark" | "system";
 
 const STORAGE_KEY = "compass-theme";
+
+// Matches app/globals.css's --background for each theme — the native status
+// bar is outside the WebView (see capacitor.config.ts), so it can't pick up
+// the CSS variable itself and needs these literal values kept in sync by hand.
+const STATUS_BAR_BG: Record<"light" | "dark", string> = { light: "#f4f1ea", dark: "#1a211c" };
 
 // Lodestone defaults to dark regardless of OS preference — "system" still
 // tracks live OS changes for Compass, but for Lodestone it's pinned to dark
@@ -20,7 +27,12 @@ function resolve(pref: ThemePref): "light" | "dark" {
 }
 
 function apply(pref: ThemePref) {
-  document.documentElement.setAttribute("data-theme", resolve(pref));
+  const theme = resolve(pref);
+  document.documentElement.setAttribute("data-theme", theme);
+  if (Capacitor.isNativePlatform()) {
+    StatusBar.setStyle({ style: theme === "dark" ? Style.Dark : Style.Light });
+    StatusBar.setBackgroundColor({ color: STATUS_BAR_BG[theme] });
+  }
 }
 
 const ICONS: Record<ThemePref, React.ReactNode> = {
@@ -64,6 +76,11 @@ export default function ThemeToggle() {
     const stored = localStorage.getItem(STORAGE_KEY) as ThemePref | null;
     const initial = stored === "light" || stored === "dark" ? stored : "system";
     setPref(initial);
+    // The declarative config in capacitor.config.ts only covers the very
+    // first paint; sync the native status bar for real here in case the
+    // resolved theme differs (e.g. this device has an explicit "light" pref
+    // stored from a previous session).
+    apply(initial);
 
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => {
