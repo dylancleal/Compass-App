@@ -17,16 +17,25 @@ import { App } from "@capacitor/app";
 export default function AndroidBackButton() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-    const listener = App.addListener("backButton", () => {
+    let handle: { remove: () => void } | undefined;
+    App.addListener("backButton", () => {
       if (window.history.length > 1) {
         window.history.back();
       } else {
-        App.exitApp();
+        App.exitApp().catch(() => {});
       }
-    });
-    return () => {
-      listener.then((l) => l.remove());
-    };
+    })
+      .then((l) => {
+        handle = l;
+      })
+      .catch(() => {
+        // The plugin genuinely isn't compiled into whatever's currently
+        // installed on-device (e.g. right after adding it, before the next
+        // native rebuild) — fail quiet and let Android's own default back
+        // handling take over, rather than crashing the whole app on an
+        // unhandled rejection.
+      });
+    return () => handle?.remove();
   }, []);
 
   return null;
