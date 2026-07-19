@@ -171,6 +171,47 @@ export default function TodayPage() {
   const activeCats = categories.filter((c) => c.active);
   const pausedCats = categories.filter((c) => c.metadata?.paused_reason === "downgrade");
 
+  // Today's page can have several true-at-once nudges (catch-up, fresh-week
+  // recap, a free-tier downgrade). Stacking every applicable one as a full
+  // card reads as noisy, but nothing here is allowed to go fully silent —
+  // the downgrade notice especially, since a paused area disappearing without
+  // explanation would feel like a bait-and-switch. Compromise: the single
+  // highest-priority nudge stays a full card, the rest compress into a row
+  // of small chips — still visible and one tap away, just not shouting.
+  const nudges = [
+    pausedCats.length > 0 && {
+      key: "paused",
+      href: "/categories",
+      icon: "⏸",
+      bg: "var(--info-soft)",
+      textColor: "var(--info-text)",
+      title: `Trial ended — ${pausedCats.map((c) => c.name).join(", ")} paused`,
+      description: `${activeCats.map((c) => c.name).join(", ") || "Your other area"} is still fully yours. Switch areas or upgrade anytime.`,
+      chipLabel: "Areas paused",
+    },
+    missedDays.length > 0 && {
+      key: "catchup",
+      href: "/catchup",
+      icon: "📋",
+      bg: "var(--info-soft)",
+      textColor: "var(--info-text)",
+      title: missedDays.length === 1 ? "1 day to catch up" : `${missedDays.length} days to catch up`,
+      description: `Log what you remember from ${prettyDate(missedDays[0].date)}${missedDays.length > 1 ? " onward" : ""} — takes a minute.`,
+      chipLabel: missedDays.length === 1 ? "1 day to log" : `${missedDays.length} days to log`,
+    },
+    freshWeek && {
+      key: "freshweek",
+      href: "/review",
+      icon: "🌅",
+      bg: "var(--accent-soft)",
+      textColor: "var(--accent)",
+      title: "Fresh week",
+      description: `See how last week landed — ${lastWeekCount} session${lastWeekCount === 1 ? "" : "s"} logged.`,
+      chipLabel: "Last week's recap",
+    },
+  ].filter((n): n is Exclude<typeof n, false> => n !== false);
+  const [primaryNudge, ...compactNudges] = nudges;
+
   // Only timed, non-ghost blocks for today's schedule display
   const todayBlocks = useMemo(
     () =>
@@ -320,66 +361,39 @@ export default function TodayPage() {
         </Link>
       )}
 
-      {/* Gentle catch-up nudge — never guilt-toned, just an easy way to backfill */}
-      {missedDays.length > 0 && (
+      {/* Highest-priority nudge (downgrade notice > catch-up > fresh-week)
+          stays a full card; anything else true at the same time compresses
+          into chips right below rather than stacking more full cards. */}
+      {primaryNudge && (
         <Link
-          href="/catchup"
+          href={primaryNudge.href}
           className="card card-interactive flex items-center gap-3 p-4 hover:brightness-[1.03]"
-          style={{ background: "var(--info-soft)", borderColor: "var(--mist)" }}
+          style={{ background: primaryNudge.bg, borderColor: "var(--mist)" }}
         >
-          <span className="text-2xl">📋</span>
+          <span className="text-2xl">{primaryNudge.icon}</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold" style={{ color: "var(--info-text)" }}>
-              {missedDays.length === 1 ? "1 day to catch up" : `${missedDays.length} days to catch up`}
+            <p className="text-sm font-semibold" style={{ color: primaryNudge.textColor }}>
+              {primaryNudge.title}
             </p>
-            <p className="text-xs text-[var(--muted)]">
-              Log what you remember from {prettyDate(missedDays[0].date)}
-              {missedDays.length > 1 ? " onward" : ""} — takes a minute.
-            </p>
+            <p className="text-xs text-[var(--muted)]">{primaryNudge.description}</p>
           </div>
           <span className="text-sm text-[var(--muted)]">→</span>
         </Link>
       )}
-
-      {/* Fresh-week ritual */}
-      {freshWeek && (
-        <Link
-          href="/review"
-          className="card card-interactive flex items-center gap-3 p-4 hover:brightness-[1.03]"
-          style={{ background: "var(--accent-soft)", borderColor: "var(--mist)" }}
-        >
-          <span className="text-2xl">🌅</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold" style={{ color: "var(--accent)" }}>
-              Fresh week
-            </p>
-            <p className="text-xs text-[var(--muted)]">
-              See how last week landed — {lastWeekCount} session{lastWeekCount === 1 ? "" : "s"} logged.
-            </p>
-          </div>
-          <span className="text-sm text-[var(--muted)]">→</span>
-        </Link>
-      )}
-
-      {/* Free-tier downgrade notice — explicit, not silent: a category got
-          paused because only one area is included on the free tier. */}
-      {pausedCats.length > 0 && (
-        <Link
-          href="/categories"
-          className="card card-interactive flex items-center gap-3 p-4 hover:brightness-[1.03]"
-          style={{ background: "var(--info-soft)", borderColor: "var(--mist)" }}
-        >
-          <span className="text-2xl">⏸</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold" style={{ color: "var(--info-text)" }}>
-              Trial ended — {pausedCats.map((c) => c.name).join(", ")} paused
-            </p>
-            <p className="text-xs text-[var(--muted)]">
-              {activeCats.map((c) => c.name).join(", ") || "Your other area"} is still fully yours. Switch areas or upgrade anytime.
-            </p>
-          </div>
-          <span className="text-sm text-[var(--muted)]">→</span>
-        </Link>
+      {compactNudges.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {compactNudges.map((n) => (
+            <Link
+              key={n.key}
+              href={n.href}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all hover:scale-[1.03] hover:opacity-100"
+              style={{ background: n.bg, color: n.textColor, border: "1px solid var(--border)" }}
+            >
+              <span>{n.icon}</span>
+              {n.chipLabel}
+            </Link>
+          ))}
+        </div>
       )}
 
       {/* Personalised plan */}
