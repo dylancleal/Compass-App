@@ -39,6 +39,12 @@ export default function Nav() {
         return;
       }
       setPill({ left: el.offsetLeft, width: el.offsetWidth, ready: true });
+      // The nav row doesn't fit every tab at narrow widths — without this,
+      // navigating to a tab past the visible edge (e.g. Progress) left it
+      // scrolled out of view, showing a half-cut pill next to the gear
+      // instead of scrolling to reveal it. "nearest"/"nearest" keeps this
+      // scoped to the nav's own horizontal scroll, not the page.
+      el.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
     }
     measure();
     const t = window.setTimeout(measure, 180);
@@ -101,9 +107,11 @@ export default function Nav() {
       {/* Divider */}
       <div className="h-4 w-px shrink-0 bg-[var(--border)]" />
 
-      {/* Nav pills — horizontally scrollable on narrow screens */}
+      {/* Nav pills — horizontally scrollable on narrow screens. pr-1 keeps
+          the active pill from sitting flush against the settings gear when
+          scrolled all the way to the last item. */}
       <nav
-        className="relative flex min-w-0 flex-1 gap-1 overflow-x-auto"
+        className="relative flex min-w-0 flex-1 gap-1 overflow-x-auto pr-1"
         style={{ scrollbarWidth: "none" } as React.CSSProperties}
       >
         {/* Sliding indicator pill */}
