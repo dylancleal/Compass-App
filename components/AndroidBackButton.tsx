@@ -14,12 +14,19 @@ import { App } from "@capacitor/app";
 // button: step back through browser history (populated correctly by next/link
 // navigations) while there's somewhere to go, otherwise exit like a normal
 // Android app does when back is pressed from its home screen.
+//
+// Uses the event's own `canGoBack` (computed natively from the real WebView
+// back stack) rather than `window.history.length` — length only ever grows,
+// it doesn't decrease when you go back, so a length-based check goes stuck
+// "true" forever after the very first in-app navigation: back would work
+// once (Settings -> Today) and then do nothing at all on every press after,
+// since there was nothing left behind the pointer to go back to.
 export default function AndroidBackButton() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     let handle: { remove: () => void } | undefined;
-    App.addListener("backButton", () => {
-      if (window.history.length > 1) {
+    App.addListener("backButton", ({ canGoBack }) => {
+      if (canGoBack) {
         window.history.back();
       } else {
         App.exitApp().catch(() => {});
