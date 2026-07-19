@@ -26,7 +26,7 @@ import { buildPlan } from "@/lib/planner";
 import { findMissedDays } from "@/lib/missedDays";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
 import { APP_VARIANT } from "@/lib/appVariant";
-import { useAccessLevel } from "@/lib/subscription";
+import { useAccessLevel, useStartCheckout } from "@/lib/subscription";
 import type { Category } from "@/lib/types";
 import Plan from "@/components/Plan";
 import TaskList from "@/components/TaskList";
@@ -40,7 +40,6 @@ import DeadlineChip from "@/components/calendar/DeadlineChip";
 import DayTimeline from "@/components/calendar/DayTimeline";
 import { isDeadlineLike } from "@/lib/categoryMatcher";
 
-const MENTAL_EMOJI = ["", "😞", "😕", "😐", "🙂", "😄"];
 const CAP_LABEL: Record<string, string> = { light: "Light day", medium: "Medium day", big: "Big day" };
 
 function fmtTime(iso: string) {
@@ -52,6 +51,7 @@ export default function TodayPage() {
   const router = useRouter();
   const { data: settings } = useSettings();
   const accessLevel = useAccessLevel();
+  const startCheckout = useStartCheckout();
   const { data: sessions = [], isLoading: sessionsLoading } = useSessions();
   const { data: checkin } = useCheckin(today);
   const { data: categories = [] } = useCategories();
@@ -182,7 +182,6 @@ export default function TodayPage() {
     pausedCats.length > 0 && {
       key: "paused",
       href: "/categories",
-      icon: "⏸",
       bg: "var(--info-soft)",
       textColor: "var(--info-text)",
       title: `Trial ended — ${pausedCats.map((c) => c.name).join(", ")} paused`,
@@ -192,7 +191,6 @@ export default function TodayPage() {
     missedDays.length > 0 && {
       key: "catchup",
       href: "/catchup",
-      icon: "📋",
       bg: "var(--info-soft)",
       textColor: "var(--info-text)",
       title: missedDays.length === 1 ? "1 day to catch up" : `${missedDays.length} days to catch up`,
@@ -202,7 +200,6 @@ export default function TodayPage() {
     freshWeek && {
       key: "freshweek",
       href: "/review",
-      icon: "🌅",
       bg: "var(--accent-soft)",
       textColor: "var(--accent)",
       title: "Fresh week",
@@ -266,8 +263,8 @@ export default function TodayPage() {
         >
           <p className="text-xl font-semibold" style={{ color: "var(--primary)" }}>
             {daypart() === "morning"
-              ? "Good morning — start with a check-in 🌿"
-              : "Ready for a quick check-in? 🌿"}
+              ? "Good morning — start with a check-in"
+              : "Ready for a quick check-in?"}
           </p>
           <p className="mt-1.5 text-sm text-[var(--muted)]">
             Tell me how today feels and I&apos;ll shape a gentle plan with you. ~30 seconds.
@@ -282,14 +279,11 @@ export default function TodayPage() {
           className="card animate-pop p-5"
           style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
         >
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🌙</span>
-            <div>
-              <p className="text-base font-semibold" style={{ color: "var(--primary)" }}>
-                Day sealed
-              </p>
-              <p className="text-xs text-[var(--muted)]">You closed the loop today. Rest well.</p>
-            </div>
+          <div>
+            <p className="text-base font-semibold" style={{ color: "var(--primary)" }}>
+              Day sealed
+            </p>
+            <p className="text-xs text-[var(--muted)]">You closed the loop today. Rest well.</p>
           </div>
           {tomorrowChips.length > 0 && (
             <div className="mt-3 border-t pt-3" style={{ borderColor: "var(--border)" }}>
@@ -315,13 +309,12 @@ export default function TodayPage() {
           className="card card-interactive animate-pop flex items-center gap-3 p-5 hover:brightness-[1.03]"
           style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
         >
-          <span className="text-2xl">🌙</span>
           <div className="flex-1">
             <p className="text-base font-semibold" style={{ color: "var(--primary)" }}>
               How did today land?
             </p>
             <p className="text-xs text-[var(--muted)]">
-              One tap to close the day{allDone ? " — you finished your plan 🎉" : ""}.
+              One tap to close the day{allDone ? " — you finished your plan" : ""}.
             </p>
           </div>
           <span className="text-sm text-[var(--muted)]">→</span>
@@ -329,7 +322,6 @@ export default function TodayPage() {
       ) : (
         // Checked in, mid-day → compact summary; the plan below is the focus.
         <div className="card flex items-center gap-4 p-4">
-          <span className="text-3xl">{MENTAL_EMOJI[checkin.mental]}</span>
           <div className="flex-1">
             <p className="text-sm font-semibold">{CAP_LABEL[checkin.capacity]}</p>
             <p className="text-sm text-[var(--muted)]">
@@ -370,7 +362,6 @@ export default function TodayPage() {
           className="card card-interactive flex items-center gap-3 p-4 hover:brightness-[1.03]"
           style={{ background: primaryNudge.bg, borderColor: "var(--mist)" }}
         >
-          <span className="text-2xl">{primaryNudge.icon}</span>
           <div className="flex-1">
             <p className="text-sm font-semibold" style={{ color: primaryNudge.textColor }}>
               {primaryNudge.title}
@@ -380,7 +371,7 @@ export default function TodayPage() {
           <span className="text-sm text-[var(--muted)]">→</span>
         </Link>
       )}
-      {compactNudges.length > 0 && (
+      {(compactNudges.length > 0 || (APP_VARIANT.id === "study" && accessLevel === "free")) && (
         <div className="flex flex-wrap gap-2">
           {compactNudges.map((n) => (
             <Link
@@ -389,10 +380,24 @@ export default function TodayPage() {
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all hover:scale-[1.03] hover:opacity-100"
               style={{ background: n.bg, color: n.textColor, border: "1px solid var(--border)" }}
             >
-              <span>{n.icon}</span>
               {n.chipLabel}
             </Link>
           ))}
+          {/* Coach teaser — free tier doesn't get the full "Your coach is
+              ready" card below, but it shouldn't vanish from the product
+              entirely either; a small upgrade chip keeps it discoverable
+              without implying it's actually available to tap into. */}
+          {APP_VARIANT.id === "study" && accessLevel === "free" && (
+            <button
+              onClick={() => startCheckout.mutate()}
+              disabled={startCheckout.isPending}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all hover:scale-[1.03] hover:opacity-100 disabled:opacity-60"
+              style={{ background: "var(--primary-soft)", color: "var(--primary)", border: "1px solid var(--border)" }}
+            >
+              <span aria-hidden>✨</span>
+              {startCheckout.isPending ? "…" : "Unlock AI coach"}
+            </button>
+          )}
         </div>
       )}
 
@@ -528,7 +533,7 @@ export default function TodayPage() {
           accent="#5b8a72"
           showAdd={false}
           hideCompleted
-          emptyText="No open tasks — beautifully clear. ✨"
+          emptyText="No open tasks — beautifully clear."
         />
         <QuickAddTask categories={activeCats} />
       </section>
