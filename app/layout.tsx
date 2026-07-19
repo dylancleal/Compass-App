@@ -6,6 +6,7 @@ import Providers from "./providers";
 import Nav from "@/components/Nav";
 import IntroTour from "@/components/IntroTour";
 import Fireflies from "@/components/Fireflies";
+import AndroidBackButton from "@/components/AndroidBackButton";
 import { APP_VARIANT } from "@/lib/appVariant";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {THEME_INIT_SCRIPT}
         </Script>
         <Providers>
+          <AndroidBackButton />
           <Fireflies />
           <Nav />
           <main
