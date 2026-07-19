@@ -29,11 +29,8 @@ export default function AndroidBackButton() {
         handle = l;
       })
       .catch(() => {
-        // The plugin genuinely isn't compiled into whatever's currently
-        // installed on-device (e.g. right after adding it, before the next
-        // native rebuild) — fail quiet and let Android's own default back
-        // handling take over, rather than crashing the whole app on an
-        // unhandled rejection.
+        // Shouldn't happen now that MainActivity.java registers the plugin
+        // explicitly, but fail quiet rather than crash if it ever does.
       });
     return () => handle?.remove();
   }, []);
