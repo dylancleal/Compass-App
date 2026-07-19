@@ -231,6 +231,13 @@ export interface AppSettings {
   stripe_subscription_id?: string;
   stripe_subscription_status?: StripeSubscriptionStatus;
   stripe_current_period_end?: string;   // ISO datetime, display-only (renewal date)
+  // Native (Android/iOS) subscriptions via RevenueCat — a second, independent
+  // path to "paid" alongside Stripe (see lib/subscription.ts). Single field,
+  // same shape as trial_ends_at: access is granted purely by this date being
+  // in the future, so renewals/cancellations/expirations all resolve
+  // correctly just by the webhook keeping it in sync, no separate "active"
+  // flag to fall out of sync with it.
+  revenuecat_expires_at?: string;       // ISO datetime
   downgraded_at?: string;               // ISO datetime, audit only — not used for gating
   // AI coach (Lodestone paid tier — see lib/coach.ts). Cached per ISO week so
   // repeat page views don't re-spend a model call on the same week's data.

@@ -16,6 +16,7 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Category, DayIndex } from "@/lib/types";
 import { APP_VARIANT } from "@/lib/appVariant";
 import { canActivateCategory, useAccessLevel, useOpenBillingPortal, useStartCheckout } from "@/lib/subscription";
+import { usePresentCustomerCenter, usePresentPaywall } from "@/lib/revenuecat";
 import { Button } from "@/components/ui";
 import ConnectionsPanel from "@/components/calendar/ConnectionsPanel";
 import UpgradeCallout from "@/components/UpgradeCallout";
@@ -47,6 +48,10 @@ export default function SettingsPage() {
   const accessLevel = useAccessLevel();
   const startCheckout = useStartCheckout();
   const openBillingPortal = useOpenBillingPortal();
+  const presentPaywall = usePresentPaywall();
+  const presentCustomerCenter = usePresentCustomerCenter();
+  const [nativeBillingPending, setNativeBillingPending] = useState(false);
+  const [nativeBillingError, setNativeBillingError] = useState("");
   const { subscribed: pushSubscribed, refresh: refreshPushSubscribed } = usePushSubscribed();
   const enablePush = useEnablePush();
   const disablePush = useDisablePush();
@@ -366,29 +371,66 @@ export default function SettingsPage() {
             <div className="flex gap-2 pt-1">
               {accessLevel === "free" && (
                 <button
-                  onClick={() => startCheckout.mutate()}
-                  disabled={startCheckout.isPending}
+                  onClick={async () => {
+                    if (!isNative) {
+                      startCheckout.mutate();
+                      return;
+                    }
+                    // Native purchases go through Play Billing (via
+                    // RevenueCat's dashboard-configured paywall), not
+                    // Stripe checkout — Play doesn't allow linking out to a
+                    // non-Google payment page for in-app digital content.
+                    setNativeBillingPending(true);
+                    setNativeBillingError("");
+                    try {
+                      await presentPaywall();
+                    } catch (e) {
+                      setNativeBillingError(e instanceof Error ? e.message : String(e));
+                    } finally {
+                      setNativeBillingPending(false);
+                    }
+                  }}
+                  disabled={isNative ? nativeBillingPending : startCheckout.isPending}
                   className="rounded-xl px-3 py-2 text-xs font-semibold text-[#fffdf9] transition-all hover:brightness-105 disabled:opacity-60"
                   style={{ background: "var(--primary)" }}
                 >
-                  {startCheckout.isPending ? "…" : `Upgrade — $4.99/mo`}
+                  {(isNative ? nativeBillingPending : startCheckout.isPending) ? "…" : `Upgrade — $4.99/mo`}
                 </button>
               )}
               {(accessLevel === "paid" || accessLevel === "past_due") && (
                 <button
-                  onClick={() => openBillingPortal.mutate()}
-                  disabled={openBillingPortal.isPending}
+                  onClick={async () => {
+                    if (!isNative) {
+                      openBillingPortal.mutate();
+                      return;
+                    }
+                    // A native subscriber's billing lives inside Google
+                    // Play, not Stripe — Stripe's portal has no record of
+                    // it. RevenueCat's Customer Center shows the real
+                    // cancel/manage options backed by the actual store.
+                    setNativeBillingPending(true);
+                    setNativeBillingError("");
+                    try {
+                      await presentCustomerCenter();
+                    } catch (e) {
+                      setNativeBillingError(e instanceof Error ? e.message : String(e));
+                    } finally {
+                      setNativeBillingPending(false);
+                    }
+                  }}
+                  disabled={isNative ? nativeBillingPending : openBillingPortal.isPending}
                   className="rounded-xl px-3 py-2 text-xs font-semibold transition-all hover:brightness-105 disabled:opacity-60"
                   style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
                 >
-                  {openBillingPortal.isPending ? "…" : "Manage billing"}
+                  {(isNative ? nativeBillingPending : openBillingPortal.isPending) ? "…" : "Manage billing"}
                 </button>
               )}
             </div>
-            {(startCheckout.error || openBillingPortal.error) && (
+            {(startCheckout.error || openBillingPortal.error || nativeBillingError) && (
               <p className="text-xs" style={{ color: "#c06b5a" }}>
                 {(startCheckout.error as Error | null)?.message ||
-                  (openBillingPortal.error as Error | null)?.message}
+                  (openBillingPortal.error as Error | null)?.message ||
+                  nativeBillingError}
               </p>
             )}
           </div>
