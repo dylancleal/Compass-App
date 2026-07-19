@@ -21,6 +21,7 @@ import ConnectionsPanel from "@/components/calendar/ConnectionsPanel";
 import UpgradeCallout from "@/components/UpgradeCallout";
 import ThemeToggle from "@/components/ThemeToggle";
 import { pushSupported, useDisablePush, useEnablePush, usePushSubscribed } from "@/lib/pushNotifications";
+import { useIsNativePlatform } from "@/lib/platform";
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 const SCHEDULE_ROWS: { key: "gym" | "tennis" | "study"; label: string }[] = [
@@ -49,6 +50,7 @@ export default function SettingsPage() {
   const { subscribed: pushSubscribed, refresh: refreshPushSubscribed } = usePushSubscribed();
   const enablePush = useEnablePush();
   const disablePush = useDisablePush();
+  const isNative = useIsNativePlatform();
 
   const [newName, setNewName] = useState("");
   const [tourOpen, setTourOpen] = useState(false);
@@ -309,7 +311,9 @@ export default function SettingsPage() {
           ) : (
             <div className="card p-4">
               <p className="text-sm text-[var(--muted)]">
-                Push notifications aren&apos;t supported in this browser.
+                {isNative
+                  ? "Reminders aren't available in the Android app yet — they work today from the browser at mylodestone.app."
+                  : "Push notifications aren't supported in this browser."}
               </p>
             </div>
           )
