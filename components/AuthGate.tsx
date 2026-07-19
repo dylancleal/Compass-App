@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { APP_VARIANT } from "@/lib/appVariant";
 import { useApplyFreeDowngrade, useReactivateOnUpgrade } from "@/lib/subscription";
+import { useConfigureRevenueCat } from "@/lib/revenuecat";
 import { useIsNativePlatform } from "@/lib/platform";
 import NativeAuthScreen from "@/components/NativeAuthScreen";
 
@@ -33,6 +34,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   // to mount unconditionally ahead of the auth-gate's early returns below.
   useApplyFreeDowngrade();
   useReactivateOnUpgrade();
+  // No-ops on web/Compass (useConfigureRevenueCat itself checks
+  // Capacitor.isNativePlatform()) and before a session exists.
+  useConfigureRevenueCat(session !== "loading" ? session?.user.id : undefined);
 
   useEffect(() => {
     if (!needsAuth) return;

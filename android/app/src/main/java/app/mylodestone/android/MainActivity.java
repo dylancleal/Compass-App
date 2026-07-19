@@ -4,6 +4,8 @@ import android.os.Bundle;
 import com.capacitorjs.plugins.app.AppPlugin;
 import com.capacitorjs.plugins.statusbar.StatusBarPlugin;
 import com.getcapacitor.BridgeActivity;
+import com.revenuecat.purchases.capacitor.PurchasesPlugin;
+import com.revenuecat.purchases.capacitor.ui.RevenueCatUIPlugin;
 
 // Explicit registration — Capacitor's usual build-time auto-discovery of
 // plugins isn't taking effect in this project for reasons not yet root-
@@ -17,6 +19,8 @@ public class MainActivity extends BridgeActivity {
   public void onCreate(Bundle savedInstanceState) {
     registerPlugin(AppPlugin.class);
     registerPlugin(StatusBarPlugin.class);
+    registerPlugin(PurchasesPlugin.class);
+    registerPlugin(RevenueCatUIPlugin.class);
     super.onCreate(savedInstanceState);
   }
 }

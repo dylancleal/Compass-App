@@ -31,12 +31,19 @@ export type AccessLevel = "trial" | "paid" | "free" | "past_due";
 // status. No per-user data is touched; unset it later and real access
 // levels apply immediately on next load.
 export function getAccessLevel(
-  settings: Pick<AppSettings, "trial_ends_at" | "stripe_subscription_status"> | undefined | null,
+  settings:
+    | Pick<AppSettings, "trial_ends_at" | "stripe_subscription_status" | "revenuecat_expires_at">
+    | undefined
+    | null,
   now: Date = new Date(),
 ): AccessLevel {
   if (process.env.NEXT_PUBLIC_DISABLE_PAYWALL === "true") return "paid";
   if (APP_VARIANT.id !== "study") return "paid";
   if (!settings) return "paid"; // permissive while loading — a flash of full access beats a flash of the free UI for a paying user
+  // Native (RevenueCat) purchases are checked first and independently of
+  // Stripe — a user with an active Play Store subscription is "paid" even
+  // if their (separate) web/Stripe status says otherwise, and vice versa.
+  if (settings.revenuecat_expires_at && new Date(settings.revenuecat_expires_at) > now) return "paid";
   const status = settings.stripe_subscription_status;
   if (status === "past_due" || status === "unpaid") return "past_due";
   if (status === "active" || status === "trialing") return "paid";
