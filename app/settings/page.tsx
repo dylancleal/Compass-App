@@ -19,6 +19,7 @@ import { canActivateCategory, useAccessLevel, useOpenBillingPortal, useStartChec
 import { Button } from "@/components/ui";
 import ConnectionsPanel from "@/components/calendar/ConnectionsPanel";
 import UpgradeCallout from "@/components/UpgradeCallout";
+import ThemeToggle from "@/components/ThemeToggle";
 import { pushSupported, useDisablePush, useEnablePush, usePushSubscribed } from "@/lib/pushNotifications";
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -75,6 +76,19 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="text-sm text-[var(--muted)]">Make {APP_VARIANT.name} yours.</p>
       </header>
+
+      {/* Appearance — moved here from the top nav to give the scrollable
+          Today/Calendar/Progress/Areas row more breathing room. */}
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold text-[var(--muted)]">Appearance</h2>
+        <div className="card flex items-center justify-between gap-3 p-4">
+          <div>
+            <p className="text-sm font-medium">Theme</p>
+            <p className="text-xs text-[var(--muted)]">Light, dark, or match your device.</p>
+          </div>
+          <ThemeToggle />
+        </div>
+      </section>
 
       {/* Profile */}
       <section className="space-y-2">

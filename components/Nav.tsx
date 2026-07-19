@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_VARIANT } from "@/lib/appVariant";
-import ThemeToggle from "@/components/ThemeToggle";
 
 // Consolidated top nav: Today · Calendar · Progress · Areas, with Settings as a
 // right-aligned gear. "Progress" is the hub for both the weekly summary (/review)
@@ -77,7 +76,7 @@ export default function Nav() {
       {APP_VARIANT.logoStyle === "glow" ? (
         <Link
           href="/"
-          className="shrink-0 text-xl font-bold tracking-tight"
+          className="shrink-0 text-base font-bold tracking-tight"
           style={{
             color: "var(--foreground)",
             textShadow:
@@ -144,8 +143,8 @@ export default function Nav() {
         })}
       </nav>
 
-      {/* Theme toggle + Settings gear — right aligned */}
-      <ThemeToggle />
+      {/* Settings gear — right aligned. Theme toggle moved to Settings itself
+          to give the scrollable nav-pill row more room (see settings/page.tsx). */}
       <Link
         href="/settings"
         aria-label="Settings"
