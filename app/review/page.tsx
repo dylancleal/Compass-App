@@ -11,6 +11,7 @@ import { addDays, daysBetween, prettyDate, startOfWeek, todayKey } from "@/lib/d
 import { accentOf } from "@/lib/palette";
 import { AnimatedBar, IconChip } from "@/components/ui";
 import ProgressTabs from "@/components/ProgressTabs";
+import ShareRecapCard from "@/components/ShareRecapCard";
 import { useCountUp } from "@/lib/useCountUp";
 
 function fmtMin(min: number) {
@@ -151,6 +152,25 @@ export default function ReviewPage() {
           </p>
         </div>
       </div>
+
+      {/* Shareable recap — only worth offering once there's something to
+          show off; an empty-stats card would just look like an ad for a
+          quiet week. */}
+      {thisWeek.length > 0 && (
+        <ShareRecapCard
+          dateRange={`${prettyDate(weekStart)} – ${prettyDate(weekEnd)}`}
+          sessionCount={thisWeek.length}
+          timeLabel={fmtMin(totalMin)}
+          streak={studyStreak}
+          byArea={activeCats
+            .map((cat) => ({
+              icon: cat.icon,
+              name: cat.name,
+              count: byCategory.get(cat.id)?.count ?? 0,
+            }))
+            .filter((a) => a.count > 0)}
+        />
+      )}
 
       {/* Per-category breakdown */}
       {activeCats.length > 0 && (
