@@ -2,6 +2,8 @@ package app.mylodestone.android;
 
 import android.os.Bundle;
 import com.capacitorjs.plugins.app.AppPlugin;
+import com.capacitorjs.plugins.filesystem.FilesystemPlugin;
+import com.capacitorjs.plugins.share.SharePlugin;
 import com.capacitorjs.plugins.statusbar.StatusBarPlugin;
 import com.getcapacitor.BridgeActivity;
 import com.revenuecat.purchases.capacitor.PurchasesPlugin;
@@ -21,6 +23,8 @@ public class MainActivity extends BridgeActivity {
     registerPlugin(StatusBarPlugin.class);
     registerPlugin(PurchasesPlugin.class);
     registerPlugin(RevenueCatUIPlugin.class);
+    registerPlugin(FilesystemPlugin.class);
+    registerPlugin(SharePlugin.class);
     super.onCreate(savedInstanceState);
   }
 }
