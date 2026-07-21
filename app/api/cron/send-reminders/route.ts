@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabaseService";
 import { getWebPush } from "@/lib/webpush";
+import { getFcm } from "@/lib/firebaseAdmin";
 import { APP_VARIANT } from "@/lib/appVariant";
 import type { WebPushError } from "web-push";
 
@@ -22,6 +23,18 @@ function isGone(err: unknown): boolean {
   return status === 404 || status === 410;
 }
 
+// Native (Android/iOS) delivery via FCM is a separate, optional channel
+// alongside web-push — unlike VAPID_PRIVATE_KEY, missing Firebase config
+// only disables this half rather than failing the whole cron, since web
+// subscribers shouldn't lose reminders because native isn't set up yet.
+function tryGetFcm() {
+  try {
+    return getFcm();
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization") ?? "";
   const secret = process.env.CRON_SECRET;
@@ -34,6 +47,7 @@ export async function GET(request: Request) {
 
   const supabase = getServiceSupabase();
   const webpush = getWebPush();
+  const fcm = tryGetFcm();
 
   const now = new Date();
   const windowEnd = new Date(now.getTime() + LEAD_MINUTES * 60_000);
@@ -89,6 +103,44 @@ export async function GET(request: Request) {
           await supabase.from("push_subscriptions").delete().eq("id", sub.id);
         }
         // Otherwise leave it — a transient failure shouldn't drop the subscription.
+      }
+    }
+
+    if (fcm) {
+      const { data: fcmTokens } = await supabase
+        .from("fcm_tokens")
+        .select("id, token, timezone")
+        .eq("user_id", block.user_id);
+
+      // Sent one at a time rather than via a single multicast call — each
+      // token can carry its own timezone, same reasoning as the web-push
+      // loop above.
+      for (const tokenRow of fcmTokens ?? []) {
+        const body = tokenRow.timezone
+          ? `Starts at ${new Date(block.start_at).toLocaleTimeString("en-US", {
+              timeZone: tokenRow.timezone,
+              hour: "numeric",
+              minute: "2-digit",
+            })} (${relative})`
+          : `Starts ${relative}`;
+
+        try {
+          await fcm.send({
+            token: tokenRow.token,
+            notification: { title: block.title, body },
+            data: { url: "/today" },
+          });
+          sent++;
+        } catch (err) {
+          failed++;
+          const code = (err as { code?: string } | undefined)?.code ?? "?";
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`[send-reminders] fcm failed (${code}) for token ${tokenRow.id}: ${msg}`);
+          errors.push(`${tokenRow.id}: ${code} ${msg}`);
+          if (code === "messaging/registration-token-not-registered") {
+            await supabase.from("fcm_tokens").delete().eq("id", tokenRow.id);
+          }
+        }
       }
     }
 
