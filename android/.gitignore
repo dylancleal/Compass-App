@@ -63,8 +63,12 @@ keystore.properties
 .externalNativeBuild
 .cxx/
 
-# Google Services (e.g. APIs or Firebase)
-# google-services.json
+# Google Services (e.g. APIs or Firebase) — the app/build.gradle plugin
+# block already applies conditionally when this file is present, so a
+# checkout without it still builds (just without push notifications). Every
+# dev/CI environment that needs FCM drops their own copy at
+# android/app/google-services.json, same pattern as keystore.properties.
+google-services.json
 
 # Freeline
 freeline.py

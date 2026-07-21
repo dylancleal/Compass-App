@@ -22,6 +22,7 @@ import ConnectionsPanel from "@/components/calendar/ConnectionsPanel";
 import UpgradeCallout from "@/components/UpgradeCallout";
 import ThemeToggle from "@/components/ThemeToggle";
 import { pushSupported, useDisablePush, useEnablePush, usePushSubscribed } from "@/lib/pushNotifications";
+import { useDisableNativePush, useEnableNativePush, useNativePushSubscribed } from "@/lib/nativePush";
 import { useIsNativePlatform } from "@/lib/platform";
 
 const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -55,6 +56,9 @@ export default function SettingsPage() {
   const { subscribed: pushSubscribed, refresh: refreshPushSubscribed } = usePushSubscribed();
   const enablePush = useEnablePush();
   const disablePush = useDisablePush();
+  const { subscribed: nativePushSubscribed, refresh: refreshNativePushSubscribed } = useNativePushSubscribed();
+  const enableNativePush = useEnableNativePush();
+  const disableNativePush = useDisableNativePush();
   const isNative = useIsNativePlatform();
 
   const [newName, setNewName] = useState("");
@@ -282,7 +286,45 @@ export default function SettingsPage() {
       <section className="space-y-3" data-tour="notifications-section">
         <h2 className="text-sm font-semibold text-[var(--muted)]">Notifications</h2>
         {accessLevel !== "free" ? (
-          pushSupported() ? (
+          isNative ? (
+            <div className="card flex items-center justify-between gap-3 p-4">
+              <div>
+                <p className="text-sm font-medium">Event reminders</p>
+                <p className="text-xs text-[var(--muted)]">
+                  A push notification ~15 minutes before something on your calendar starts.
+                  You&apos;ll get a permission prompt the first time you turn this on.
+                </p>
+                {(enableNativePush.error || disableNativePush.error) && (
+                  <p className="text-xs" style={{ color: "#c06b5a" }}>
+                    {(enableNativePush.error as Error | null)?.message ||
+                      (disableNativePush.error as Error | null)?.message}
+                    {" — check that notifications are allowed for this app in Android Settings, then try again."}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  const action = nativePushSubscribed ? disableNativePush : enableNativePush;
+                  action.mutate(undefined, { onSuccess: refreshNativePushSubscribed });
+                }}
+                disabled={
+                  enableNativePush.isPending || disableNativePush.isPending || nativePushSubscribed === null
+                }
+                className="shrink-0 rounded-xl px-3 py-2 text-xs font-semibold transition-all hover:brightness-105 disabled:opacity-60"
+                style={
+                  nativePushSubscribed
+                    ? { background: "var(--primary-soft)", color: "var(--primary)" }
+                    : { background: "var(--primary)", color: "#fffdf9" }
+                }
+              >
+                {enableNativePush.isPending || disableNativePush.isPending
+                  ? "…"
+                  : nativePushSubscribed
+                    ? "Turn off"
+                    : "Turn on"}
+              </button>
+            </div>
+          ) : pushSupported() ? (
             <div className="card flex items-center justify-between gap-3 p-4">
               <div>
                 <p className="text-sm font-medium">Event reminders</p>
@@ -315,11 +357,7 @@ export default function SettingsPage() {
             </div>
           ) : (
             <div className="card p-4">
-              <p className="text-sm text-[var(--muted)]">
-                {isNative
-                  ? "Reminders aren't available in the Android app yet — they work today from the browser at mylodestone.app."
-                  : "Push notifications aren't supported in this browser."}
-              </p>
+              <p className="text-sm text-[var(--muted)]">Push notifications aren&apos;t supported in this browser.</p>
             </div>
           )
         ) : (
