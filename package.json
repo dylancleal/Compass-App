@@ -22,6 +22,7 @@
     "@revenuecat/purchases-capacitor-ui": "^13.2.3",
     "@supabase/supabase-js": "^2.108.2",
     "@tanstack/react-query": "^5.101.0",
+    "firebase-admin": "^14.2.0",
     "html-to-image": "^1.11.13",
     "next": "16.2.9",
     "node-ical": "^0.26.1",
