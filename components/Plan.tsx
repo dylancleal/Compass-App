@@ -24,7 +24,7 @@ import { findFreeSlot } from "@/lib/timeSlot";
 import { addDays, dayIndex, todayKey } from "@/lib/date";
 import { accentOf } from "@/lib/palette";
 import { useTilt } from "@/lib/useTilt";
-import type { Suggestion, Category, Session } from "@/lib/types";
+import type { CalendarBlock, Suggestion, Category, Session } from "@/lib/types";
 import { Button, Pill } from "./ui";
 import SessionEditor from "./SessionEditor";
 import TickCircle from "./TickCircle";
@@ -77,20 +77,32 @@ export default function Plan() {
     [yesterdaySuggestions],
   );
 
-  // Pre-compute a suggested time slot for each actionable suggestion based on today's calendar.
+  // Pre-compute a suggested time slot for each still-pending suggestion based
+  // on today's calendar. Only pending ones need this — an accepted suggestion
+  // either already has a real committed block (already in calendarBlocks) or
+  // never got one, and its slot pill isn't shown either way.
+  //
+  // findFreeSlot only knows about real calendar_blocks, not about the other
+  // suggestions being scheduled in this same pass — so each suggestion's
+  // computed slot is fed back in as a tentative busy block before computing
+  // the next one, otherwise two suggestions with nothing else on the
+  // calendar both independently land on the same "first free" slot.
   const slotMap = useMemo(() => {
     const map = new Map<string, string>();
-    const usedEnds: number[] = [];
-    for (const s of suggestions.filter((s) => (s.est_minutes ?? 0) > 0)) {
-      const slot = findFreeSlot(
-        calendarBlocks.filter(() => true),
-        s.est_minutes ?? 45,
-      );
-      if (slot) map.set(s.id, slot);
+    const tentative: CalendarBlock[] = [];
+    for (const s of suggestions.filter((s) => s.status === "pending" && (s.est_minutes ?? 0) > 0)) {
+      const slot = findFreeSlot([...calendarBlocks, ...tentative], s.est_minutes ?? 45);
+      if (!slot) continue;
+      map.set(s.id, slot);
+      const mins = parseSlot(slot);
+      if (mins == null) continue;
+      const start = new Date();
+      start.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+      const end = new Date(start.getTime() + (s.est_minutes ?? 45) * 60_000);
+      tentative.push({ start_at: start.toISOString(), end_at: end.toISOString(), busy: true } as CalendarBlock);
     }
     return map;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suggestions.map((s) => s.id).join(), calendarBlocks.length]);
+  }, [suggestions, calendarBlocks]);
 
   const save = useSaveSuggestions();
   const update = useUpdateSuggestion(today);
@@ -557,28 +569,40 @@ function SuggestionCard({
               </Pill>
             )}
             {s.est_minutes ? <Pill color="#7d7c6e">~{s.est_minutes} min</Pill> : null}
-            {suggestedTime && !accepted &&
-              (committed ? (
-                <Pill color="#5b8a72">🗓 planned {suggestedTime}</Pill>
-              ) : onCommitTime ? (
-                <button
-                  onClick={() => {
-                    onCommitTime();
-                    setCommitted(true);
-                  }}
-                  title="Add this to today's calendar"
-                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-all hover:scale-105"
-                  style={{ background: "#7a9bb522", color: "#7a9bb5" }}
-                >
-                  🕐 {suggestedTime} · plan it
-                </button>
-              ) : (
-                <Pill color="#7a9bb5">🕐 {suggestedTime}</Pill>
-              ))}
             {personalInsight && (
               <Pill color="#5b8a72">{personalInsight}</Pill>
             )}
           </div>
+
+          {/* A real prompt, not another small pill in the row above — this is
+              an actual decision (commit a real block to your calendar), and
+              buried among the category/duration/insight pills it read as
+              just more decoration rather than something to act on. */}
+          {suggestedTime && !accepted && committed && (
+            <div
+              className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium"
+              style={{ background: "#5b8a7218", color: "#3e6b54" }}
+            >
+              <span aria-hidden>🗓</span>
+              Added to your calendar at {suggestedTime}
+            </div>
+          )}
+          {suggestedTime && !accepted && !committed && onCommitTime && (
+            <button
+              onClick={() => {
+                onCommitTime();
+                setCommitted(true);
+              }}
+              className="mt-2 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition-all hover:brightness-95"
+              style={{ background: "#7a9bb522", color: "#7a9bb5" }}
+            >
+              <span className="flex items-center gap-1.5">
+                <span aria-hidden>🕐</span>
+                Add to your calendar at {suggestedTime}?
+              </span>
+              <span>Add →</span>
+            </button>
+          )}
 
           {steps.length > 0 && (
             <div className="mt-2.5">
