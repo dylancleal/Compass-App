@@ -569,28 +569,40 @@ function SuggestionCard({
               </Pill>
             )}
             {s.est_minutes ? <Pill color="#7d7c6e">~{s.est_minutes} min</Pill> : null}
-            {suggestedTime && !accepted &&
-              (committed ? (
-                <Pill color="#5b8a72">🗓 planned {suggestedTime}</Pill>
-              ) : onCommitTime ? (
-                <button
-                  onClick={() => {
-                    onCommitTime();
-                    setCommitted(true);
-                  }}
-                  title="Add this to today's calendar"
-                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-all hover:scale-105"
-                  style={{ background: "#7a9bb522", color: "#7a9bb5" }}
-                >
-                  🕐 {suggestedTime} · plan it
-                </button>
-              ) : (
-                <Pill color="#7a9bb5">🕐 {suggestedTime}</Pill>
-              ))}
             {personalInsight && (
               <Pill color="#5b8a72">{personalInsight}</Pill>
             )}
           </div>
+
+          {/* A real prompt, not another small pill in the row above — this is
+              an actual decision (commit a real block to your calendar), and
+              buried among the category/duration/insight pills it read as
+              just more decoration rather than something to act on. */}
+          {suggestedTime && !accepted && committed && (
+            <div
+              className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium"
+              style={{ background: "#5b8a7218", color: "#3e6b54" }}
+            >
+              <span aria-hidden>🗓</span>
+              Added to your calendar at {suggestedTime}
+            </div>
+          )}
+          {suggestedTime && !accepted && !committed && onCommitTime && (
+            <button
+              onClick={() => {
+                onCommitTime();
+                setCommitted(true);
+              }}
+              className="mt-2 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition-all hover:brightness-95"
+              style={{ background: "#7a9bb522", color: "#7a9bb5" }}
+            >
+              <span className="flex items-center gap-1.5">
+                <span aria-hidden>🕐</span>
+                Add to your calendar at {suggestedTime}?
+              </span>
+              <span>Add →</span>
+            </button>
+          )}
 
           {steps.length > 0 && (
             <div className="mt-2.5">
