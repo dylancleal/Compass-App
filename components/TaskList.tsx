@@ -1,13 +1,27 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useCreateTask, useRemoveTask, useTasks, useUpdateTask } from "@/lib/queries";
+import {
+  useCalendarBlocks,
+  useCreateTask,
+  useRemoveTask,
+  useSuggestions,
+  useTasks,
+  useUpdateSuggestion,
+  useUpdateTask,
+} from "@/lib/queries";
+import { useConfirmPlacement } from "@/lib/suggestionActions";
+import { proposePlacementsForDay } from "@/lib/calendarPlan";
 import type { Task } from "@/lib/types";
 import { prettyDate, todayKey } from "@/lib/date";
 import { suggestTasks } from "@/lib/taskSuggestions";
 import TickCircle from "./TickCircle";
 import { Pill } from "./ui";
 import { LeafMark } from "./decor";
+
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
+}
 
 function dueTone(task: Task): { label: string; color: string } | null {
   if (!task.due_date) return null;
@@ -55,6 +69,32 @@ export default function TaskList({
     });
   }, [allTasks, categoryId, hideCompleted]);
 
+  // Today's check-in suggestion for this category, shown as a tickable row
+  // above the standing task list rather than as a separate ghost block —
+  // only on a category-specific instance (Today's cross-category Quick-tick
+  // already has its own view of the day via DayTimeline). Computed against
+  // every pending suggestion for the day, not just this category's, so the
+  // proposed time here always matches what the day timeline itself shows —
+  // the scheduler fills gaps in order, so placing this category's suggestion
+  // in isolation could compute a different (and confusing) time.
+  const today = todayKey();
+  const { data: allSuggestions = [] } = useSuggestions(today);
+  const { data: todayBlocks = [] } = useCalendarBlocks(`${today}T00:00:00.000Z`, `${today}T23:59:59.999Z`);
+  const confirmPlacement = useConfirmPlacement(today);
+  const updateSuggestion = useUpdateSuggestion(today);
+
+  const suggestedPlacement = useMemo(() => {
+    if (!categoryId) return null;
+    const pending = allSuggestions.filter((s) => s.status === "pending" && (s.est_minutes ?? 0) > 0);
+    if (pending.length === 0) return null;
+    const { placed } = proposePlacementsForDay(pending, allTasks, todayBlocks, today);
+    return placed.find((p) => p.category_id === categoryId) ?? null;
+  }, [categoryId, allSuggestions, allTasks, todayBlocks, today]);
+
+  function dismissSuggestion(id: string) {
+    updateSuggestion.mutate({ id, patch: { status: "dismissed" } });
+  }
+
   function add() {
     if (!title.trim() || !categoryId) return;
     createTask.mutate({
@@ -89,7 +129,39 @@ export default function TaskList({
 
   return (
     <div className="space-y-2">
-      {tasks.length === 0 && (
+      {suggestedPlacement && (
+        <div
+          className="card animate-pop flex items-start gap-3 p-3"
+          style={{ borderLeft: `3px solid ${accent}` }}
+        >
+          <div className="pt-0.5">
+            <TickCircle
+              checked={false}
+              onChange={() => confirmPlacement(suggestedPlacement, allSuggestions)}
+              accent={accent}
+              label={suggestedPlacement.title}
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">{suggestedPlacement.title}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <Pill color={accent}>
+                {fmtTime(suggestedPlacement.start_at)}–{fmtTime(suggestedPlacement.end_at)}
+              </Pill>
+              <span className="text-xs text-[var(--muted)]">from today&apos;s check-in</span>
+            </div>
+          </div>
+          <button
+            onClick={() => dismissSuggestion(suggestedPlacement.id)}
+            className="text-[var(--muted)] opacity-60 transition-all hover:scale-110 hover:text-[#c06b5a] hover:opacity-100"
+            aria-label="Skip suggestion"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {tasks.length === 0 && !suggestedPlacement && (
         <div className="flex flex-col items-center gap-2 px-1 py-6 text-center">
           <LeafMark size={34} />
           <p className="text-sm text-[var(--muted)]">{emptyText}</p>

@@ -7,12 +7,14 @@
 // `sessions`) consistent, regardless of where the accept happened.
 
 import {
+  useCreateCalendarBlock,
   useCreateSession,
   useRemoveSession,
   useSessions,
   useUpdateSuggestion,
 } from "@/lib/queries";
 import { inferDurationFromBlocks } from "@/lib/sessionInfer";
+import type { PlacedIntention } from "@/lib/schedule";
 import type { CalendarBlock, Session, Suggestion } from "@/lib/types";
 
 // Payload discriminator convention:
@@ -79,4 +81,30 @@ export function useAcceptSuggestion(date: string) {
   }
 
   return { setAccepted, loggedSessionFor };
+}
+
+// Turns a scheduled ghost placement into a real calendar block, then accepts
+// its source suggestion — shared by DayTimeline, /calendar's bulk confirm,
+// and TaskList's inline suggestion rows, so there's exactly one place doing
+// the awaited create-then-accept sequence (see setAccepted's comment above
+// for why this has to be awaited, not fire-and-forget, when confirming more
+// than one placement in a row).
+export function useConfirmPlacement(date: string) {
+  const acceptSuggestion = useAcceptSuggestion(date);
+  const createBlock = useCreateCalendarBlock();
+
+  return async function confirmPlacement(p: PlacedIntention, suggestions: Suggestion[]) {
+    await createBlock.mutateAsync({
+      title: p.title,
+      category_id: p.category_id,
+      task_id: p.task_id,
+      start_at: p.start_at,
+      end_at: p.end_at,
+      source: "compass",
+      busy: true,
+      status: "planned",
+    });
+    const s = suggestions.find((sugg) => sugg.id === p.id);
+    if (s) await acceptSuggestion.setAccepted(s, true, { durationMin: p.durationMin });
+  };
 }
