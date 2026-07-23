@@ -220,11 +220,16 @@ export class LocalDB implements CompassDB {
     // Preserve any accept/dismiss feedback the user already gave today.
     const keptFeedback = all.filter((s) => s.date === date && s.status !== "pending");
     const others = all.filter((s) => s.date !== date);
-    const created: Suggestion[] = items.map((i) => ({
-      ...i,
-      id: uid(),
-      created_at: new Date().toISOString(),
-    }));
+    // A category that already has an answer for today never gets a second
+    // suggestion — see the matching comment in lib/db/supabase.ts.
+    const keptCategoryIds = new Set(keptFeedback.map((s) => s.category_id).filter(Boolean));
+    const created: Suggestion[] = items
+      .filter((i) => !i.category_id || !keptCategoryIds.has(i.category_id))
+      .map((i) => ({
+        ...i,
+        id: uid(),
+        created_at: new Date().toISOString(),
+      }));
     write(KEYS.suggestions, [...others, ...keptFeedback, ...created]);
     return [...keptFeedback, ...created];
   }
