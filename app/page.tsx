@@ -37,7 +37,6 @@ import { ParallaxLeaf } from "@/components/decor";
 import { IconChip, QuietLink } from "@/components/ui";
 import { GoalsOverview } from "@/components/GoalCard";
 import DeadlineChip from "@/components/calendar/DeadlineChip";
-import DayTimeline from "@/components/calendar/DayTimeline";
 import { isDeadlineLike } from "@/lib/categoryMatcher";
 
 const CAP_LABEL: Record<string, string> = { light: "Light day", medium: "Medium day", big: "Big day" };
@@ -401,22 +400,14 @@ export default function TodayPage() {
         </div>
       )}
 
-      {/* Personalised plan */}
+      {/* Personalised plan — a card per suggestion (tick circle, expandable
+          "how to approach" steps, a suggested time computed from free gaps
+          around your real synced calendar), same for every account. Lodestone
+          briefly had a calendar-grid alternative here (DayTimeline) instead;
+          removed per explicit product direction — the grid buried the science
+          content a tap away and read as a downgrade from this card view. */}
       <div data-tour="suggestions">
-        {APP_VARIANT.layout === "timeline" && accessLevel !== "free" ? (
-          <DayTimeline
-            dayKey={today}
-            categories={categories}
-            tasks={tasks}
-            suggestions={suggestions}
-            existingBlocks={allBlocks}
-            conflictIds={conflictIds}
-            onToggleBlockDone={toggleBlockDone}
-            isBlockDone={(id) => !!blockDoneSession(id)}
-          />
-        ) : (
-          <Plan />
-        )}
+        <Plan />
       </div>
 
       {/* Weekly goals — glanceable here, tap through to Trends for detail */}
@@ -456,9 +447,9 @@ export default function TodayPage() {
         </div>
       </section>
 
-      {/* Today's schedule — calendar blocks (list variant only; the timeline
-          variant absorbs this into DayTimeline above) */}
-      {(APP_VARIANT.layout === "list" || accessLevel === "free") && todayBlocks.length > 0 && (
+      {/* Today's schedule — real calendar blocks (synced events, manual
+          entries, and anything already accepted from the plan above). */}
+      {todayBlocks.length > 0 && (
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--muted)]">Today&apos;s schedule</h2>
