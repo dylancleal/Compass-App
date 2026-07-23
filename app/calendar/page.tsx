@@ -87,27 +87,26 @@ function CalendarInner() {
     createBlock.mutate(input);
   }
 
-  function handleConfirmAll(proposed: PlacedIntention[]) {
-    proposed.forEach((p) => {
-      createBlock.mutate(
-        {
-          title: p.title,
-          category_id: p.category_id,
-          task_id: p.task_id,
-          start_at: p.start_at,
-          end_at: p.end_at,
-          source: "compass",
-          busy: true,
-          status: "planned",
-        },
-        {
-          onSuccess: () => {
-            const s = pendingSuggestions.find((sugg) => sugg.id === p.id);
-            if (s) acceptSuggestion.setAccepted(s, true, { durationMin: p.durationMin });
-          },
-        },
-      );
-    });
+  // Sequential, not concurrent — see the matching comment on DayTimeline's
+  // confirmPlacement. Firing every createBlock.mutate() at once on this one
+  // shared mutation hook instance was silently dropping some per-call
+  // onSuccess callbacks, leaving the block created but its suggestion stuck
+  // "pending" forever.
+  async function handleConfirmAll(proposed: PlacedIntention[]) {
+    for (const p of proposed) {
+      await createBlock.mutateAsync({
+        title: p.title,
+        category_id: p.category_id,
+        task_id: p.task_id,
+        start_at: p.start_at,
+        end_at: p.end_at,
+        source: "compass",
+        busy: true,
+        status: "planned",
+      });
+      const s = pendingSuggestions.find((sugg) => sugg.id === p.id);
+      if (s) await acceptSuggestion.setAccepted(s, true, { durationMin: p.durationMin });
+    }
   }
 
   function handleClickSlot(dayKey: string, hour: number) {

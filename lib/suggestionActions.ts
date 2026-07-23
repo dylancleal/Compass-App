@@ -43,17 +43,25 @@ export function useAcceptSuggestion(date: string) {
   // opts.durationMin lets a caller pass the actual scheduled length (e.g. a
   // confirmed timeline placement) instead of falling back to
   // inferDurationFromBlocks(...) ?? est_minutes.
-  function setAccepted(
+  //
+  // Returns a Promise and awaits each mutation via mutateAsync (rather than
+  // fire-and-forget .mutate()) so a caller confirming several suggestions in
+  // a loop (DayTimeline's "Add all", /calendar's bulk confirm) can await
+  // each one fully before starting the next — concurrent .mutate() calls
+  // sharing the same mutation hook instance can silently drop a later call's
+  // per-call onSuccess, which was leaving some suggestions stuck "pending"
+  // forever even though their calendar block had already been created.
+  async function setAccepted(
     s: Suggestion,
     accepted: boolean,
     opts: { calendarBlocks?: CalendarBlock[]; durationMin?: number } = {},
   ) {
-    updateSuggestion.mutate({ id: s.id, patch: { status: accepted ? "accepted" : "pending" } });
+    await updateSuggestion.mutateAsync({ id: s.id, patch: { status: accepted ? "accepted" : "pending" } });
     if (!s.category_id || (s.est_minutes ?? 0) === 0) return;
 
     if (accepted) {
       if (!loggedSessionFor(s.id)) {
-        createSession.mutate({
+        await createSession.mutateAsync({
           category_id: s.category_id,
           date: s.date,
           type: s.session_type ?? "Session",
@@ -66,7 +74,7 @@ export function useAcceptSuggestion(date: string) {
       }
     } else {
       const existing = loggedSessionFor(s.id);
-      if (existing) removeSession.mutate(existing.id);
+      if (existing) await removeSession.mutateAsync(existing.id);
     }
   }
 

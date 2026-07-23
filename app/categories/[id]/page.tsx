@@ -69,7 +69,7 @@ export default function CategoryDetail({ params }: { params: Promise<{ id: strin
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-[var(--muted)]">Tasks</h2>
-        <TaskList categoryId={category.id} accent={accent.accent} />
+        <TaskList categoryId={category.id} categoryName={category.name} accent={accent.accent} />
       </section>
 
       <section>
