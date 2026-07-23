@@ -74,33 +74,54 @@ export default function DayTimeline({
   // once accepted. Only all-day events don't make sense on an hour grid.
   const realBlocks = existingBlocks.filter((b) => !b.all_day);
 
-  function confirmPlacement(p: PlacedIntention) {
-    createBlock.mutate(
-      {
-        title: p.title,
-        category_id: p.category_id,
-        task_id: p.task_id,
-        start_at: p.start_at,
-        end_at: p.end_at,
-        source: "compass",
-        busy: true,
-        status: "planned",
-      },
-      {
-        onSuccess: () => {
-          const s = suggestions.find((sugg) => sugg.id === p.id);
-          if (s) acceptSuggestion.setAccepted(s, true, { durationMin: p.durationMin });
-        },
-      },
-    );
+  // Awaits the block-create fully before accepting the suggestion — and
+  // callers that confirm several placements in a row (confirmAll below)
+  // await each one in sequence rather than firing them concurrently. Firing
+  // createBlock.mutate() several times back to back on the same shared
+  // mutation hook instance was silently dropping some per-call onSuccess
+  // callbacks, leaving the block created but its suggestion stuck "pending"
+  // forever.
+  async function confirmPlacement(p: PlacedIntention) {
+    await createBlock.mutateAsync({
+      title: p.title,
+      category_id: p.category_id,
+      task_id: p.task_id,
+      start_at: p.start_at,
+      end_at: p.end_at,
+      source: "compass",
+      busy: true,
+      status: "planned",
+    });
+    const s = suggestions.find((sugg) => sugg.id === p.id);
+    if (s) await acceptSuggestion.setAccepted(s, true, { durationMin: p.durationMin });
   }
 
   function dismissPlacement(p: PlacedIntention) {
     updateSuggestion.mutate({ id: p.id, patch: { status: "dismissed" } });
   }
 
+  async function confirmAll() {
+    for (const p of placed) {
+      await confirmPlacement(p);
+    }
+  }
+
   return (
     <div className="space-y-3">
+      {placed.length > 1 && (
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+            {placed.length} suggested for today
+          </p>
+          <button
+            onClick={confirmAll}
+            className="rounded-lg px-2.5 py-1 text-xs font-semibold transition-all hover:brightness-105"
+            style={{ background: "var(--primary)", color: "#fffdf9" }}
+          >
+            Add all
+          </button>
+        </div>
+      )}
       {affirmations.map((a, i) => (
         <div
           key={a.id}
