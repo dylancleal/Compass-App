@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useCreateTask, useRemoveTask, useTasks, useUpdateTask } from "@/lib/queries";
 import type { Task } from "@/lib/types";
 import { prettyDate, todayKey } from "@/lib/date";
+import { suggestTasks } from "@/lib/taskSuggestions";
 import TickCircle from "./TickCircle";
 import { Pill } from "./ui";
 import { LeafMark } from "./decor";
@@ -19,12 +20,14 @@ function dueTone(task: Task): { label: string; color: string } | null {
 
 export default function TaskList({
   categoryId,
+  categoryName,
   accent,
   showAdd = true,
   hideCompleted = false,
   emptyText = "Nothing here yet — add something small to start.",
 }: {
   categoryId?: string;
+  categoryName?: string;
   accent: string;
   showAdd?: boolean;
   hideCompleted?: boolean;
@@ -66,6 +69,13 @@ export default function TaskList({
     setFirstStep("");
     setShowMore(false);
   }
+
+  const suggestions = useMemo(() => {
+    if (!categoryId || !categoryName) return [];
+    const pastForCategory = allTasks.filter((t) => t.category_id === categoryId);
+    const openTitles = tasks.filter((t) => t.status !== "complete").map((t) => t.title);
+    return suggestTasks(categoryName, pastForCategory, openTitles);
+  }, [allTasks, tasks, categoryId, categoryName]);
 
   function toggle(task: Task, done: boolean) {
     updateTask.mutate({
@@ -125,6 +135,21 @@ export default function TaskList({
 
       {showAdd && categoryId && (
         <div className="card p-3">
+          {suggestions.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setTitle(s)}
+                  className="rounded-full px-2.5 py-1 text-xs font-medium transition-all hover:brightness-105"
+                  style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <input
               value={title}

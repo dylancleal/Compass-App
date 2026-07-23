@@ -93,7 +93,7 @@ export default function UniPage() {
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-[var(--muted)]">All uni tasks</h2>
-        <TaskList categoryId={uni.id} accent={accent.accent} />
+        <TaskList categoryId={uni.id} categoryName={uni.name} accent={accent.accent} />
       </section>
 
       <p className="text-center text-xs text-[var(--muted)]">

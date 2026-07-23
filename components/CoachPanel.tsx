@@ -13,6 +13,13 @@ export default function CoachPanel() {
   return <CoachPanelInner />;
 }
 
+const SUGGESTED_QUESTIONS = [
+  "What should I focus on this week?",
+  "How's my streak looking?",
+  "What's my best area right now?",
+  "Any patterns I'm missing?",
+];
+
 function CoachPanelInner() {
   const weekly = useWeeklyInsight();
   const askCoach = useAskCoach();
@@ -27,15 +34,20 @@ function CoachPanelInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekly.isStale]);
 
-  function ask() {
-    const q = question.trim();
-    if (!q) return;
+  function askWith(q: string) {
+    setQuestion(q);
     setAnswer(null);
     setError(null);
     askCoach.mutate(q, {
       onSuccess: (reply) => setAnswer(reply),
       onError: () => setError("Couldn't reach your coach — try again in a moment."),
     });
+  }
+
+  function ask() {
+    const q = question.trim();
+    if (!q) return;
+    askWith(q);
   }
 
   return (
@@ -49,6 +61,20 @@ function CoachPanelInner() {
             {weekly.isPending ? "Thinking about your week…" : "Log a few sessions to get your first insight."}
           </p>
         )}
+
+        <div className="flex flex-wrap gap-1.5">
+          {SUGGESTED_QUESTIONS.map((q) => (
+            <button
+              key={q}
+              onClick={() => askWith(q)}
+              disabled={askCoach.isPending}
+              className="rounded-full px-2.5 py-1 text-xs font-medium transition-all hover:brightness-105 disabled:opacity-40"
+              style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
 
         <div className="flex gap-2">
           <input

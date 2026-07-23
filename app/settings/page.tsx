@@ -499,33 +499,48 @@ export default function SettingsPage() {
         <IntroTour forceOpen onClose={() => setTourOpen(false)} />
       )}
 
-      {/* Integrations */}
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-[var(--muted)]">Sync & integrations</h2>
-        <div className="card space-y-3 p-4 text-sm">
-          <Row
-            label="Cloud sync (Supabase)"
-            status={isSupabaseConfigured() ? "Connected" : "Local-only"}
-            on={isSupabaseConfigured()}
-            note={
-              isSupabaseConfigured()
-                ? "Your data syncs across devices."
-                : "Running locally on this device. Add Supabase keys to sync — see README."
-            }
-          />
-          <Row label="OnTrack (Deakin)" status="Phase 3" on={false} note="Pull uni tasks & deadlines automatically." />
-          {isSupabaseConfigured() && (
-            <div className="border-t border-[var(--border)] pt-3">
-              <button
-                onClick={() => getSupabase()?.auth.signOut()}
-                className="text-xs text-red-500 underline hover:text-red-700 hover:opacity-100"
-              >
-                Sign out
-              </button>
-            </div>
-          )}
+      {/* Integrations — Compass only. These are internal/personal-project
+          details (backend vendor name, a Deakin-specific integration stub)
+          that don't mean anything to a real Lodestone customer. */}
+      {APP_VARIANT.id !== "study" && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-[var(--muted)]">Sync & integrations</h2>
+          <div className="card space-y-3 p-4 text-sm">
+            <Row
+              label="Cloud sync (Supabase)"
+              status={isSupabaseConfigured() ? "Connected" : "Local-only"}
+              on={isSupabaseConfigured()}
+              note={
+                isSupabaseConfigured()
+                  ? "Your data syncs across devices."
+                  : "Running locally on this device. Add Supabase keys to sync — see README."
+              }
+            />
+            <Row label="OnTrack (Deakin)" status="Phase 3" on={false} note="Pull uni tasks & deadlines automatically." />
+            {isSupabaseConfigured() && (
+              <div className="border-t border-[var(--border)] pt-3">
+                <button
+                  onClick={() => getSupabase()?.auth.signOut()}
+                  className="text-xs text-red-500 underline hover:text-red-700 hover:opacity-100"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {APP_VARIANT.id === "study" && isSupabaseConfigured() && (
+        <div className="pb-2 pt-1 text-center">
+          <button
+            onClick={() => getSupabase()?.auth.signOut()}
+            className="text-xs text-red-500 underline hover:text-red-700 hover:opacity-100"
+          >
+            Sign out
+          </button>
         </div>
-      </section>
+      )}
     </div>
   );
 }
