@@ -5,9 +5,9 @@ import type { CalendarBlock, Category, Suggestion, Task } from "@/lib/types";
 import type { Intention, PlacedIntention } from "@/lib/schedule";
 import { blockBox, dayWindowFor } from "@/lib/schedule";
 import { proposePlacementsForDay } from "@/lib/calendarPlan";
-import { useAcceptSuggestion } from "@/lib/suggestionActions";
+import { parseSuggestionText, useAcceptSuggestion, useConfirmPlacement } from "@/lib/suggestionActions";
 import { useGeneratePlan } from "@/lib/planGeneration";
-import { useCreateCalendarBlock, useUpdateSuggestion } from "@/lib/queries";
+import { useUpdateSuggestion } from "@/lib/queries";
 import { accentOf } from "@/lib/palette";
 import { isDeadlineLike } from "@/lib/categoryMatcher";
 import BlockChip from "./BlockChip";
@@ -64,8 +64,15 @@ export default function DayTimeline({
 
   const acceptSuggestion = useAcceptSuggestion(dayKey);
   const updateSuggestion = useUpdateSuggestion(dayKey);
-  const createBlock = useCreateCalendarBlock();
+  const confirmPlacement = useConfirmPlacement(dayKey);
   const [selected, setSelected] = useState<CalendarBlock | null>(null);
+  // Separate from `selected` (a real, already-confirmed block) — a ghost
+  // placement has no calendar_blocks row yet, and its detail view needs the
+  // full science/plan content plus Add/Skip, not the real-block modal's
+  // mark-done affordance. Tapping the compact chip only ever showed the
+  // title before; this is what used to live in the list layout's expandable
+  // "how to approach" card and was missing entirely from the timeline.
+  const [selectedGhost, setSelectedGhost] = useState<PlacedIntention | null>(null);
 
   // Unlike the list variant's "Today's schedule" section — which excludes
   // source:"compass"/status:"planned" blocks because those duplicate a
@@ -74,35 +81,13 @@ export default function DayTimeline({
   // once accepted. Only all-day events don't make sense on an hour grid.
   const realBlocks = existingBlocks.filter((b) => !b.all_day);
 
-  // Awaits the block-create fully before accepting the suggestion — and
-  // callers that confirm several placements in a row (confirmAll below)
-  // await each one in sequence rather than firing them concurrently. Firing
-  // createBlock.mutate() several times back to back on the same shared
-  // mutation hook instance was silently dropping some per-call onSuccess
-  // callbacks, leaving the block created but its suggestion stuck "pending"
-  // forever.
-  async function confirmPlacement(p: PlacedIntention) {
-    await createBlock.mutateAsync({
-      title: p.title,
-      category_id: p.category_id,
-      task_id: p.task_id,
-      start_at: p.start_at,
-      end_at: p.end_at,
-      source: "compass",
-      busy: true,
-      status: "planned",
-    });
-    const s = suggestions.find((sugg) => sugg.id === p.id);
-    if (s) await acceptSuggestion.setAccepted(s, true, { durationMin: p.durationMin });
-  }
-
   function dismissPlacement(p: PlacedIntention) {
     updateSuggestion.mutate({ id: p.id, patch: { status: "dismissed" } });
   }
 
   async function confirmAll() {
     for (const p of placed) {
-      await confirmPlacement(p);
+      await confirmPlacement(p, suggestions);
     }
   }
 
@@ -207,8 +192,9 @@ export default function DayTimeline({
                   topPct={box.topPct}
                   heightPct={box.heightPct}
                   isGhost
-                  onConfirm={() => confirmPlacement(p)}
+                  onConfirm={() => confirmPlacement(p, suggestions)}
                   onDismiss={() => dismissPlacement(p)}
+                  onClick={() => setSelectedGhost(p)}
                 />
               );
             })}
@@ -286,6 +272,90 @@ export default function DayTimeline({
           </div>
         </div>
       )}
+
+      {selectedGhost && (() => {
+        const s = suggestions.find((sugg) => sugg.id === selectedGhost.id);
+        if (!s) return null;
+        const cat = categories.find((c) => c.id === selectedGhost.category_id);
+        const accent = cat ? accentOf(cat.color).accent : "#5b8a72";
+        const { headerLines, steps } = parseSuggestionText(s.text);
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+            onClick={() => setSelectedGhost(null)}
+          >
+            <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" />
+            <div
+              className="card relative z-10 w-full max-w-md space-y-3 rounded-b-none rounded-t-3xl p-5 sm:rounded-3xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div>
+                <h2 className="text-lg font-semibold">{headerLines[0]}</h2>
+                {headerLines.slice(1).map((line, i) => (
+                  <p key={i} className="mt-0.5 text-sm" style={{ color: "var(--muted)" }}>
+                    {line}
+                  </p>
+                ))}
+              </div>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                {fmtTime(selectedGhost.start_at)}–{fmtTime(selectedGhost.end_at)}
+              </p>
+
+              {steps.length > 0 && (
+                <ol className="space-y-1.5 pl-1">
+                  {steps.map((step, i) => (
+                    <li key={i} className="flex gap-2 text-sm leading-snug">
+                      <span
+                        className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full text-[10px] font-bold"
+                        style={{ background: accent + "22", color: accent }}
+                      >
+                        {i + 1}
+                      </span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+
+              {s.reason && (
+                <p className="text-xs" style={{ color: "var(--muted)" }}>
+                  {s.reason}
+                </p>
+              )}
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={() => {
+                    confirmPlacement(selectedGhost, suggestions);
+                    setSelectedGhost(null);
+                  }}
+                  className="rounded-xl px-3 py-2 text-sm font-semibold text-white transition-all hover:scale-[1.03]"
+                  style={{ background: accent }}
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => {
+                    dismissPlacement(selectedGhost);
+                    setSelectedGhost(null);
+                  }}
+                  className="rounded-xl px-3 py-2 text-sm font-medium"
+                  style={{ background: "var(--border)", color: "var(--muted)" }}
+                >
+                  Skip
+                </button>
+                <button
+                  className="ml-auto rounded-xl px-3 py-2 text-sm font-medium hover:text-[var(--foreground)] hover:opacity-100"
+                  style={{ color: "var(--muted)" }}
+                  onClick={() => setSelectedGhost(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

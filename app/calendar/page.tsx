@@ -12,7 +12,7 @@ import {
   useSyncCalendarConnection,
   useGoogleSync,
 } from "@/lib/queries";
-import { useAcceptSuggestion } from "@/lib/suggestionActions";
+import { useConfirmPlacement } from "@/lib/suggestionActions";
 import { addDays, startOfWeek, todayKey } from "@/lib/date";
 import { findConflictPairs, findConflictGroups, type PlacedIntention } from "@/lib/schedule";
 import type { CalendarBlock, Task } from "@/lib/types";
@@ -55,7 +55,7 @@ function CalendarInner() {
   const removeBlock = useRemoveCalendarBlock();
   const syncConnection = useSyncCalendarConnection();
   const googleSync = useGoogleSync();
-  const acceptSuggestion = useAcceptSuggestion(today);
+  const confirmPlacement = useConfirmPlacement(today);
 
   // Auto-sync stale connections on page load.
   useEffect(() => {
@@ -87,25 +87,9 @@ function CalendarInner() {
     createBlock.mutate(input);
   }
 
-  // Sequential, not concurrent — see the matching comment on DayTimeline's
-  // confirmPlacement. Firing every createBlock.mutate() at once on this one
-  // shared mutation hook instance was silently dropping some per-call
-  // onSuccess callbacks, leaving the block created but its suggestion stuck
-  // "pending" forever.
   async function handleConfirmAll(proposed: PlacedIntention[]) {
     for (const p of proposed) {
-      await createBlock.mutateAsync({
-        title: p.title,
-        category_id: p.category_id,
-        task_id: p.task_id,
-        start_at: p.start_at,
-        end_at: p.end_at,
-        source: "compass",
-        busy: true,
-        status: "planned",
-      });
-      const s = pendingSuggestions.find((sugg) => sugg.id === p.id);
-      if (s) await acceptSuggestion.setAccepted(s, true, { durationMin: p.durationMin });
+      await confirmPlacement(p, pendingSuggestions);
     }
   }
 

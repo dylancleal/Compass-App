@@ -18,7 +18,7 @@ import {
 } from "@/lib/queries";
 import { buildPlan } from "@/lib/planner";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
-import { useAcceptSuggestion } from "@/lib/suggestionActions";
+import { parseSuggestionText, useAcceptSuggestion } from "@/lib/suggestionActions";
 import { useGeneratePlan } from "@/lib/planGeneration";
 import { findFreeSlot } from "@/lib/timeSlot";
 import { addDays, dayIndex, todayKey } from "@/lib/date";
@@ -448,13 +448,7 @@ function SuggestionCard({
   const highlight = isNext && !accepted;
   const tiltRef = useTilt<HTMLDivElement>(highlight);
 
-  // The suggestion text packs a header (and maybe a "Task:" line) followed by
-  // "· " bullet steps. Split so the headline stays, the steps tuck away.
-  const lines = s.text.split("\n");
-  const headerLines = lines.filter((l) => !l.trimStart().startsWith("·"));
-  const steps = lines
-    .filter((l) => l.trimStart().startsWith("·"))
-    .map((l) => l.replace(/^\s*·\s*/, ""));
+  const { headerLines, steps } = parseSuggestionText(s.text);
 
   // ── Completed → a calm, compact "done" row (settles to the bottom of the plan).
   if (accepted) {
