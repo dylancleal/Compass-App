@@ -189,12 +189,21 @@ export class SupabaseDB implements CompassDB {
     items: Omit<Suggestion, "id" | "created_at">[],
   ): Promise<Suggestion[]> {
     await sb().from("suggestions").delete().eq("date", date).eq("status", "pending");
-    const { data } = await sb().from("suggestions").insert(items).select();
     const { data: kept } = await sb()
       .from("suggestions")
       .select("*")
       .eq("date", date)
       .neq("status", "pending");
+    // A category that already has an answer for today (accepted, dismissed,
+    // snoozed) never gets a second suggestion — regenerating (the "refresh"
+    // button, or the real-time re-score effect) is meant to replace the
+    // still-pending plan, not duplicate a category the day already resolved.
+    // The caller's own draft-filtering (buildDraftPreserving) is supposed to
+    // exclude these already, but that relies on component state that can be
+    // a beat stale right after an accept; this is the actual source of truth.
+    const keptCategoryIds = new Set((kept ?? []).map((s) => s.category_id).filter(Boolean));
+    const toInsert = items.filter((i) => !i.category_id || !keptCategoryIds.has(i.category_id));
+    const { data } = await sb().from("suggestions").insert(toInsert).select();
     return [...((kept ?? []) as Suggestion[]), ...((data ?? []) as Suggestion[])];
   }
   async updateSuggestion(id: string, patch: Partial<Suggestion>): Promise<Suggestion> {
