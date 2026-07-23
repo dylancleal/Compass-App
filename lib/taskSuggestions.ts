@@ -8,6 +8,8 @@
 
 import { detectDomain, type Domain } from "@/lib/categorySetup";
 import { BUILTIN_LIBRARY } from "@/lib/science/library";
+import { resolveSession } from "@/lib/science/resolve";
+import type { SessionTemplate } from "@/lib/types";
 
 const FALLBACK_SUGGESTIONS: Partial<Record<Domain, string[]>> = {
   finance: ["Review this month's spending", "Update the budget", "Check savings progress"],
@@ -71,4 +73,23 @@ export function suggestTasks(
   });
 
   return [...recurring, ...defaults];
+}
+
+// Resolves a suggestion chip into the same shape a real planner-generated
+// suggestion has — duration, structured plan, everything — by running the
+// chosen session type through the same resolver the daily check-in uses
+// (lib/science/resolve.ts). A tapped chip becomes a real pending Suggestion,
+// not a plain task: it shows up as a tickable, time-blocked item exactly
+// like a check-in suggestion does, because it IS one, just picked by hand
+// instead of by the planner's own scoring.
+export function buildSuggestedSession(
+  library: SessionTemplate[],
+  categoryName: string,
+  sessionType: string,
+): { text: string; est_minutes: number; session_type: string } {
+  const domain = detectDomain(categoryName);
+  const { sessionType: resolvedType, science } = resolveSession(library, domain, sessionType, {});
+  const planLines = science.plan.map((p) => `· ${p}`).join("\n");
+  const text = `${resolvedType} — ~${science.durationMin} min\n${planLines}`;
+  return { text, est_minutes: science.durationMin, session_type: resolvedType };
 }

@@ -70,11 +70,11 @@ export default function BlockChip({
           ? `1.5px dashed ${accent.accent}`
           : `1px solid ${accent.accent}44`,
         opacity: isExternal && !isConflict ? 0.82 : 1,
-        cursor: isGhost ? "default" : "pointer",
+        cursor: "pointer",
         zIndex: 2,
         padding: tiny ? "1px 6px" : "4px 8px",
       }}
-      onClick={!isGhost ? onClick : undefined}
+      onClick={onClick}
     >
       {tiny && isGhost ? (
         /* Short suggestion — cramped, but Add/Skip must stay reachable. */
