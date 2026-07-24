@@ -386,7 +386,7 @@ export default function SettingsPage() {
                 note={
                   settings?.stripe_current_period_end
                     ? `Renews ${new Date(settings.stripe_current_period_end).toLocaleDateString()}.`
-                    : "Full access to both areas, the calendar timeline, sync, and full history."
+                    : "Full access to both areas, calendar sync, and full history."
                 }
               />
             )}
@@ -403,7 +403,7 @@ export default function SettingsPage() {
                 label="Free"
                 status="Limited"
                 on={false}
-                note="One area, 7-day history, list view only. Upgrade for both areas, the calendar timeline, sync, and full history."
+                note="One area, 7-day history. Upgrade for both areas, calendar sync, and full history."
               />
             )}
             <div className="flex gap-2 pt-1">
