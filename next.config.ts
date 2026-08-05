@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
   // silently blocking its dev-resource requests as cross-origin. Dev-only:
   // this setting has no effect on `next build`/production.
   allowedDevOrigins: ["10.0.2.2"],
+  devIndicators: false,
 };
 
 export default nextConfig;

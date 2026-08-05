@@ -88,7 +88,7 @@ function CoachPanelInner() {
           <button
             onClick={ask}
             disabled={askCoach.isPending || !question.trim()}
-            className="shrink-0 rounded-xl px-3 py-2 text-sm font-semibold text-[#fffdf9] transition-all hover:brightness-105 disabled:opacity-40"
+            className="shrink-0 rounded-xl px-3 py-2 text-sm font-semibold text-[var(--on-primary)] transition-all hover:brightness-105 disabled:opacity-40"
             style={{ background: "var(--primary)" }}
           >
             {askCoach.isPending ? "…" : "Ask"}

@@ -67,8 +67,14 @@ function weeklyFrequency(cat: Category, hasOpenTasks: boolean): number {
 export function buildWeekPreview(
   base: Omit<PlannerInput, "date" | "checkin">,
   days = 7,
+  startDate?: string,
 ): PreviewDay[] {
-  const today = todayKey();
+  // Defaults to today (onboarding's use: "here's what your next few days
+  // look like, starting now"). Progress/This-week passes next Monday
+  // explicitly — critique found the un-offset default made "Next week
+  // preview" open on today, the same day already shown in "This week"'s
+  // stats above it.
+  const today = startDate ?? todayKey();
 
   // Build each category's scheduled weekdays from its selected goal. A per-category
   // phase offset staggers the patterns so they spread across the week instead of

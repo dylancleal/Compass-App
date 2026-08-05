@@ -15,6 +15,22 @@ import NativeAuthScreen from "@/components/NativeAuthScreen";
 const needsAuth =
   process.env.NEXT_PUBLIC_DATA_BACKEND === "supabase" && isSupabaseConfigured();
 
+// Not a secret — just identifies which account gets the fixed-code bypass
+// below. The actual gate is the code itself, checked server-side.
+const REVIEWER_EMAIL = process.env.NEXT_PUBLIC_PLAY_REVIEWER_EMAIL;
+
+// A raw Error's own enumerable properties are empty (message/stack live on
+// the prototype), so JSON.stringify(someError) — which an API route this
+// calls into may do on an unhandled exception — produces the literal string
+// "{}". That string then flows straight into setErr and renders verbatim,
+// which is the "{}" users see on a failed sign-in. This never trusts an
+// error value at face value: only a genuinely non-empty message gets shown.
+function friendlyAuthError(e: unknown): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (typeof e === "string" && e && e !== "{}" && e !== "[object Object]") return e;
+  return "Something went wrong on our end — please try again.";
+}
+
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null | "loading">(
     needsAuth ? "loading" : null,
@@ -75,7 +91,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       options: { emailRedirectTo: window.location.origin },
     });
     setSending(false);
-    if (error) setErr(error.message);
+    if (error) setErr(friendlyAuthError(error));
     else setSent(true);
   }
 
@@ -89,9 +105,35 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     if (verifying || code.length < 4) return;
     setVerifying(true);
     setErr("");
+
+    // Play Store reviewers can't receive real emails, so the account
+    // declared in Play Console's "Sign in details" uses a fixed,
+    // non-expiring code (per Google's own guidance for OTP-based apps)
+    // verified via /api/reviewer-auth instead of a real emailed OTP.
+    if (
+      REVIEWER_EMAIL &&
+      email.trim().toLowerCase() === REVIEWER_EMAIL.toLowerCase()
+    ) {
+      const res = await fetch("/api/reviewer-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      setVerifying(false);
+      if (data.error) { setErr(friendlyAuthError(data.error)); return; }
+      const { error } = await getSupabase()!.auth.verifyOtp({
+        email: data.email,
+        token: data.token,
+        type: "magiclink",
+      });
+      if (error) setErr(friendlyAuthError(error));
+      return;
+    }
+
     const { error } = await getSupabase()!.auth.verifyOtp({ email, token: code, type: "email" });
     setVerifying(false);
-    if (error) setErr(error.message);
+    if (error) setErr(friendlyAuthError(error));
   }
 
   const isDev = process.env.NODE_ENV === "development";
@@ -100,15 +142,15 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch("/api/dev-auth");
       const { token, email, error } = await res.json();
-      if (error) { setErr(error); return; }
+      if (error) { setErr(friendlyAuthError(error)); return; }
       const { error: verifyErr } = await getSupabase()!.auth.verifyOtp({
         email,
         token,
         type: "magiclink",
       });
-      if (verifyErr) setErr(verifyErr.message);
+      if (verifyErr) setErr(friendlyAuthError(verifyErr));
     } catch (e) {
-      setErr(String(e));
+      setErr(friendlyAuthError(e));
     }
   }
 
@@ -164,15 +206,15 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             </p>
           )}
           <p className="text-sm text-[var(--muted)]">
-            Sign in with a magic link — no password needed.
+            Sign in with a one-time code — no password needed.
           </p>
         </div>
 
         {isDev && (
           <button
             onClick={devLogin}
-            className="w-full rounded-xl py-2 text-xs font-semibold transition-opacity hover:opacity-80"
-            style={{ background: "var(--border)", color: "var(--muted)" }}
+            className="w-full rounded-xl px-4 py-3 text-xs font-semibold transition-opacity hover:opacity-80"
+            style={{ background: "var(--border)", color: "var(--foreground)" }}
           >
             ⚡ Dev login (preview only)
           </button>
@@ -191,6 +233,8 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             <input
               type="text"
               inputMode="numeric"
+              autoComplete="one-time-code"
+              aria-label="Verification code"
               value={code}
               // Not hardcoded to a specific digit count — Supabase's OTP
               // length is a project-level setting (this one's currently 8,
@@ -201,13 +245,13 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               onKeyDown={(e) => e.key === "Enter" && verifyCode()}
               placeholder="Enter code"
               autoFocus
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-center text-lg tracking-[0.3em] outline-none placeholder:tracking-normal focus:border-[var(--primary)]"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-3 text-center text-lg tracking-[0.3em] outline-none placeholder:tracking-normal focus:border-[var(--primary)]"
             />
             {err && <p className="text-xs text-red-500">{err}</p>}
             <button
               onClick={verifyCode}
               disabled={code.length < 4 || verifying}
-              className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+              className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-[var(--on-primary)] transition-opacity disabled:opacity-50"
               style={{ background: "var(--primary)" }}
             >
               {verifying ? "Verifying…" : "Verify code"}
@@ -224,21 +268,23 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           <div className="space-y-3">
             <input
               type="email"
+              autoComplete="email"
+              aria-label="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendLink()}
               placeholder="your@email.com"
               autoFocus
-              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-3 text-sm outline-none focus:border-[var(--primary)]"
             />
             {err && <p className="text-xs text-red-500">{err}</p>}
             <button
               onClick={sendLink}
               disabled={!email.includes("@") || sending}
-              className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+              className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-[var(--on-primary)] transition-opacity disabled:opacity-50"
               style={{ background: "var(--primary)" }}
             >
-              {sending ? "Sending…" : "Send magic link"}
+              {sending ? "Sending…" : "Continue"}
             </button>
           </div>
         )}

@@ -152,7 +152,7 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
           className="shrink-0 cursor-pointer rounded-full px-2.5 py-0.5 text-xs font-semibold transition-all duration-150 hover:scale-105 active:scale-95"
           style={{
             background: conn.enabled ? "var(--primary)" : "var(--border)",
-            color: conn.enabled ? "#fffdf9" : "var(--muted)",
+            color: conn.enabled ? "var(--on-primary)" : "var(--muted)",
           }}
           onClick={() => update.mutate({ id: conn.id, patch: { enabled: !conn.enabled } })}
         >
@@ -280,7 +280,7 @@ function GoogleConnectForm({
       {!cloudRequired && userId && (
         <a
           href={oauthStartUrl(userId)}
-          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-[#fffdf9] transition-all duration-150 hover:scale-[1.02] hover:brightness-110 active:scale-[0.98]"
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-[var(--on-primary)] transition-all duration-150 hover:scale-[1.02] hover:brightness-110 active:scale-[0.98]"
           style={{ background: "var(--primary)" }}
         >
           🗓️ Sign in with Google
@@ -442,7 +442,7 @@ export default function ConnectionsPanel() {
         <p className="text-sm font-semibold">Connected calendars</p>
         <button
           onClick={() => setAddOpen(true)}
-          className="flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-[#fffdf9] transition-all duration-150 hover:scale-[1.03] hover:brightness-110 active:scale-[0.97]"
+          className="flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-[var(--on-primary)] transition-all duration-150 hover:scale-[1.03] hover:brightness-110 active:scale-[0.97]"
           style={{ background: "var(--primary)" }}
         >
           <span className="text-base leading-none">+</span> Add calendar

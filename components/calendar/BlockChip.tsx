@@ -46,6 +46,7 @@ export default function BlockChip({
 }: Props) {
   const accent = accentOf(categoryColor ?? "slate");
   const isExternal = block.source !== "manual" && block.source !== "compass";
+  const label = `${block.title}, ${fmtRange(block.start_at, block.end_at)}${isConflict ? ", scheduling conflict" : ""}`;
 
   // How many px does this block occupy (approximate, based on typical 64px/hr grid)?
   // We use heightPct of total 14-hr window to estimate rendered px.
@@ -55,17 +56,20 @@ export default function BlockChip({
 
   return (
     <div
-      className="absolute left-0.5 right-0.5 overflow-hidden rounded-lg select-none"
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      className="absolute left-0.5 right-0.5 overflow-hidden rounded-lg select-none focus:outline-none focus:ring-2 focus:ring-offset-1"
       style={{
         top: `${topPct}%`,
         height: `${Math.max(heightPct, 1.2)}%`,
         // Ghosts need Add/Skip to stay tappable even at a short duration —
         // real blocks (no buttons to fit) can shrink all the way down.
         minHeight: isGhost ? 34 : undefined,
-        background: isConflict ? "#fef9ec" : isGhost ? "transparent" : accent.soft,
-        color: isConflict ? "#8a6800" : accent.text,
+        background: isConflict ? "var(--warn-soft)" : isGhost ? "transparent" : accent.soft,
+        color: isConflict ? "var(--warn-text)" : accent.text,
         border: isConflict
-          ? "1.5px solid #e8c84088"
+          ? "1.5px solid color-mix(in srgb, var(--warn-text) 45%, transparent)"
           : isGhost
           ? `1.5px dashed ${accent.accent}`
           : `1px solid ${accent.accent}44`,
@@ -73,8 +77,15 @@ export default function BlockChip({
         cursor: "pointer",
         zIndex: 2,
         padding: tiny ? "1px 6px" : "4px 8px",
+        ["--tw-ring-color" as string]: "var(--primary)",
       }}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
     >
       {tiny && isGhost ? (
         /* Short suggestion — cramped, but Add/Skip must stay reachable. */
@@ -97,14 +108,14 @@ export default function BlockChip({
         </div>
       ) : tiny ? (
         /* Very short block — single cramped line */
-        <p className="truncate text-[11px] font-semibold leading-tight" style={{ color: isConflict ? "#8a6800" : accent.text }}>
+        <p className="truncate text-[11px] font-semibold leading-tight" style={{ color: isConflict ? "var(--warn-text)" : accent.text }}>
           {isConflict && <span className="mr-0.5">⚠</span>}
           {block.title}
         </p>
       ) : compact ? (
         /* Compact — title + time side by side (+ Add/Skip inline for ghosts) */
         <div className="flex items-center gap-1.5 overflow-hidden">
-          <p className="min-w-0 flex-1 truncate text-xs font-semibold leading-tight" style={{ color: isConflict ? "#8a6800" : accent.text }}>
+          <p className="min-w-0 flex-1 truncate text-xs font-semibold leading-tight" style={{ color: isConflict ? "var(--warn-text)" : accent.text }}>
             {isConflict && <span className="mr-0.5">⚠</span>}
             {block.title}
           </p>
@@ -131,7 +142,7 @@ export default function BlockChip({
       ) : (
         /* Full — title on its own line, then time + badge row */
         <>
-          <p className="truncate text-sm font-semibold leading-snug" style={{ color: isConflict ? "#8a6800" : accent.text }}>
+          <p className="truncate text-sm font-semibold leading-snug" style={{ color: isConflict ? "var(--warn-text)" : accent.text }}>
             {isConflict && <span className="mr-1">⚠</span>}
             {block.title}
           </p>

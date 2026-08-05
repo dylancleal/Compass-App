@@ -88,7 +88,7 @@ export default function CategorySetupSheet({
                     className="rounded-full px-3 py-1.5 text-sm font-medium transition-all hover:scale-[1.03]"
                     style={{
                       background: active ? "var(--primary)" : "var(--surface)",
-                      color: active ? "#fffdf9" : "var(--foreground)",
+                      color: active ? "var(--on-primary)" : "var(--foreground)",
                       border: active ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
                     }}
                   >
@@ -195,7 +195,7 @@ export default function CategorySetupSheet({
           onClick={handleSave}
           disabled={update.isPending}
           className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all hover:brightness-105"
-          style={{ background: "var(--primary)", color: "#fffdf9", opacity: update.isPending ? 0.7 : 1 }}
+          style={{ background: "var(--primary)", color: "var(--on-primary)", opacity: update.isPending ? 0.7 : 1 }}
         >
           {update.isPending ? "Saving…" : "Save"}
         </button>

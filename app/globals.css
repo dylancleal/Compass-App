@@ -24,6 +24,17 @@
   --accent: #d98e63; /* warm apricot / clay */
   --accent-soft: #f7ece2;
 
+  /* Text color for solid var(--primary) buttons/pills. White fails contrast
+     (~3:1, needs 4.5:1) against every dark-mode --primary value, including
+     Instrument Readout's cobalt — confirmed live via computed styles.
+     Deliberately aliased to --background, not a literal hex: --primary is
+     dark in light mode and bright in every dark mode, so the page's own
+     background color already sits on the correct side of that contrast in
+     both cases and stays correct automatically if either value changes.
+     Custom properties resolve via cascade at point of use, not at
+     declaration, so this needs no per-theme override below. */
+  --on-primary: var(--background);
+
   /* semantic status tints — kept in vars so they adapt to dark mode */
   --success-soft: #e1f5ee;
   --success-text: #0f6e56;
@@ -116,6 +127,65 @@
 
   --blob-a: rgba(111, 165, 136, 0.4);
   --blob-b: rgba(224, 160, 121, 0.26);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Instrument Readout — Lodestone only (data-variant="study", stamped on
+   <html> in app/layout.tsx). Compass keeps the Eucalyptus tokens above
+   untouched; nothing here is reachable without that attribute.
+
+   A live instrument reading your actual state back to you, not a soft card
+   apologizing for asking you to do something. Matte-black ground, hairline
+   bezel panels (no elevation/shadow), tabular-numeral readouts, committed
+   saturated channel colors. Direction contract: app/layout.tsx.
+   ───────────────────────────────────────────────────────────────────────── */
+:root[data-variant="study"] {
+  --background: #0a0a0a;
+  --surface: #111111;
+  --foreground: #f5f6f4;
+  --muted: #8a8a8a;
+  --border: #242424; /* the "bezel" */
+  --ring: rgba(79, 143, 240, 0.35);
+
+  --primary: #4f8ff0; /* committed cobalt channel */
+  --primary-mid: #6fa2f2;
+  --primary-soft: #14202e;
+  --mist: #2a3a4d;
+  --accent: #f2954a; /* committed amber channel */
+  --accent-soft: #2e2013;
+
+  --success-soft: #132a20;
+  --success-text: #4fd8a0;
+  --info-soft: #14202e;
+  --info-text: #7fb3f5;
+  --warn-soft: #2e2410;
+  --warn-text: #e8b23d;
+
+  /* Restored per feedback: the fully flat "no elevation, no atmosphere"
+     instrument-panel treatment read as cold and off-brand for a wellness
+     app — the biophilic glow blobs, ambient fireflies, and card lift are
+     kept from the Eucalyptus dark values (same green/apricot, proven
+     against a near-black canvas) so the bezel-panel/LED-dot/tabular-numeral
+     structure keeps its instrument identity without losing the warmth. */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.28), 0 6px 16px rgba(0, 0, 0, 0.34);
+  --shadow-3: 0 6px 14px rgba(0, 0, 0, 0.34), 0 18px 40px rgba(0, 0, 0, 0.46);
+  --card-highlight: rgba(255, 255, 255, 0.045);
+
+  --blob-a: rgba(111, 165, 136, 0.4); /* mist green */
+  --blob-b: rgba(224, 160, 121, 0.26); /* apricot */
+
+  /* instrument-only primitives, no Eucalyptus equivalent */
+  --led-glow: 0 0 6px currentColor;
+  --font-mono-instrument: ui-monospace, "SF Mono", "Cascadia Code", monospace;
+}
+
+/* Panels keep the bezel-outlined instrument radius, but no longer strip the
+   shadow/lift — that's the flat-austerity part of the treatment being
+   walked back, everything else (border, LED-dot chips, tabular numerals)
+   stays. */
+:root[data-variant="study"] .card {
+  border-radius: 0.75rem;
 }
 
 @theme inline {

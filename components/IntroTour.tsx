@@ -184,7 +184,12 @@ export default function IntroTour({ forceOpen, onClose }: IntroTourProps) {
     !!settings?.onboarding_completed_at &&
     !settings?.tour_completed_at;
 
-  const isHiddenRoute = pathname?.startsWith("/onboarding");
+  // /checkin is exactly where onboarding hands off to right after finishing —
+  // auto-showing the tour there used to immediately redirect the user away
+  // from the check-in they were just sent to (tour step 0 is "/"), hijacking
+  // their first post-onboarding action. Suppressing it here just means the
+  // tour waits for the next natural visit to "/" instead; it isn't skipped.
+  const isHiddenRoute = pathname?.startsWith("/onboarding") || pathname === "/checkin";
 
   useEffect(() => {
     if (forceOpen) { setStepIndex(0); setVisible(true); }
@@ -333,7 +338,7 @@ export default function IntroTour({ forceOpen, onClose }: IntroTourProps) {
             <button
               onClick={advance}
               className="rounded-xl px-4 py-2 text-sm font-semibold transition-all hover:brightness-105"
-              style={{ background: "var(--primary)", color: "#fffdf9" }}
+              style={{ background: "var(--primary)", color: "var(--on-primary)" }}
             >
               {isLast ? "Done →" : isOnCorrectPage ? "Next →" : "Go there →"}
             </button>

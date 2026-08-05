@@ -37,10 +37,10 @@ export function LineTrend({
     return <Empty text="Log a few entries and your trend will appear here." />;
   return (
     <ResponsiveContainer width="100%" height={180}>
-      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="date" tick={axis} tickLine={false} axisLine={false} />
-        <YAxis tick={axis} tickLine={false} axisLine={false} width={40} />
+        <YAxis tick={axis} tickLine={false} axisLine={false} width={44} />
         <Tooltip
           contentStyle={tooltipStyle}
           formatter={(v) => [`${v}${unit}`, ""] as [string, string]}
@@ -61,7 +61,7 @@ export function AreaTrend({
   if (data.length === 0) return <Empty text="No data yet." />;
   return (
     <ResponsiveContainer width="100%" height={160}>
-      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <defs>
           <linearGradient id={`grad-${color}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.35} />
@@ -70,7 +70,7 @@ export function AreaTrend({
         </defs>
         <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="date" tick={axis} tickLine={false} axisLine={false} />
-        <YAxis tick={axis} tickLine={false} axisLine={false} width={40} />
+        <YAxis tick={axis} tickLine={false} axisLine={false} width={44} />
         <Tooltip contentStyle={tooltipStyle} />
         <Area type="monotone" dataKey="value" stroke={color} strokeWidth={2.5} fill={`url(#grad-${color})`} />
       </AreaChart>
@@ -85,12 +85,14 @@ export function BarTrend({
   data: { week: string; count: number }[];
   color: string;
 }) {
+  if (data.length === 0 || data.every((d) => d.count === 0))
+    return <Empty text="Log a few sessions and your weekly pattern will appear here." />;
   return (
     <ResponsiveContainer width="100%" height={160}>
-      <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -24 }}>
+      <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="week" tick={axis} tickLine={false} axisLine={false} />
-        <YAxis tick={axis} tickLine={false} axisLine={false} width={32} allowDecimals={false} />
+        <YAxis tick={axis} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
         <Tooltip contentStyle={tooltipStyle} />
         <Bar dataKey="count" fill={color} radius={[6, 6, 0, 0]} />
       </BarChart>

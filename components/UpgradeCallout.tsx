@@ -19,7 +19,7 @@ export default function UpgradeCallout({ feature }: { feature: string }) {
       <button
         onClick={() => startCheckout.mutate()}
         disabled={startCheckout.isPending}
-        className="shrink-0 rounded-xl px-3 py-2 text-xs font-semibold text-[#fffdf9] transition-all hover:brightness-105 disabled:opacity-60"
+        className="shrink-0 rounded-xl px-3 py-2 text-xs font-semibold text-[var(--on-primary)] transition-all hover:brightness-105 disabled:opacity-60"
         style={{ background: "var(--primary)" }}
       >
         {startCheckout.isPending ? "…" : "Upgrade"}

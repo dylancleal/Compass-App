@@ -127,7 +127,7 @@ function CalendarInner() {
                 className="cursor-pointer px-3 py-1.5 text-xs font-medium capitalize transition-all duration-150 hover:brightness-95 active:scale-95"
                 style={{
                   background: view === v ? "var(--primary)" : "var(--surface)",
-                  color: view === v ? "#fffdf9" : "var(--muted)",
+                  color: view === v ? "var(--on-primary)" : "var(--muted)",
                 }}
               >
                 {v}

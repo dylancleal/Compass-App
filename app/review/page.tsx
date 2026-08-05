@@ -106,13 +106,17 @@ export default function ReviewPage() {
     calendarBlocks: [],
     library,
   };
+  // Next Monday, not today — buildWeekPreview defaults to "starting now,"
+  // which put today's date under both "This week" and "Next week preview"
+  // at once.
+  const nextMonday = addDays(startOfWeek(today), 7);
   const nextPreview = useMemo(
     () =>
       settings
-        ? buildWeekPreview({ ...nextWeekBase, settings }, 7)
+        ? buildWeekPreview({ ...nextWeekBase, settings }, 7, nextMonday)
         : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [!!settings, library.length, categories.length],
+    [!!settings, library.length, categories.length, nextMonday],
   );
 
   return (
@@ -191,7 +195,7 @@ export default function ReviewPage() {
                 <div
                   key={cat.id}
                   className="card animate-fade-slide flex items-center gap-3 px-4 py-3"
-                  style={{ borderLeft: `3px solid ${accent}`, animationDelay: `${i * 60}ms` }}
+                  style={{ animationDelay: `${i * 60}ms` }}
                 >
                   <IconChip emoji={cat.icon} color={accent} size={40} />
                   <div className="flex-1 min-w-0">
@@ -228,8 +232,11 @@ export default function ReviewPage() {
         </section>
       )}
 
-      {/* No sessions at all */}
-      {thisWeek.length === 0 && (
+      {/* Empty state — only when there's no "By area" section above to carry
+          the message itself (each zeroed area card already says "0
+          sessions"; critique found both rendering at once said the same
+          thing twice). */}
+      {thisWeek.length === 0 && activeCats.length === 0 && (
         <p className="card p-4 text-sm text-[var(--muted)]">
           No sessions logged this week yet — this updates as you tick off your plan.
         </p>

@@ -233,18 +233,26 @@ export default function TodayPage() {
           <p className="text-sm text-[var(--muted)]">{prettyDate(today)}</p>
           <h1 className="text-2xl font-bold">{greeting(settings?.greetingName ?? "")}</h1>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
+        <div className="flex shrink-0 flex-col items-end gap-10">
           {conflictGroups.length > 0 && (
+            // Bounded signal, not a floating alarm: a small LED dot + label,
+            // same visual weight as any other status readout — present, not
+            // shouting. (Was a warn-orange pill rendered before the greeting
+            // even resolves; critique flagged this as the page opening on an
+            // alarm instead of a greeting.)
             <Link
               href="/calendar"
-              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all duration-150 hover:scale-105 hover:brightness-95 active:scale-95"
-              style={{
-                background: "var(--warn-soft)",
-                color: "var(--warn-text)",
-                border: "1px solid color-mix(in srgb, var(--warn-text) 45%, transparent)",
-              }}
+              className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs transition-all duration-150 hover:opacity-80 active:scale-95"
+              style={{ color: "var(--warn-text)" }}
             >
-              ⚠ {conflictGroups.length} conflict{conflictGroups.length !== 1 ? "s" : ""}
+              <span
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ background: "var(--warn-text)", boxShadow: "var(--led-glow, none)" }}
+                aria-hidden
+              />
+              <span className="font-mono tabular-nums">
+                {conflictGroups.length} conflict{conflictGroups.length !== 1 ? "s" : ""}
+              </span>
             </Link>
           )}
           <DayArc />
@@ -332,18 +340,19 @@ export default function TodayPage() {
       )}
 
       {/* Coach entry point — always visible (not conditional like the nudges
-          below), so it reads as a standing feature rather than an alert */}
+          below), so it reads as a standing feature rather than an alert.
+          Deliberately quieter than the hero above it (plain surface, no
+          primary-soft fill) — the morphing hero above is the one thing with
+          "start here" weight; critique flagged the two competing at equal
+          visual register before this. */}
       {APP_VARIANT.id === "study" && accessLevel !== "free" && (
         <Link
           href="/trends"
-          className="card card-interactive flex items-center gap-3 p-4 hover:brightness-[1.03]"
-          style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
+          className="card card-interactive flex items-center gap-3 p-3.5 hover:brightness-110"
         >
-          <span className="text-2xl">✨</span>
+          <span className="text-lg opacity-80">✨</span>
           <div className="flex-1">
-            <p className="text-sm font-semibold" style={{ color: "var(--primary)" }}>
-              Your coach is ready
-            </p>
+            <p className="text-sm font-medium">Your coach is ready</p>
             <p className="text-xs text-[var(--muted)]">
               Ask what to focus on today, or how your streaks are looking.
             </p>
@@ -455,33 +464,41 @@ export default function TodayPage() {
             <h2 className="text-sm font-semibold text-[var(--muted)]">Today&apos;s schedule</h2>
             <QuietLink href="/calendar">calendar →</QuietLink>
           </div>
+          {/* Split-strip: bezel-outlined instrument rows, a channel-color LED
+              dot instead of a colored border bar (the "side-tab" pattern the
+              redesign retires — it showed up on 4 of 6 surfaces critiqued).
+              Conflicts get the same amber signal language as the header
+              badge, not a separate louder red treatment. */}
           <div className="space-y-1.5">
             {todayBlocks.map((block) => {
               const isConflict = conflictIds.has(block.id);
               const alreadyTasked = tasks.some(
                 (t) => t.source === "calendar" && t.title === block.title,
               );
+              const cat = categories.find((c) => c.id === block.category_id);
+              const dotColor = isConflict ? "var(--warn-text)" : cat ? accentOf(cat.color).accent : "var(--muted)";
               return (
                 <div
                   key={block.id}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm"
+                  className="flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm"
                   style={{
-                    background: isConflict ? "var(--warn-soft)" : "var(--surface)",
-                    border: isConflict
-                      ? "1px solid color-mix(in srgb, var(--warn-text) 40%, transparent)"
-                      : "1px solid var(--border)",
-                    borderLeft: isConflict ? "3px solid var(--warn-text)" : "3px solid #7a9bb5",
+                    background: "var(--surface)",
+                    borderColor: isConflict ? "color-mix(in srgb, var(--warn-text) 45%, var(--border))" : "var(--border)",
                   }}
                 >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: dotColor, boxShadow: `var(--led-glow, none)`, color: dotColor }}
+                    aria-hidden
+                  />
                   <div className="min-w-0 flex-1">
                     <p
                       className="truncate text-sm font-medium"
                       style={{ color: isConflict ? "var(--warn-text)" : "var(--foreground)" }}
                     >
-                      {isConflict && <span className="mr-1">⚠</span>}
                       {block.title}
                     </p>
-                    <p className="text-xs" style={{ color: "var(--muted)" }}>
+                    <p className="font-mono text-xs tabular-nums" style={{ color: "var(--muted)" }}>
                       {fmtTime(block.start_at)}–{fmtTime(block.end_at)}
                       {block.source !== "manual" && (
                         <span className="ml-1 opacity-60">· {block.source}</span>
@@ -497,11 +514,11 @@ export default function TodayPage() {
                         toggleBlockDone(block.id, block.category_id!, block.start_at, block.end_at)
                       }
                       title={blockDoneSession(block.id) ? "Mark undone" : "Mark done"}
-                      className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold transition-all hover:scale-105 hover:opacity-100"
+                      className="shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all hover:scale-105 hover:opacity-100"
                       style={
                         blockDoneSession(block.id)
-                          ? { background: "#5b8a7222", color: "#3e6b54" }
-                          : { background: "var(--border)", color: "var(--muted)" }
+                          ? { background: "var(--success-soft)", color: "var(--success-text)", borderColor: "transparent" }
+                          : { background: "transparent", color: "var(--foreground)", borderColor: "var(--border)" }
                       }
                     >
                       {blockDoneSession(block.id) ? "✓ done" : "done?"}

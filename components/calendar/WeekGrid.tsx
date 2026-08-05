@@ -68,7 +68,7 @@ export default function WeekGrid({
                   className="mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-sm font-semibold"
                   style={
                     isToday
-                      ? { background: "var(--primary)", color: "#fffdf9" }
+                      ? { background: "var(--primary)", color: "var(--on-primary)" }
                       : {}
                   }
                 >
@@ -92,7 +92,7 @@ export default function WeekGrid({
             {HOURS.map((hour) => (
               <div
                 key={hour}
-                className="absolute right-2 text-[10px] leading-none"
+                className="absolute right-2 text-[11px] leading-none"
                 style={{
                   top: (hour - 7) * HOUR_H - 5,
                   color: "var(--muted)",

@@ -62,12 +62,14 @@ export default function AgendaView({ blocks, tasks, categories, rangeStart, conf
                 return (
                   <div
                     key={task.id}
-                    className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm"
-                    style={{
-                      background: "var(--accent-soft)",
-                      borderLeft: `3px solid var(--accent)`,
-                    }}
+                    className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm"
+                    style={{ background: "var(--accent-soft)", borderColor: "var(--border)" }}
                   >
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: "var(--accent)", boxShadow: "var(--led-glow, none)" }}
+                      aria-hidden
+                    />
                     <span>{cat?.icon ?? "📌"}</span>
                     <span className="flex-1 font-medium truncate">{task.title}</span>
                     <span className="text-xs" style={{ color: "var(--accent)" }}>due</span>
@@ -88,9 +90,9 @@ export default function AgendaView({ blocks, tasks, categories, rangeStart, conf
                     key={block.id}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm"
                     style={{
-                      background: isConflict ? "#fef9ec" : isGhost ? "transparent" : accent.soft,
+                      background: isConflict ? "var(--warn-soft)" : isGhost ? "transparent" : accent.soft,
                       border: isConflict
-                        ? "1.5px solid #e8c84088"
+                        ? "1.5px solid color-mix(in srgb, var(--warn-text) 45%, transparent)"
                         : isGhost
                         ? `1.5px dashed ${accent.accent}`
                         : `1px solid ${accent.accent}22`,
@@ -101,13 +103,18 @@ export default function AgendaView({ blocks, tasks, categories, rangeStart, conf
                       className="flex flex-1 items-center gap-3 text-left transition-all hover:scale-[1.01]"
                     >
                       {isConflict && (
-                        <span className="shrink-0 text-sm" title="Scheduling conflict">⚠</span>
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ background: "var(--warn-text)", boxShadow: "var(--led-glow, none)" }}
+                          title="Scheduling conflict"
+                          aria-hidden
+                        />
                       )}
                       {!isConflict && (
                         <span className="shrink-0 text-base">{cat?.icon ?? "📅"}</span>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium" style={{ color: isConflict ? "#8a6800" : accent.text }}>
+                        <p className="truncate font-medium" style={{ color: isConflict ? "var(--warn-text)" : accent.text }}>
                           {block.title}
                         </p>
                         <p className="text-xs" style={{ color: "var(--muted)" }}>

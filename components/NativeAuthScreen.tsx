@@ -91,12 +91,14 @@ export default function NativeAuthScreen({
             <input
               type="text"
               inputMode="numeric"
+              autoComplete="one-time-code"
+              aria-label="Verification code"
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
               onKeyDown={(e) => e.key === "Enter" && verifyCode()}
               placeholder="Enter code"
               autoFocus
-              className="w-full rounded-2xl px-4 py-4 text-center text-xl tracking-[0.3em] outline-none placeholder:tracking-normal"
+              className="w-full rounded-2xl px-4 py-4 text-center text-xl tracking-[0.3em] outline-none placeholder:tracking-normal focus:ring-2 focus:ring-white/50"
               style={{
                 background: "rgba(255,255,255,0.08)",
                 border: "1px solid rgba(255,255,255,0.2)",
@@ -111,7 +113,7 @@ export default function NativeAuthScreen({
             <button
               onClick={verifyCode}
               disabled={code.length < 4 || verifying}
-              className="w-full rounded-2xl py-4 text-base font-semibold text-white transition-opacity disabled:opacity-50"
+              className="w-full rounded-2xl py-4 text-base font-semibold text-[var(--on-primary)] transition-opacity disabled:opacity-50"
               style={{ background: "var(--primary)" }}
             >
               {verifying ? "Verifying…" : "Verify code"}
@@ -128,12 +130,14 @@ export default function NativeAuthScreen({
           <div className="mt-8 space-y-4">
             <input
               type="email"
+              autoComplete="email"
+              aria-label="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendLink()}
               placeholder="your@email.com"
               autoFocus
-              className="w-full rounded-2xl px-4 py-4 text-base outline-none"
+              className="w-full rounded-2xl px-4 py-4 text-base outline-none focus:ring-2 focus:ring-white/50"
               style={{
                 background: "rgba(255,255,255,0.08)",
                 border: "1px solid rgba(255,255,255,0.2)",
@@ -148,7 +152,7 @@ export default function NativeAuthScreen({
             <button
               onClick={sendLink}
               disabled={!email.includes("@") || sending}
-              className="w-full rounded-2xl py-4 text-base font-semibold text-white transition-opacity disabled:opacity-50"
+              className="w-full rounded-2xl py-4 text-base font-semibold text-[var(--on-primary)] transition-opacity disabled:opacity-50"
               style={{ background: "var(--primary)" }}
             >
               {sending ? "Sending…" : "Continue"}
