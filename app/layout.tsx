@@ -3,10 +3,6 @@ import { Geist } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import Providers from "./providers";
-import Nav from "@/components/Nav";
-import IntroTour from "@/components/IntroTour";
-import Fireflies from "@/components/Fireflies";
-import AndroidBackButton from "@/components/AndroidBackButton";
 import { APP_VARIANT } from "@/lib/appVariant";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -101,22 +97,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script id="theme-init" strategy="beforeInteractive">
           {THEME_INIT_SCRIPT}
         </Script>
-        <Providers>
-          <AndroidBackButton />
-          {/* Restored per feedback — the fully "crisp, not atmospheric"
-              instrument treatment read as too cold for a wellness app.
-              Fireflies now runs for both variants; only hidden in light
-              mode / reduced-motion (see .fireflies rules in globals.css). */}
-          <Fireflies />
-          <Nav />
-          <main
-            className="mx-auto w-full max-w-2xl px-4 pb-10"
-            style={{ paddingTop: "calc(5rem + env(safe-area-inset-top))" }}
-          >
-            {children}
-          </main>
-          <IntroTour />
-        </Providers>
+        {/* The authenticated app shell (Nav, Fireflies, IntroTour, the
+            padded <main>) now lives inside AuthGate itself — it only renders
+            once a session exists. /privacy and /terms bypass AuthGate
+            entirely and render bare, since Google's OAuth verification (and
+            basic decency) requires those to be readable without signing in. */}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

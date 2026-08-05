@@ -1,15 +1,16 @@
 import { APP_VARIANT } from "@/lib/appVariant";
+import PublicPageShell from "@/components/PublicPageShell";
 
-// Mechanical name-substitution only. Before this variant goes live for paying
-// customers, the full content needs real legal review — not just a rebrand.
 export default function PrivacyPage() {
   const name = APP_VARIANT.name;
+  const isStudy = APP_VARIANT.id === "study";
   return (
+    <PublicPageShell>
     <div className="space-y-8 pb-16">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">Privacy Policy</h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Last updated: June 2026
+          Last updated: August 2026
         </p>
       </header>
 
@@ -29,6 +30,7 @@ export default function PrivacyPage() {
             "Tasks, sessions, check-ins, and goals you create inside the app",
             "Calendar events from calendars you choose to connect (read-only)",
             "App settings and preferences you configure",
+            "If you turn on notifications, a device/browser push token and your timezone — used only to time reminders",
           ].map((item) => (
             <li key={item} className="flex gap-2">
               <span style={{ color: "var(--primary)" }}>·</span>
@@ -78,6 +80,28 @@ export default function PrivacyPage() {
         </P>
       </Section>
 
+      {isStudy && (
+        <Section title="AI Coach">
+          <P>
+            {name} includes an AI coach feature that answers questions about your progress. When you use it, we send your <strong>aggregated activity stats</strong> — streaks, session counts, best weeks/months by area — and, if you ask a question, the text of that question, to Anthropic&apos;s Claude API to generate a response. We do not send your name, email, or raw calendar data to Anthropic. Anthropic processes this data to generate the response and does not use it to train their models. This feature is entirely optional — {name} works fully without ever using it.
+          </P>
+        </Section>
+      )}
+
+      {isStudy && (
+        <Section title="Subscription and billing">
+          <P>
+            {name} offers a paid subscription. Payment is processed by{" "}
+            <strong>Stripe</strong> (web) or through <strong>Google Play Billing</strong> via{" "}
+            <strong>RevenueCat</strong> (Android app) — we never see or store your full card
+            details ourselves. These processors receive the billing information necessary to
+            charge you (such as your email and payment method) under their own privacy policies.
+            We store only your subscription status and renewal date to determine your access
+            level within {name}.
+          </P>
+        </Section>
+      )}
+
       <Section title="How we use your data">
         <P>Your data is used exclusively to make {name} work for you:</P>
         <ul className="mt-2 space-y-1.5 text-sm" style={{ color: "var(--muted)" }}>
@@ -94,10 +118,11 @@ export default function PrivacyPage() {
           ))}
         </ul>
         <P>
-          We do not use your data for advertising. We do not sell your data. We do not share
-          your data with third parties except as technically necessary to operate the service
-          (Supabase for database hosting, Vercel for app hosting — both under their respective
-          privacy policies).
+          We do not use your data for advertising. We do not sell your data. We do not share your
+          data with third parties except as technically necessary to operate the service —
+          Supabase for database hosting, Vercel for app hosting
+          {isStudy && ", and (only if you use those specific features) Anthropic for the AI coach and Stripe/RevenueCat for billing"}
+          , each under their own privacy policies.
         </P>
       </Section>
 
@@ -134,15 +159,21 @@ export default function PrivacyPage() {
         <P>
           Questions about this policy or requests to delete your data:{" "}
           <a
-            href="mailto:dylancleal@gmail.com"
+            href={`mailto:${APP_VARIANT.supportEmail}`}
             className="underline"
             style={{ color: "var(--primary)" }}
           >
-            dylancleal@gmail.com
+            {APP_VARIANT.supportEmail}
           </a>
+          . See also our{" "}
+          <a href="/terms" className="underline" style={{ color: "var(--primary)" }}>
+            Terms of Service
+          </a>
+          .
         </P>
       </Section>
     </div>
+    </PublicPageShell>
   );
 }
 
