@@ -57,7 +57,7 @@ const STEPS: TourStep[] = [
           path: "/settings",
           selector: "[data-tour='subscription-section']",
           title: "Free vs. Plus",
-          body: "Free gets you one area and a 7-day view. Lodestone Plus ($4.99/mo) unlocks both areas, the calendar timeline, sync, notifications, and your AI coach — with a 7-day free trial to try it all first.",
+          body: "Free gets you one area and a 7-day view. Lodestone Plus ($4.99/mo) unlocks both areas, calendar sync, notifications, and your AI coach — with a 7-day free trial to try it all first.",
         },
         {
           path: "/settings",
