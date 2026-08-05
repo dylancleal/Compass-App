@@ -35,9 +35,34 @@ const THEME_INIT_SCRIPT = `
 })();
 `;
 
+// Used for og:url / metadataBase — same env var ConnectionsPanel.tsx already
+// relies on for the canonical OAuth origin, so no new config to set per
+// deployment. Left unset entirely when the env var is empty rather than
+// defaulting to a relative/placeholder value that could mismatch the real
+// domain.
+const CANONICAL_ORIGIN = process.env.NEXT_PUBLIC_OAUTH_REDIRECT_BASE_URL || undefined;
+
 export const metadata: Metadata = {
+  applicationName: APP_VARIANT.name,
   title: `${APP_VARIANT.name} — your calm life dashboard`,
   description: APP_VARIANT.tagline,
+  ...(CANONICAL_ORIGIN && { metadataBase: new URL(CANONICAL_ORIGIN) }),
+  // og:site_name / og:title give crawlers (including Google's OAuth branding
+  // verifier) an explicit, machine-readable app name to match against the
+  // OAuth consent screen's "App name" field — the visible page text alone
+  // apparently wasn't being read as that signal.
+  openGraph: {
+    type: "website",
+    title: APP_VARIANT.name,
+    siteName: APP_VARIANT.name,
+    description: APP_VARIANT.tagline,
+    ...(CANONICAL_ORIGIN && { url: CANONICAL_ORIGIN }),
+  },
+  twitter: {
+    card: "summary",
+    title: APP_VARIANT.name,
+    description: APP_VARIANT.tagline,
+  },
   // manifest link is auto-injected by the app/manifest.ts route convention
   appleWebApp: { capable: true, statusBarStyle: "default", title: APP_VARIANT.name },
   // Overrides the shared app/favicon.ico (Compass's icon) for Lodestone only —
