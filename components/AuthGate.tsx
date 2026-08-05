@@ -95,23 +95,14 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   // Supabase to resolve a session first.
   if (PUBLIC_PATHS.has(pathname ?? "")) return <>{children}</>;
 
-  // Loading state while we check for an existing session (and, since it
-  // resolves in an effect to avoid a hydration mismatch, which sign-in
-  // screen to show).
-  if (session === "loading" || isNative === null) {
-    return (
-      <div className="grid min-h-dvh place-items-center text-sm text-[var(--muted)]">
-        Loading…
-      </div>
-    );
-  }
-
-  // Authenticated (or local mode) — show the app, wrapped in its shell.
+  // Authenticated (or local mode) — show the app, wrapped in its shell. Only
+  // renders once the session check has actually resolved to a real session.
   // This used to live in app/layout.tsx wrapping AuthGate from the outside;
   // it moved in here so the shell (and SeedOnMount) only ever mounts once a
   // session actually exists, leaving room for the public/unauthenticated
   // branches below to render without it.
-  if (!needsAuth || session) {
+  const isAuthenticated = session !== "loading" && session !== null;
+  if (!needsAuth || isAuthenticated) {
     return (
       <>
         <AndroidBackButton />
@@ -129,7 +120,15 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Not authenticated in Supabase mode — show magic-link login.
+  // Not authenticated in Supabase mode (or the session/platform checks are
+  // still resolving) — show magic-link login. Deliberately doesn't gate this
+  // behind a blocking "Loading…" spinner while session/isNative resolve: the
+  // raw server-rendered HTML needs real, crawlable content immediately for
+  // search engines and for Google's OAuth verification, which reads the page
+  // before any client JS runs — a bare loading screen here is exactly what
+  // got this flagged as "does not explain the purpose of your app". A
+  // returning signed-in user may see a brief flash of this screen before it
+  // swaps to the authenticated shell once the session check resolves.
   async function sendLink() {
     if (sending) return;
     setSending(true);
