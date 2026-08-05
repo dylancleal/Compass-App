@@ -44,7 +44,13 @@ const CANONICAL_ORIGIN = process.env.NEXT_PUBLIC_OAUTH_REDIRECT_BASE_URL || unde
 
 export const metadata: Metadata = {
   applicationName: APP_VARIANT.name,
-  title: `${APP_VARIANT.name} — your calm life dashboard`,
+  // Bare app name, not "Lodestone — your calm life dashboard" — every other
+  // app-name signal on the page (og:site_name, og:title, application-name,
+  // apple-mobile-web-app-title) is already the literal string APP_VARIANT.name;
+  // this was the one place still carrying a suffix, in case Google's OAuth
+  // branding checker does a strict/literal match rather than a "contains"
+  // check against the consent screen's App name field.
+  title: APP_VARIANT.name,
   description: APP_VARIANT.tagline,
   ...(CANONICAL_ORIGIN && { metadataBase: new URL(CANONICAL_ORIGIN) }),
   // og:site_name / og:title give crawlers (including Google's OAuth branding
