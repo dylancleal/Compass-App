@@ -162,7 +162,7 @@ export default function ShareRecapCard({ dateRange, sessionCount, timeLabel, str
       <button
         onClick={handleShare}
         disabled={busy}
-        className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-all hover:brightness-105 disabled:opacity-60"
+        className="w-full rounded-xl py-2.5 text-sm font-semibold text-[var(--on-primary)] transition-all hover:brightness-105 disabled:opacity-60"
         style={{ background: "var(--primary)" }}
       >
         {busy ? "…" : "Share"}

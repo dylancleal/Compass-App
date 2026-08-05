@@ -21,6 +21,7 @@ import {
   weeklySessionCounts,
 } from "@/lib/stats";
 import { addDays, daysBetween, startOfWeek, todayKey } from "@/lib/date";
+import { detectDomain } from "@/lib/categorySetup";
 import { BarTrend, LineTrend, SectionLabel, StatRow } from "@/components/charts";
 import { GoalCard, GoalsOverview } from "@/components/GoalCard";
 import ProgressTabs from "@/components/ProgressTabs";
@@ -54,40 +55,47 @@ function HeatmapChart({
   if (rows.length === 0) return <Empty text="Log sessions to see your activity pattern." />;
 
   return (
-    <div className="overflow-x-auto" style={{ scrollbarWidth: "none" } as React.CSSProperties}>
-      <div className="flex flex-col gap-1.5" style={{ minWidth: "fit-content" }}>
-        {rows.map((row) => {
-          const cat = categories.find((c) => c.id === row.categoryId);
-          const { accent } = cat ? accentOf(cat.color) : { accent: "#94a3b8" };
-          return (
-            <div key={row.categoryId} className="flex items-center gap-2">
-              <span className="w-16 shrink-0 text-right text-[10px] text-[var(--muted)]">
-                {cat?.icon} {row.categoryName.split(" ")[0]}
-              </span>
-              <div className="flex gap-1">
-                {row.cells.map((cell) => {
-                  const opacity = cell.count === 0 ? 0.08 : cell.count === 1 ? 0.45 : 1;
-                  return (
-                    <div
-                      key={cell.date}
-                      title={`${cell.date}: ${cell.count} session${cell.count !== 1 ? "s" : ""}`}
-                      style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: 3,
-                        background: accent,
-                        opacity,
-                        flexShrink: 0,
-                      }}
-                    />
-                  );
-                })}
+    <div className="relative">
+      <div className="overflow-x-auto" style={{ scrollbarWidth: "none" } as React.CSSProperties}>
+        <div className="flex flex-col gap-1.5" style={{ minWidth: "fit-content" }}>
+          {rows.map((row) => {
+            const cat = categories.find((c) => c.id === row.categoryId);
+            const { accent } = cat ? accentOf(cat.color) : { accent: "#94a3b8" };
+            return (
+              <div key={row.categoryId} className="flex items-center gap-2" role="img" aria-label={`${row.categoryName} activity over the last ${days} days`}>
+                <span className="w-16 shrink-0 text-right text-[10px] text-[var(--muted)]">
+                  {cat?.icon} {row.categoryName.split(" ")[0]}
+                </span>
+                <div className="flex gap-1">
+                  {row.cells.map((cell) => {
+                    const opacity = cell.count === 0 ? 0.16 : cell.count === 1 ? 0.5 : 1;
+                    return (
+                      <div
+                        key={cell.date}
+                        title={`${cell.date}: ${cell.count} session${cell.count !== 1 ? "s" : ""}`}
+                        style={{
+                          width: 16,
+                          height: 16,
+                          borderRadius: 3,
+                          background: accent,
+                          opacity,
+                          border: cell.count === 0 ? "1px solid var(--border)" : "none",
+                          flexShrink: 0,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-      <p className="mt-2 text-[10px] text-[var(--muted)]">last {days} days · darker = more sessions</p>
+      <div
+        className="pointer-events-none absolute right-0 top-0 h-full w-6"
+        style={{ background: "linear-gradient(to right, transparent, var(--background))" }}
+      />
+      <p className="mt-2 text-[10px] text-[var(--muted)]">last {days} days · darker = more sessions · scroll for more →</p>
     </div>
   );
 }
@@ -223,22 +231,26 @@ function ForecastCard({
 
   if (!lastScore || checkins.length < 2) {
     return (
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      <div className="card p-4">
         <SectionLabel>3-day momentum forecast</SectionLabel>
         <p className="text-xs text-[var(--muted)]">Check in for a few days and your forecast will appear here.</p>
       </div>
     );
   }
 
-  const uplift = days.length > 0 ? (days[days.length - 1].withSessions - days[days.length - 1].baseline).toFixed(1) : "0";
+  const finalDay = days[days.length - 1];
+  // Round before comparing — otherwise a sub-0.05 float reads as ">0" and
+  // claims a gap the rounded digits shown to the user don't actually show.
+  const upliftNum = finalDay ? Math.round((finalDay.withSessions - finalDay.baseline) * 10) / 10 : 0;
+  const hasGap = upliftNum > 0;
 
   return (
-    <div className="rounded-xl border p-4" style={{ borderColor: "#9fe1cb", background: "var(--surface)" }}>
+    <div className="card p-4">
       <div className="mb-3 flex items-center justify-between">
         <SectionLabel>3-day momentum forecast</SectionLabel>
         <span
           className="rounded-full px-2 py-0.5 text-[10px] font-medium"
-          style={{ background: "#e1f5ee", color: "#0f6e56" }}
+          style={{ background: "var(--info-soft)", color: "var(--info-text)" }}
         >
           based on your patterns
         </span>
@@ -257,26 +269,28 @@ function ForecastCard({
             <span className="text-[10px] text-[var(--muted)]">{d.label}</span>
             {/* baseline */}
             <div className="flex flex-col items-center gap-0.5">
-              <div className="h-2 w-2 rounded-full" style={{ background: "#cbd5e1" }} />
+              <div className="h-2 w-2 rounded-full" style={{ background: "var(--border)" }} />
               <span className="text-xs text-[var(--muted)]">{d.baseline}</span>
             </div>
             <div className="h-px w-full bg-[var(--border)]" />
             {/* with sessions */}
             <div className="flex flex-col items-center gap-0.5">
-              <span className="text-xs font-medium" style={{ color: "#0f6e56" }}>{d.withSessions}</span>
-              <div className="h-2 w-2 rounded-full" style={{ background: "#1d9e75" }} />
+              <span className="text-xs font-medium" style={{ color: "var(--success-text)" }}>{d.withSessions}</span>
+              <div className="h-2 w-2 rounded-full" style={{ background: "var(--success-text)" }} />
             </div>
           </div>
         ))}
       </div>
 
       <div className="mb-3 flex items-center gap-4 text-[10px] text-[var(--muted)]">
-        <span><span className="inline-block h-2 w-2 rounded-full bg-[#cbd5e1] mr-1" />no change</span>
-        <span><span className="inline-block h-2 w-2 rounded-full mr-1" style={{ background: "#1d9e75" }} />with sessions</span>
+        <span><span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: "var(--border)" }} />no change</span>
+        <span><span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ background: "var(--success-text)" }} />with sessions</span>
       </div>
 
-      <div className="rounded-lg p-3 text-xs leading-relaxed" style={{ background: "#e1f5ee", color: "#0f6e56" }}>
-        Your check-in score tends to rise after active days. Doing your suggested sessions could lift your mood by +{uplift} pts by {days[days.length - 1]?.label}.
+      <div className="rounded-lg p-3 text-xs leading-relaxed" style={{ background: "var(--success-soft)", color: "var(--success-text)" }}>
+        {hasGap
+          ? `Your check-in score tends to hold up better on active days. Staying on top of your sessions could keep you +${upliftNum.toFixed(1)} pts ahead of drifting by ${finalDay?.label}.`
+          : "Your mood's been steady lately — keep checking in and this forecast will sharpen."}
       </div>
     </div>
   );
@@ -319,10 +333,12 @@ function TennisPanel({
         <SectionLabel>Skill confidence</SectionLabel>
         <SkillBars sessions={catSessions} accent={accent} />
       </div>
-      <div>
-        <SectionLabel>Sessions per week</SectionLabel>
-        <BarTrend data={weeklySessionCounts(sessions, cat.id, accessLevel === "free" ? 1 : 8)} color={accent} />
-      </div>
+      {accessLevel === "free" && (
+        <div>
+          <SectionLabel>Sessions per week</SectionLabel>
+          <BarTrend data={weeklySessionCounts(sessions, cat.id, 1)} color={accent} />
+        </div>
+      )}
       <div>
         <SectionLabel>Energy after sessions</SectionLabel>
         <EnergyChart sessions={sessions} categories={categories} categoryId={cat.id} days={accessLevel === "free" ? 7 : 14} />
@@ -368,10 +384,12 @@ function UniPanel({
         <SectionLabel>Session type breakdown</SectionLabel>
         <StudyBreakdown sessions={catSessions} accent={accent} />
       </div>
-      <div>
-        <SectionLabel>Sessions per week</SectionLabel>
-        <BarTrend data={weeklySessionCounts(sessions, cat.id, accessLevel === "free" ? 1 : 8)} color={accent} />
-      </div>
+      {accessLevel === "free" && (
+        <div>
+          <SectionLabel>Sessions per week</SectionLabel>
+          <BarTrend data={weeklySessionCounts(sessions, cat.id, 1)} color={accent} />
+        </div>
+      )}
       <div>
         <SectionLabel>Energy after sessions</SectionLabel>
         <EnergyChart sessions={sessions} categories={categories} categoryId={cat.id} days={accessLevel === "free" ? 7 : 14} />
@@ -418,10 +436,12 @@ function GymPanel({
           { value: lastDays === null ? "—" : lastDays === 0 ? "today" : `${lastDays}d ago`, label: "last session" },
         ]}
       />
-      <div>
-        <SectionLabel>Sessions per week</SectionLabel>
-        <BarTrend data={weeklySessionCounts(sessions, cat.id, accessLevel === "free" ? 1 : 8)} color={accent} />
-      </div>
+      {accessLevel === "free" && (
+        <div>
+          <SectionLabel>Sessions per week</SectionLabel>
+          <BarTrend data={weeklySessionCounts(sessions, cat.id, 1)} color={accent} />
+        </div>
+      )}
       {numeric.map((m) => (
         <div key={m.id}>
           <SectionLabel>{m.name}{m.unit ? ` (${m.unit})` : ""}</SectionLabel>
@@ -473,10 +493,12 @@ function GenericPanel({
           { value: lastDays === null ? "—" : lastDays === 0 ? "today" : `${lastDays}d ago`, label: "last session" },
         ]}
       />
-      <div>
-        <SectionLabel>Sessions per week</SectionLabel>
-        <BarTrend data={weeklySessionCounts(sessions, cat.id, accessLevel === "free" ? 1 : 8)} color={accent} />
-      </div>
+      {accessLevel === "free" && (
+        <div>
+          <SectionLabel>Sessions per week</SectionLabel>
+          <BarTrend data={weeklySessionCounts(sessions, cat.id, 1)} color={accent} />
+        </div>
+      )}
       {numeric.map((m) => (
         <div key={m.id}>
           <SectionLabel>{m.name}{m.unit ? ` (${m.unit})` : ""}</SectionLabel>
@@ -603,6 +625,7 @@ function TrendsContent() {
     }
   }, [categories, selected]);
   const selectedCat = activeCats.find((c) => c.id === selected);
+  const selectedDomain = selectedCat ? detectDomain(selectedCat.name) : undefined;
   const checkinData = checkins.map((c) => ({ date: c.date, mental: c.mental }));
 
   return (
@@ -637,19 +660,19 @@ function TrendsContent() {
         <OverviewPanel sessions={visibleSessions} tasks={tasks} checkins={checkinData} categories={activeCats} accessLevel={accessLevel} />
       )}
 
-      {selectedCat?.name === "Tennis" && (
-        <TennisPanel cat={selectedCat} sessions={visibleSessions} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
+      {selectedDomain === "tennis" && (
+        <TennisPanel cat={selectedCat!} sessions={visibleSessions} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
       )}
 
-      {selectedCat?.name === "Uni work" && (
-        <UniPanel cat={selectedCat} sessions={visibleSessions} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
+      {selectedDomain === "uni" && (
+        <UniPanel cat={selectedCat!} sessions={visibleSessions} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
       )}
 
-      {selectedCat?.name === "Gym" && (
-        <GymPanel cat={selectedCat} sessions={visibleSessions} metrics={metrics} logs={logs} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
+      {selectedDomain === "gym" && (
+        <GymPanel cat={selectedCat!} sessions={visibleSessions} metrics={metrics} logs={logs} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
       )}
 
-      {selectedCat && !["Tennis", "Uni work", "Gym"].includes(selectedCat.name) && (
+      {selectedCat && !["tennis", "uni", "gym"].includes(selectedDomain!) && (
         <GenericPanel cat={selectedCat} sessions={visibleSessions} metrics={metrics} logs={logs} categories={activeCats} checkins={checkinData} accessLevel={accessLevel} />
       )}
     </div>

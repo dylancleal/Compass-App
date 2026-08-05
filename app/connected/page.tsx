@@ -37,7 +37,7 @@ export default function ConnectedPage() {
         <Link
           href="/"
           className="btn-life w-full rounded-xl py-3 text-sm font-semibold"
-          style={{ background: "var(--primary)", color: "#fffdf9" }}
+          style={{ background: "var(--primary)", color: "var(--on-primary)" }}
         >
           Continue to {APP_VARIANT.name} →
         </Link>

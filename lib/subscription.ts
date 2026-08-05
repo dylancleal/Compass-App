@@ -191,3 +191,20 @@ export function useOpenBillingPortal() {
     },
   });
 }
+
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: async () => {
+      const token = (await getSupabase()!.auth.getSession()).data.session?.access_token;
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not delete account");
+      // The account is gone server-side — signOut() just clears the
+      // now-invalid local session so AuthGate shows the sign-in screen.
+      await getSupabase()!.auth.signOut();
+    },
+  });
+}

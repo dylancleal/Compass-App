@@ -174,7 +174,7 @@ export function GoalsOverview({
                 {cat.icon} {cat.name}
               </span>
               <div className="flex-1">
-                <AnimatedBar pct={pct} color={status === "behind" ? "var(--warn-text)" : accent} />
+                <AnimatedBar pct={pct} color={status === "behind" ? "var(--warn-text)" : accent} track="var(--border)" />
               </div>
               <span className="w-12 shrink-0 text-right text-xs font-medium" style={{ color: meta.color }}>
                 {done}/{target}

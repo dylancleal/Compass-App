@@ -53,7 +53,7 @@ export default function QuickAddTask({ categories }: { categories: Category[] })
         <button
           onClick={add}
           disabled={!title.trim() || create.isPending}
-          className="rounded-lg px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40 hover:brightness-110"
+          className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--on-primary)] disabled:opacity-40 hover:brightness-110"
           style={{ background: "var(--primary)" }}
         >
           Add

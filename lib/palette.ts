@@ -1,6 +1,8 @@
 // Calm, modern accent palette. Categories store a key; UI reads hex from here.
 // Inline styles are used (not Tailwind classes) so colours stay data-driven.
 
+import { APP_VARIANT } from "@/lib/appVariant";
+
 export interface Accent {
   label: string;
   accent: string; // primary accent
@@ -22,17 +24,34 @@ export const PALETTE: Record<string, Accent> = {
   slate: { label: "Stone", accent: "#7d7c6e", soft: "#f3f1ea", text: "#54533f" },
 };
 
+// Same keys, committed/saturated hexes — the Instrument Readout direction's
+// "channel colors," used only for Lodestone (see accentOf). A category picker
+// swatch should read as a live instrument channel, not a pastel tint.
+const INSTRUMENT_ACCENT: Record<string, string> = {
+  blue: "#4f8ff0",
+  violet: "#9d6ef0",
+  green: "#3ddc84",
+  amber: "#f2954a",
+  teal: "#2dd4bf",
+  rose: "#f0596e",
+  indigo: "#6a7bf0",
+  slate: "#a0a0a0",
+};
+
 export const PALETTE_KEYS = Object.keys(PALETTE);
 
 export function accentOf(colorKey: string): Accent {
   const base = PALETTE[colorKey] ?? PALETTE.slate;
+  const accent =
+    APP_VARIANT.id === "study" ? (INSTRUMENT_ACCENT[colorKey] ?? INSTRUMENT_ACCENT.slate) : base.accent;
   // Derive soft/text from the accent against the theme vars so they adapt to
   // dark mode automatically — pale tint in light mode, deep tint in dark, with
   // text contrast that flips with --foreground. (The static soft/text hexes in
   // PALETTE are light-mode only and are kept just for the swatch labels.)
   return {
     ...base,
-    soft: `color-mix(in srgb, ${base.accent} 18%, var(--surface))`,
-    text: `color-mix(in srgb, ${base.accent} 70%, var(--foreground))`,
+    accent,
+    soft: `color-mix(in srgb, ${accent} 18%, var(--surface))`,
+    text: `color-mix(in srgb, ${accent} 70%, var(--foreground))`,
   };
 }

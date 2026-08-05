@@ -1,0 +1,17 @@
+{
+  "approved": true,
+  "direction": "Instrument Readout",
+  "candidate": "4 of 7 (Running watch / lap-split instrument readout)",
+  "seedKey": "c72a5b91",
+  "comp": "comp-b.png",
+  "note": "Approved with one required deviation: drop the colored left-border bar on split rows (present in this render) — it reintroduces the 'side-tab' AI-tell pattern the redesign is meant to retire. Use the channel-color LED dot only.",
+  "inventory": {
+    "ground": "matte black (#0a0a0a), true near-black, not the old soft charcoal-green",
+    "panel": "hairline 1px border (#242424 'bezel'), 12px corner radius, no shadow/elevation — flat instrument-panel language, not card elevation",
+    "divider": "1px hairline border between stacked rows inside one panel, not gaps between separate cards",
+    "type_ramp": "labels: 9-10px uppercase, letter-spacing 1-1.5px, muted gray (#888); values: 15-22px monospace/tabular-nums, bold, full ink (#f5f6f4); body copy stays a warm humanist sans, never mono",
+    "channel_color": "small circular LED dot (6-8px), never a border bar; category color is otherwise reserved for the dot and for filled/active states only",
+    "state_language": "amber (#e8b23d) reserved for genuine signal/warning states, shown as a bounded pill with an LED dot, never a floating alarm badge or an unbounded list",
+    "primary_action": "the readiness strip's active segments fill solid in the channel color; inactive segments stay bezel-outlined only"
+  }
+}

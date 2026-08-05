@@ -48,8 +48,10 @@ const VISIBLE_TILES = APP_VARIANT.onboardingTiles
 
 function StepPick({
   onNext,
+  pending,
 }: {
   onNext: (selected: TileName[], customName?: string) => void;
+  pending: boolean;
 }) {
   const [selected, setSelected] = useState<Set<TileName>>(new Set());
   const [customName, setCustomName] = useState("");
@@ -130,11 +132,11 @@ function StepPick({
         onClick={() =>
           onNext([...selected] as TileName[], showCustom && customName.trim() ? customName.trim() : undefined)
         }
-        disabled={!anySelected}
+        disabled={!anySelected || pending}
         className="btn-life w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-40"
-        style={{ background: "var(--primary)", color: "#fffdf9" }}
+        style={{ background: "var(--primary)", color: "var(--on-primary)" }}
       >
-        Continue →
+        {pending ? "Setting up…" : "Continue →"}
       </button>
     </div>
   );
@@ -148,12 +150,14 @@ function StepSetup({
   total,
   onNext,
   onSkip,
+  onBack,
 }: {
   categories: Category[];
   currentIndex: number;
   total: number;
   onNext: (meta: CategoryMetadata) => void;
   onSkip: () => void;
+  onBack: () => void;
 }) {
   const cat = categories[currentIndex];
   if (!cat) return null;
@@ -161,6 +165,13 @@ function StepSetup({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
+        <button
+          onClick={onBack}
+          className="text-sm transition-opacity hover:opacity-80"
+          style={{ color: "var(--muted)" }}
+        >
+          ← Back
+        </button>
         <p className="text-xs font-medium" style={{ color: "var(--muted)" }}>
           {currentIndex + 1} of {total}
         </p>
@@ -193,12 +204,16 @@ function StepPreview({
   settings,
   tasks,
   onFinish,
+  onBack,
+  finishing,
 }: {
   categories: Category[];
   library: SessionTemplate[];
   settings: AppSettings;
   tasks: Task[];
   onFinish: () => void;
+  onBack: () => void;
+  finishing: boolean;
 }) {
   const preview = useMemo(
     () =>
@@ -218,6 +233,13 @@ function StepPreview({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
+        <button
+          onClick={onBack}
+          className="mb-1 text-sm transition-opacity hover:opacity-80"
+          style={{ color: "var(--muted)" }}
+        >
+          ← Back
+        </button>
         <h1 className="text-2xl font-bold">Here&apos;s what your next 7 days could look like</h1>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
           This adapts as you log sessions — the more you track, the more personal it gets.
@@ -257,10 +279,11 @@ function StepPreview({
 
       <button
         onClick={onFinish}
-        className="btn-life w-full rounded-xl py-3 text-sm font-semibold"
-        style={{ background: "var(--primary)", color: "#fffdf9" }}
+        disabled={finishing}
+        className="btn-life w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-60"
+        style={{ background: "var(--primary)", color: "var(--on-primary)" }}
       >
-        Start day 1 →
+        {finishing ? "Starting…" : "Start day 1 →"}
       </button>
     </div>
   );
@@ -284,8 +307,17 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<Step>("pick");
   const [createdCategories, setCreatedCategories] = useState<Category[]>([]);
   const [setupIndex, setSetupIndex] = useState(0);
+  const [picking, setPicking] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  // Populated when a category genuinely fails to create (network/auth/RLS,
+  // not just an expected duplicate from a seeding race) — previously a bare
+  // catch{} swallowed every failure identically, so a real error left an
+  // area silently missing with no signal at all.
+  const [createErrors, setCreateErrors] = useState<string[]>([]);
 
   async function handlePick(selected: TileName[], customName?: string) {
+    setPicking(true);
+    setCreateErrors([]);
     // Refetch first — ensureSeeded() may have just created some of these
     // categories in the background, and the cached existingCategories prop
     // can still be stale at this exact moment, which previously let this
@@ -301,6 +333,7 @@ export default function OnboardingPage() {
         : []),
     ];
 
+    const failed: string[] = [];
     for (const tile of toCreate) {
       try {
         await new Promise<Category>((resolve, reject) => {
@@ -310,9 +343,10 @@ export default function OnboardingPage() {
           );
         });
       } catch {
-        // continue — category may already exist (e.g. created by seeding)
+        failed.push(tile.name);
       }
     }
+    setCreateErrors(failed);
 
     // Refetch after mutations to get the definitive list — handles races between
     // ensureSeeded() and these mutations (both may try to create the same category).
@@ -332,6 +366,7 @@ export default function OnboardingPage() {
     });
 
     setCreatedCategories(allForSetup);
+    setPicking(false);
     if (allForSetup.length === 0) {
       // Nothing to walk through (e.g. every selected tile already existed
       // from seeding) — skip straight to the preview.
@@ -358,6 +393,20 @@ export default function OnboardingPage() {
     }
   }
 
+  function handleSetupBack() {
+    if (setupIndex > 0) setSetupIndex((i) => i - 1);
+    else setStep("pick");
+  }
+
+  function handlePreviewBack() {
+    if (createdCategories.length > 0) {
+      setSetupIndex(createdCategories.length - 1);
+      setStep("setup");
+    } else {
+      setStep("pick");
+    }
+  }
+
   // Persist the "onboarding done" flag, then run a follow-up navigation. Kept as
   // an awaited mutation (not a fire-and-forget alongside an <a href>) so the flag
   // is written before we leave — otherwise a user who heads off to connect a
@@ -373,6 +422,7 @@ export default function OnboardingPage() {
   }
 
   function handleFinish() {
+    setFinishing(true);
     return completeOnboarding("/checkin");
   }
 
@@ -404,7 +454,17 @@ export default function OnboardingPage() {
           </span>
         </div>
 
-        {step === "pick" && <StepPick onNext={handlePick} />}
+        {createErrors.length > 0 && (
+          <div
+            className="mb-4 rounded-xl p-3 text-xs"
+            style={{ background: "var(--warn-soft)", color: "var(--warn-text)" }}
+          >
+            Couldn&apos;t create: {createErrors.join(", ")} — you can add{" "}
+            {createErrors.length === 1 ? "it" : "these"} anytime in Settings.
+          </div>
+        )}
+
+        {step === "pick" && <StepPick onNext={handlePick} pending={picking} />}
 
         {step === "setup" && createdCategories.length > 0 && (
           <StepSetup
@@ -413,6 +473,7 @@ export default function OnboardingPage() {
             total={createdCategories.length}
             onNext={handleSetupNext}
             onSkip={handleSetupNext}
+            onBack={handleSetupBack}
           />
         )}
 
@@ -423,6 +484,8 @@ export default function OnboardingPage() {
             settings={settings}
             tasks={tasks}
             onFinish={handleFinish}
+            onBack={handlePreviewBack}
+            finishing={finishing}
           />
         )}
       </div>

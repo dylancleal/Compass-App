@@ -23,10 +23,10 @@ export default function ProgressTabs() {
           <Link
             key={t.href}
             href={t.href}
-            className="flex-1 rounded-full py-1.5 text-center text-sm font-medium transition-all"
+            className="flex-1 rounded-full py-2.5 text-center text-sm font-medium transition-all"
             style={{
               background: active ? "var(--primary)" : "transparent",
-              color: active ? "#fffdf9" : "var(--muted)",
+              color: active ? "var(--on-primary)" : "var(--muted)",
             }}
           >
             {t.label}
