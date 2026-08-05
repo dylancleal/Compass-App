@@ -36,10 +36,18 @@ function parseEvent(event: VEvent): ParsedICSEvent[] {
       to: EXPAND_TO,
       excludeExdates: true,
     });
-    return instances.map((inst, i) => {
+    return instances.map((inst) => {
       const end = inst.end ?? new Date(inst.start.getTime() + (isAllDay ? 86400000 : 3600000));
       return {
-        externalId: `${event.uid}_${isoOf(inst.start)}_${i}`,
+        // No trailing array index — the occurrence's own start timestamp is
+        // already a stable, unique key per real instance (a single VEVENT
+        // can't produce two occurrences at the same instant). The index
+        // used to be appended here, but EXPAND_FROM rolls forward a day at
+        // a time, so instances shift position in the array between syncs
+        // as earlier occurrences age out of the window — the same future
+        // occurrence got a new externalId (and a new duplicate row) on
+        // every sync run rather than upserting the existing one.
+        externalId: `${event.uid}_${isoOf(inst.start)}`,
         title: typeof inst.summary === "string" ? inst.summary : (inst.summary?.val ?? "Event"),
         start_at: isoOf(inst.start),
         end_at: isoOf(end),
