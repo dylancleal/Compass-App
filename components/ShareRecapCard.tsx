@@ -36,6 +36,9 @@ export default function ShareRecapCard({ dateRange, sessionCount, timeLabel, str
       // — sharp enough for a phone screen or an Instagram Story, not just a
       // thumbnail.
       const dataUrl = await toPng(cardRef.current, { pixelRatio: 3 });
+      // "My week on X" reads as a caption, not a stray noun phrase — matches
+      // the pattern apps like Strava/Duolingo use for this exact share flow.
+      const shareTitle = `My week on ${APP_VARIANT.name}`;
 
       if (Capacitor.isNativePlatform()) {
         // Confirmed on-device: Capacitor's Android WebView does NOT
@@ -52,7 +55,7 @@ export default function ShareRecapCard({ dateRange, sessionCount, timeLabel, str
           directory: Directory.Cache,
         });
         await Share.share({
-          title: `My ${APP_VARIANT.name} week`,
+          title: shareTitle,
           files: [uri],
           dialogTitle: "Share your week",
         });
@@ -60,7 +63,7 @@ export default function ShareRecapCard({ dateRange, sessionCount, timeLabel, str
         const blob = await (await fetch(dataUrl)).blob();
         const file = new File([blob], "lodestone-week.png", { type: "image/png" });
         if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], title: `My ${APP_VARIANT.name} week` });
+          await navigator.share({ files: [file], title: shareTitle });
         } else {
           // Fallback (older/desktop browsers without share targets): just
           // download the image so it can still be shared manually.
@@ -144,7 +147,7 @@ export default function ShareRecapCard({ dateRange, sessionCount, timeLabel, str
               {byArea.map((a) => (
                 <span
                   key={a.name}
-                  className="rounded-full px-2.5 py-1 text-xs font-medium"
+                  className="whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium"
                   style={{ background: "rgba(255,255,255,0.1)", color: "#fffef8" }}
                 >
                   {a.icon} {a.name} · {a.count}

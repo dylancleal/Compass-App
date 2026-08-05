@@ -29,12 +29,12 @@ export interface AppVariant {
   /** Short evocative line shown under the welcome title on the sign-in screen.
    *  Undefined = no subheader (Compass's welcome screen is unchanged). */
   heroLine?: string;
-  /** Whether to offer "Sign in with Google" for calendar sync. The Google
-   *  Cloud project is still in unverified "Testing" mode (capped at 100
-   *  manually-added test-user emails), so it only works for known accounts —
-   *  showing it to real Lodestone customers would just dead-end them in a
-   *  Google warning screen. Compass's own account is already a test user, so
-   *  it keeps working there. Flip this back on once verification is done. */
+  /** Whether to offer "Sign in with Google" for calendar sync. Lodestone's
+   *  OAuth verification with Google was submitted 2026-08-05 and is still
+   *  pending review — turned on ahead of that clearing (explicit call: real
+   *  users hitting Google's "unverified app" screen is acceptable short-term
+   *  friction, ConnectionsPanel.tsx pre-warns them it's expected and safe),
+   *  rather than staying test-account-only until the review completes. */
   googleOAuth: boolean;
   /** Contact address shown on the privacy policy and support surfaces.
    *  Kept per-variant so a commercial product's real customers never see the
@@ -77,7 +77,7 @@ const VARIANTS: Record<AppVariantId, AppVariant> = {
     onboardingTiles: ["Uni work", "Gym"],
     logoStyle: "glow",
     heroLine: "Study, training, and the pull that keeps you on course.",
-    googleOAuth: false,
+    googleOAuth: true,
     supportEmail: "mylodestonesupport@gmail.com",
     pitch: [
       "A 30-second daily check-in shapes a personalised plan for uni work and training.",
