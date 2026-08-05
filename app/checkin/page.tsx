@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useCheckin, useCheckins, useSettings, useUpsertCheckin } from "@/lib/queries";
+import { useCategories, useCheckin, useCheckins, useSettings, useUpsertCheckin } from "@/lib/queries";
 import { dayIndex, todayKey, greeting } from "@/lib/date";
+import { detectDomain } from "@/lib/categorySetup";
 import type { Capacity } from "@/lib/types";
 import { Button } from "@/components/ui";
 
@@ -90,14 +91,22 @@ export default function CheckinPage() {
   const { data: settings } = useSettings();
   const { data: existing } = useCheckin(today);
   const { data: allCheckins = [] } = useCheckins();
+  const { data: categories = [] } = useCategories();
   const upsert = useUpsertCheckin();
 
   // Brand-new user landing here straight from onboarding — frame it as day one.
   const isFirstEver = allCheckins.length === 0 && !existing;
 
+  // weeklySchedule.gym/tennis default to a fixed Mon/Wed/Fri + Tue/Sat pattern
+  // for every account regardless of which areas were actually picked during
+  // onboarding (see lib/db/seed.ts) — checking the scheduled day alone asked
+  // every user about gym soreness on those days, even someone with only a
+  // Uni work area and no Gym category at all.
+  const hasGymArea = categories.some((c) => c.active && detectDomain(c.name) === "gym");
+  const hasTennisArea = categories.some((c) => c.active && detectDomain(c.name) === "tennis");
   const di = dayIndex(today);
-  const isGym = settings?.weeklySchedule.gym.includes(di as never) ?? false;
-  const isTennis = settings?.weeklySchedule.tennis.includes(di as never) ?? false;
+  const isGym = hasGymArea && (settings?.weeklySchedule.gym.includes(di as never) ?? false);
+  const isTennis = hasTennisArea && (settings?.weeklySchedule.tennis.includes(di as never) ?? false);
 
   const [mental, setMental] = useState<number | undefined>(existing?.mental);
   const [uni, setUni] = useState<number | undefined>(existing?.uni_readiness);
@@ -151,7 +160,7 @@ export default function CheckinPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6" data-tour="checkin-card">
+    <div className="mx-auto max-w-md space-y-6">
       <header className="space-y-1">
         <p className="text-sm text-[var(--muted)]">{greeting(settings?.greetingName ?? "")}</p>
         <h1 className="text-2xl font-bold">{isFirstEver ? "Day 1 — let's set your baseline" : "A quick check-in"}</h1>

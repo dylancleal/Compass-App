@@ -265,6 +265,7 @@ export default function TodayPage() {
         <Link
           ref={checkinTiltRef}
           href="/checkin"
+          data-tour="checkin-card"
           className="card card-interactive animate-pop block p-6 hover:brightness-[1.03]"
           style={{ background: "var(--primary-soft)", borderColor: "var(--mist)" }}
         >

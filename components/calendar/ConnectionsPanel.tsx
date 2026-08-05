@@ -16,7 +16,10 @@ import { APP_VARIANT } from "@/lib/appVariant";
 
 const GOOGLE_ICS_INSTRUCTIONS =
   "In Google Calendar, open Settings → click your calendar under \"Settings for my calendars\" → scroll to \"Secret address in iCal format\" and copy that URL. It starts with https://calendar.google.com/calendar/ical/… " +
-  "Don't use the \"Export\" button at the top of Settings — that downloads a one-time .zip file that won't stay in sync.";
+  "Don't use the \"Export\" button at the top of Settings — that downloads a one-time .zip file that won't stay in sync. " +
+  "Don't see a \"Secret address\" row at all? Some school/work Google accounts have it turned off by their IT admin. " +
+  "If so, look for \"Public address in iCal format\" just above it instead — you'll first need to make the calendar public " +
+  "(Settings → \"Access permissions for events\" → \"Make available to public\"). That means anyone with the link could see your event details, so only do this if you're OK with that.";
 
 // Build the OAuth start URL against the canonical origin when one is configured,
 // so /start (which sets the PKCE cookie) and the Google callback run on the same
@@ -277,6 +280,20 @@ function GoogleConnectForm({
           ? "Google sign-in requires cloud sync. Add your Supabase keys to enable it."
           : "You'll be taken to Google to approve read-only access to your calendar. No events are modified."}
       </div>
+      {/* Google's OAuth app-review process is still in progress — until that
+          clears, every user sees Google's "unverified app" interstitial, not
+          just ours. Pre-warning here so it reads as expected friction rather
+          than a real security problem, since Google's own copy on that
+          screen ("unsafe") reads scarier than it is for a small team's app
+          still going through review. */}
+      {!cloudRequired && userId && (
+        <div
+          className="rounded-xl px-3 py-2.5 text-xs leading-relaxed"
+          style={{ background: "var(--warn-soft)", color: "var(--warn-text)" }}
+        >
+          Google will show a screen saying &quot;{APP_VARIANT.name} hasn&apos;t been verified&quot; — that&apos;s expected, we&apos;re still going through Google&apos;s review process. Tap <strong>Advanced</strong>, then <strong>Go to {APP_VARIANT.name} (unsafe)</strong> to continue. It&apos;s safe — Google just hasn&apos;t finished reviewing us yet.
+        </div>
+      )}
       {!cloudRequired && userId && (
         <a
           href={oauthStartUrl(userId)}
