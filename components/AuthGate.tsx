@@ -1,19 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { db } from "@/lib/db";
 import { APP_VARIANT } from "@/lib/appVariant";
 import { useApplyFreeDowngrade, useReactivateOnUpgrade } from "@/lib/subscription";
 import { useConfigureRevenueCat } from "@/lib/revenuecat";
 import { useIsNativePlatform } from "@/lib/platform";
 import NativeAuthScreen from "@/components/NativeAuthScreen";
+import Nav from "@/components/Nav";
+import Fireflies from "@/components/Fireflies";
+import AndroidBackButton from "@/components/AndroidBackButton";
+import IntroTour from "@/components/IntroTour";
 
 // Auth is only required when we're running against Supabase. Local mode
 // (no env vars / NEXT_PUBLIC_DATA_BACKEND != "supabase") bypasses this entirely.
 const needsAuth =
   process.env.NEXT_PUBLIC_DATA_BACKEND === "supabase" && isSupabaseConfigured();
+
+// Legal/info pages that must render without signing in — required for
+// Google's OAuth verification (and basic decency: a privacy policy you can't
+// read without an account is no privacy policy at all). These render bare,
+// with none of the authenticated app shell (Nav, Fireflies, IntroTour).
+const PUBLIC_PATHS = new Set(["/privacy", "/terms"]);
+
+// Calls ensureSeeded only from the authenticated shell below, so it never
+// mounts on the login screen, the loading state, or a public legal page.
+function SeedOnMount() {
+  useEffect(() => {
+    db.ensureSeeded();
+  }, []);
+  return null;
+}
 
 // Not a secret — just identifies which account gets the fixed-code bypass
 // below. The actual gate is the code itself, checked server-side.
@@ -32,6 +54,7 @@ function friendlyAuthError(e: unknown): string {
 }
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [session, setSession] = useState<Session | null | "loading">(
     needsAuth ? "loading" : null,
   );
@@ -67,6 +90,11 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
+  // Bare, no shell, no session check — a legal page has to be readable by
+  // anyone (including an unauthenticated review bot) without waiting on
+  // Supabase to resolve a session first.
+  if (PUBLIC_PATHS.has(pathname ?? "")) return <>{children}</>;
+
   // Loading state while we check for an existing session (and, since it
   // resolves in an effect to avoid a hydration mismatch, which sign-in
   // screen to show).
@@ -78,8 +106,28 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Authenticated (or local mode) — show the app.
-  if (!needsAuth || session) return <>{children}</>;
+  // Authenticated (or local mode) — show the app, wrapped in its shell.
+  // This used to live in app/layout.tsx wrapping AuthGate from the outside;
+  // it moved in here so the shell (and SeedOnMount) only ever mounts once a
+  // session actually exists, leaving room for the public/unauthenticated
+  // branches below to render without it.
+  if (!needsAuth || session) {
+    return (
+      <>
+        <AndroidBackButton />
+        <Fireflies />
+        <Nav />
+        <main
+          className="mx-auto w-full max-w-2xl px-4 pb-10"
+          style={{ paddingTop: "calc(5rem + env(safe-area-inset-top))" }}
+        >
+          <SeedOnMount />
+          {children}
+        </main>
+        <IntroTour />
+      </>
+    );
+  }
 
   // Not authenticated in Supabase mode — show magic-link login.
   async function sendLink() {
@@ -176,11 +224,15 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="grid min-h-dvh place-items-center bg-[var(--background)] p-4">
-      <div className="card w-full max-w-sm space-y-5 p-6">
-        <div className="space-y-1">
+      <div className="w-full max-w-sm space-y-6 py-8">
+        {/* Purpose explanation — visible to every signed-out visitor,
+            including an unauthenticated review pass, without needing to log
+            in first. This is the whole reason a signed-out visit to "/"
+            shows more than a bare login form. */}
+        <div className="space-y-3 text-center">
           {APP_VARIANT.logoStyle === "classic" && (
             <span
-              className="mb-1 grid h-11 w-11 place-items-center rounded-2xl text-2xl"
+              className="mx-auto mb-1 grid h-11 w-11 place-items-center rounded-2xl text-2xl"
               style={{ background: "var(--primary-soft)" }}
               aria-hidden
             >
@@ -188,7 +240,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             </span>
           )}
           <h1
-            className="text-xl font-bold"
+            className="text-2xl font-bold"
             style={
               APP_VARIANT.logoStyle === "glow"
                 ? {
@@ -205,10 +257,20 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               {APP_VARIANT.heroLine}
             </p>
           )}
-          <p className="text-sm text-[var(--muted)]">
-            Sign in with a one-time code — no password needed.
-          </p>
+          <ul className="space-y-1.5 pt-1 text-left text-sm" style={{ color: "var(--muted)" }}>
+            {APP_VARIANT.pitch.map((line) => (
+              <li key={line} className="flex gap-2">
+                <span aria-hidden style={{ color: "var(--primary)" }}>·</span>
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
         </div>
+
+        <div className="card space-y-5 p-6">
+        <p className="text-sm text-[var(--muted)]">
+          Sign in with a one-time code — no password needed.
+        </p>
 
         {isDev && (
           <button
@@ -288,6 +350,13 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         )}
+        </div>
+
+        <p className="text-center text-xs" style={{ color: "var(--muted)" }}>
+          By continuing you agree to our{" "}
+          <Link href="/terms" className="underline">Terms</Link> and{" "}
+          <Link href="/privacy" className="underline">Privacy Policy</Link>.
+        </p>
       </div>
     </div>
   );

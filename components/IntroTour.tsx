@@ -26,7 +26,12 @@ const STEPS: TourStep[] = [
     body: "A calm daily companion that shapes your plan around your energy and goals. Let's take a 60-second look around.",
   },
   {
-    path: "/checkin",
+    // Was "/checkin" — pointed the tour at the check-in page's own card,
+    // which forced a real navigation into that live form as step 2 of the
+    // tour (right after "Welcome"), before the user had asked to check in.
+    // The prompt card also lives right on Today; spotlighting it there
+    // shows where check-in happens without leaving the tour into a form.
+    path: "/",
     selector: "[data-tour='checkin-card']",
     title: "Start every morning here",
     body: `Tell ${APP_VARIANT.name} how you feel today — takes 30 seconds. It adjusts your suggestions to match: lighter on a rough day, more ambitious on a big one.`,
