@@ -280,20 +280,6 @@ function GoogleConnectForm({
           ? "Google sign-in requires cloud sync. Add your Supabase keys to enable it."
           : "You'll be taken to Google to approve read-only access to your calendar. No events are modified."}
       </div>
-      {/* Google's OAuth app-review process is still in progress — until that
-          clears, every user sees Google's "unverified app" interstitial, not
-          just ours. Pre-warning here so it reads as expected friction rather
-          than a real security problem, since Google's own copy on that
-          screen ("unsafe") reads scarier than it is for a small team's app
-          still going through review. */}
-      {!cloudRequired && userId && (
-        <div
-          className="rounded-xl px-3 py-2.5 text-xs leading-relaxed"
-          style={{ background: "var(--warn-soft)", color: "var(--warn-text)" }}
-        >
-          Google will show a screen saying &quot;{APP_VARIANT.name} hasn&apos;t been verified&quot; — that&apos;s expected, we&apos;re still going through Google&apos;s review process. Tap <strong>Advanced</strong>, then <strong>Go to {APP_VARIANT.name} (unsafe)</strong> to continue. It&apos;s safe — Google just hasn&apos;t finished reviewing us yet.
-        </div>
-      )}
       {!cloudRequired && userId && (
         <a
           href={oauthStartUrl(userId)}
