@@ -279,6 +279,11 @@ export class SupabaseDB implements CompassDB {
     return data as CalendarConnection;
   }
   async removeCalendarConnection(id: string): Promise<void> {
+    // Synced blocks are tagged with external_calendar_id = the connection's
+    // own id (see syncCalendarBlocks call sites) rather than a real foreign
+    // key, so they don't cascade-delete on their own — without this they'd
+    // keep showing on the calendar forever after the connection is gone.
+    await sb().from("calendar_blocks").delete().eq("external_calendar_id", id);
     await sb().from("calendar_connections").delete().eq("id", id);
   }
 

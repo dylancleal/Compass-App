@@ -295,6 +295,13 @@ export class LocalDB implements CompassDB {
   }
   async removeCalendarConnection(id: string): Promise<void> {
     write(KEYS.calendarConnections, read<CalendarConnection[]>(KEYS.calendarConnections, []).filter((c) => c.id !== id));
+    // Synced blocks are tagged with external_calendar_id = the connection's
+    // own id (see syncCalendarBlocks call sites) — without this they'd keep
+    // showing on the calendar forever after the connection is gone.
+    write(
+      KEYS.calendarBlocks,
+      read<CalendarBlock[]>(KEYS.calendarBlocks, []).filter((b) => b.external_calendar_id !== id),
+    );
   }
 
   // settings
