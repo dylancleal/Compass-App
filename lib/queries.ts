@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { db } from "@/lib/db";
+import { getSupabase } from "@/lib/supabaseClient";
 import { matchEventToCategory } from "@/lib/categoryMatcher";
 import type {
   AppSettings,
@@ -257,6 +258,31 @@ export const useGoogleSync = () => {
     },
   });
 };
+
+export interface GoogleCalendarOption {
+  id: string;
+  name: string;
+  primary: boolean;
+  checked: boolean;
+}
+
+// Only fetched when the "pick your calendars" panel is actually opened
+// (enabled: false by default at the call site) — it needs a live Google API
+// round trip, unlike everything else in this file.
+export const useGoogleCalendarList = (connectionId: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ["googleCalendarList", connectionId],
+    enabled,
+    queryFn: async (): Promise<GoogleCalendarOption[]> => {
+      const token = (await getSupabase()!.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`/api/calendar/google-calendars?connectionId=${encodeURIComponent(connectionId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.json() as { calendars?: GoogleCalendarOption[]; error?: string };
+      if (!res.ok) throw new Error(body.error ?? `Failed to load calendars (${res.status})`);
+      return body.calendars ?? [];
+    },
+  });
 
 // ---- session templates ----
 export const useUpsertSessionTemplate = () =>

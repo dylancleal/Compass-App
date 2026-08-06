@@ -24,3 +24,7 @@ revoke all on calendar_oauth_tokens from anon, authenticated;
 -- Extra columns on calendar_connections for OAuth metadata.
 alter table calendar_connections add column if not exists account_email text;
 alter table calendar_connections add column if not exists needs_reauth boolean not null default false;
+-- Explicit calendar picks for a Google connection (google_calendar_id
+-- values, "primary" included). Null = no custom pick yet, sync falls back
+-- to whatever the user has "selected" (shown) in their own Google Calendar.
+alter table calendar_connections add column if not exists selected_calendar_ids text[];

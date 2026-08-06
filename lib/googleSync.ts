@@ -35,18 +35,21 @@ function toBlock(event: GoogleEvent, connectionId: string, userId: string) {
 
 type Block = NonNullable<ReturnType<typeof toBlock>>;
 
+export interface GoogleCalendarListEntry {
+  id: string; // "primary" for the user's own default calendar
+  name: string;
+  primary: boolean;
+  selectedInGoogle: boolean; // whether it's shown in the user's own Google Calendar
+}
+
 // Google Calendar's UI merges the user's own calendar with every shared and
 // subscribed calendar (a university timetable, a partner's calendar, an
 // "other account" calendar) into one view — but the Calendar API only
-// returns events from whichever specific calendar ID you ask for. Without
-// this, only the user's own default ("primary") calendar ever synced, and
-// anything living on a different calendar silently never showed up.
-//
-// Scoped to calendars the user has actually chosen to show (`selected`) —
-// matches what they see in their own Google Calendar, and avoids quietly
-// pulling in a calendar they were once shared on but hid long ago.
-async function fetchSelectedCalendarIds(accessToken: string): Promise<string[]> {
-  const ids = new Set<string>(["primary"]);
+// returns events from whichever specific calendar ID you ask for. Exported
+// so both the sync below and the "pick your calendars" settings UI can list
+// what's available without duplicating the fetch/pagination logic.
+export async function fetchGoogleCalendarList(accessToken: string): Promise<GoogleCalendarListEntry[]> {
+  const out: GoogleCalendarListEntry[] = [];
   let pageToken: string | undefined;
   do {
     const params = new URLSearchParams({ maxResults: "250" });
@@ -57,11 +60,33 @@ async function fetchSelectedCalendarIds(accessToken: string): Promise<string[]> 
     if (!resp.ok) throw new Error(`Google calendarList error ${resp.status}`);
     const data = await resp.json();
     pageToken = data.nextPageToken as string | undefined;
-    for (const cal of (data.items ?? []) as { id: string; primary?: boolean; selected?: boolean }[]) {
-      if (cal.selected && !cal.primary) ids.add(cal.id);
+    for (const cal of (data.items ?? []) as {
+      id: string;
+      summary?: string;
+      primary?: boolean;
+      selected?: boolean;
+    }[]) {
+      out.push({
+        id: cal.primary ? "primary" : cal.id,
+        name: cal.summary ?? cal.id,
+        primary: Boolean(cal.primary),
+        selectedInGoogle: Boolean(cal.selected),
+      });
     }
   } while (pageToken);
-  return Array.from(ids);
+  return out;
+}
+
+// Which calendar IDs to actually sync for this connection. An explicit pick
+// stored on the connection (from the "pick your calendars" UI) wins outright
+// — even over unchecking "primary" itself, since that's the user's own
+// deliberate choice. With no explicit pick yet, falls back to whatever the
+// user has "selected" (shown) in their own Google Calendar, same as before
+// this feature existed, so nobody's sync silently changes underneath them.
+function resolveCalendarIdsToSync(list: GoogleCalendarListEntry[], explicitPick: string[] | null): string[] {
+  if (explicitPick && explicitPick.length > 0) return explicitPick;
+  const ids = list.filter((c) => c.selectedInGoogle).map((c) => c.id);
+  return ids.includes("primary") ? ids : ["primary", ...ids];
 }
 
 // Any calendar other than "primary" — no stored incremental sync token for
@@ -149,13 +174,19 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
 
   const { data: conn } = await sb
     .from("calendar_connections")
-    .select("user_id")
+    .select("user_id, selected_calendar_ids")
     .eq("id", connectionId)
     .single();
   if (!conn) throw new Error("Connection not found");
   const userId = conn.user_id as string;
 
   const accessToken = await getFreshGoogleToken(connectionId);
+  const calendarList = await fetchGoogleCalendarList(accessToken);
+  const calendarsToSync = resolveCalendarIdsToSync(
+    calendarList,
+    (conn.selected_calendar_ids as string[] | null) ?? null,
+  );
+  const syncPrimary = calendarsToSync.includes("primary");
 
   // Fetch user's categories and open tasks for event → category matching.
   const [{ data: catRows }, { data: taskRows }] = await Promise.all([
@@ -182,53 +213,56 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
   const toUpsert: Block[] = [];
   const toDelete: string[] = [];
   let nextSyncToken: string | null = null;
-  let pageToken: string | undefined;
-  const base = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 
-  do {
-    const params = new URLSearchParams({ maxResults: "250", singleEvents: "true" });
-    if (syncToken) {
-      params.set("syncToken", syncToken);
-    } else {
-      params.set("timeMin", windowStart);
-      params.set("timeMax", windowEnd);
-      params.set("orderBy", "startTime");
-    }
-    if (pageToken) params.set("pageToken", pageToken);
+  if (syncPrimary) {
+    let pageToken: string | undefined;
+    const base = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 
-    const resp = await fetch(`${base}?${params}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (resp.status === 410) {
-      // Sync token expired — discard and run a full sync.
-      await sb.from("calendar_oauth_tokens").update({ sync_token: null }).eq("connection_id", connectionId);
-      return runGoogleSync(connectionId);
-    }
-    if (!resp.ok) throw new Error(`Google API error ${resp.status}`);
-
-    const data = await resp.json();
-    pageToken = data.nextPageToken as string | undefined;
-    if (data.nextSyncToken) nextSyncToken = data.nextSyncToken as string;
-
-    for (const event of (data.items ?? []) as GoogleEvent[]) {
-      if (event.status === "cancelled") {
-        toDelete.push(event.id);
+    do {
+      const params = new URLSearchParams({ maxResults: "250", singleEvents: "true" });
+      if (syncToken) {
+        params.set("syncToken", syncToken);
       } else {
-        const block = toBlock(event, connectionId, userId);
-        if (block) {
-          const match = matchEventToCategory(block.title, categories, tasks);
-          if (match) block.category_id = match.categoryId;
-          toUpsert.push(block);
+        params.set("timeMin", windowStart);
+        params.set("timeMax", windowEnd);
+        params.set("orderBy", "startTime");
+      }
+      if (pageToken) params.set("pageToken", pageToken);
+
+      const resp = await fetch(`${base}?${params}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (resp.status === 410) {
+        // Sync token expired — discard and run a full sync.
+        await sb.from("calendar_oauth_tokens").update({ sync_token: null }).eq("connection_id", connectionId);
+        return runGoogleSync(connectionId);
+      }
+      if (!resp.ok) throw new Error(`Google API error ${resp.status}`);
+
+      const data = await resp.json();
+      pageToken = data.nextPageToken as string | undefined;
+      if (data.nextSyncToken) nextSyncToken = data.nextSyncToken as string;
+
+      for (const event of (data.items ?? []) as GoogleEvent[]) {
+        if (event.status === "cancelled") {
+          toDelete.push(event.id);
+        } else {
+          const block = toBlock(event, connectionId, userId);
+          if (block) {
+            const match = matchEventToCategory(block.title, categories, tasks);
+            if (match) block.category_id = match.categoryId;
+            toUpsert.push(block);
+          }
         }
       }
-    }
-  } while (pageToken);
+    } while (pageToken);
+  }
 
-  // Other calendars the user actually has visible — shared calendars, a
+  // Other calendars the user actually has picked — shared calendars, a
   // university timetable, another account's calendar, etc. Run in parallel;
   // one slow or inaccessible calendar shouldn't serialize the rest.
-  const otherCalendarIds = (await fetchSelectedCalendarIds(accessToken)).filter((id) => id !== "primary");
+  const otherCalendarIds = calendarsToSync.filter((id) => id !== "primary");
   const secondaryResults = await Promise.all(
     otherCalendarIds.map((calendarId) =>
       syncSecondaryCalendar(sb, calendarId, accessToken, connectionId, userId, categories, tasks, windowStart, windowEnd),
