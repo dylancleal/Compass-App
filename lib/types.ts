@@ -156,6 +156,11 @@ export interface CalendarConnection {
   last_synced_at?: string;
   account_email?: string;  // OAuth connections only
   needs_reauth?: boolean;  // true when refresh token was revoked
+  // Explicit calendar picks for a Google connection (google_calendar_id
+  // values, "primary" included). null/undefined = no custom pick yet —
+  // falls back to whatever the user has "selected" (shown) in their own
+  // Google Calendar. Only meaningful for provider: "google".
+  selected_calendar_ids?: string[] | null;
   created_at: string;
 }
 

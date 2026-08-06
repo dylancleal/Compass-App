@@ -10,6 +10,7 @@ import {
   useRemoveCalendarConnection,
   useSyncCalendarConnection,
   useGoogleSync,
+  useGoogleCalendarList,
 } from "@/lib/queries";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { APP_VARIANT } from "@/lib/appVariant";
@@ -80,9 +81,37 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
   const icsSync = useSyncCalendarConnection();
   const googleSync = useGoogleSync();
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [pickingCalendars, setPickingCalendars] = useState(false);
+  const [pendingSelection, setPendingSelection] = useState<string[] | null>(null);
   const prov = PROVIDERS.find((p) => p.id === conn.provider) ?? PROVIDERS[3];
 
   const isOAuth = conn.provider === "google" && !conn.ics_url;
+  const calendarList = useGoogleCalendarList(conn.id, isOAuth && pickingCalendars);
+
+  // Seed the draft selection from the server's current picks (or its
+  // computed default) exactly once per time the panel is opened — after
+  // that, further edits/refetches shouldn't stomp on what the user's
+  // actively checking/unchecking.
+  useEffect(() => {
+    if (calendarList.data && pendingSelection === null) {
+      setPendingSelection(calendarList.data.filter((c) => c.checked).map((c) => c.id));
+    }
+  }, [calendarList.data, pendingSelection]);
+
+  function toggleCalendar(id: string) {
+    setPendingSelection((prev) => {
+      const cur = prev ?? [];
+      return cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+    });
+  }
+
+  function saveCalendarSelection() {
+    if (pendingSelection) {
+      update.mutate({ id: conn.id, patch: { selected_calendar_ids: pendingSelection } });
+    }
+    setPickingCalendars(false);
+    setPendingSelection(null);
+  }
   const isSyncing = isOAuth ? googleSync.isPending : icsSync.isPending;
   const syncError = isOAuth ? googleSync.isError : icsSync.isError;
   const syncErrorMsg = isOAuth
@@ -177,6 +206,18 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
         </button>
       )}
 
+      {/* Calendars picker — only Google connections have more than one
+          calendar to choose from. */}
+      {!conn.needs_reauth && isOAuth && (
+        <button
+          className="shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs font-medium transition-all duration-150 hover:scale-105 active:scale-95"
+          style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+          onClick={() => setPickingCalendars((v) => !v)}
+        >
+          Calendars
+        </button>
+      )}
+
       {/* Remove */}
       <button
         className="shrink-0 cursor-pointer rounded-lg p-1 text-sm transition-all duration-150 hover:scale-110 hover:text-[#c06b5a] active:scale-95"
@@ -189,6 +230,52 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
         ✕
       </button>
     </div>
+    {pickingCalendars && (
+      <div className="space-y-2 rounded-lg border p-3" style={{ borderColor: "var(--border)", background: "var(--background)" }}>
+        <p className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+          Sync events from:
+        </p>
+        {calendarList.isLoading && (
+          <p className="text-xs" style={{ color: "var(--muted)" }}>Loading your calendars…</p>
+        )}
+        {calendarList.isError && (
+          <p className="text-xs" style={{ color: "#c06b5a" }}>
+            {calendarList.error instanceof Error ? calendarList.error.message : "Couldn't load calendars"}
+          </p>
+        )}
+        {calendarList.data && (
+          <div className="space-y-1.5">
+            {calendarList.data.map((cal) => (
+              <label key={cal.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={pendingSelection?.includes(cal.id) ?? false}
+                  onChange={() => toggleCalendar(cal.id)}
+                />
+                <span className="truncate">{cal.name}</span>
+              </label>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={() => { setPickingCalendars(false); setPendingSelection(null); }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold transition-all hover:brightness-105"
+            style={{ background: "var(--surface)", color: "var(--muted)" }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={saveCalendarSelection}
+            disabled={!calendarList.data}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[var(--on-primary)] transition-all hover:brightness-105 disabled:opacity-50"
+            style={{ background: "var(--primary)" }}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    )}
     {confirmingRemove && (
       <div className="space-y-2 rounded-lg border p-3" style={{ borderColor: "#c06b5a", background: "var(--background)" }}>
         <p className="text-xs" style={{ color: "#c06b5a" }}>
