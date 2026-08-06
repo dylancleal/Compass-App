@@ -79,6 +79,7 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
   const remove = useRemoveCalendarConnection();
   const icsSync = useSyncCalendarConnection();
   const googleSync = useGoogleSync();
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   const prov = PROVIDERS.find((p) => p.id === conn.provider) ?? PROVIDERS[3];
 
   const isOAuth = conn.provider === "google" && !conn.ics_url;
@@ -110,6 +111,7 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
   }
 
   return (
+    <div className="space-y-2">
     <div
       className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 hover:shadow-sm"
       style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
@@ -181,11 +183,38 @@ function ConnectionRow({ conn, userId }: { conn: CalendarConnection; userId: str
         style={{ color: "var(--muted)", opacity: 0.5 }}
         onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
         onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
-        onClick={() => remove.mutate(conn.id)}
+        onClick={() => setConfirmingRemove(true)}
         aria-label="Remove connection"
       >
         ✕
       </button>
+    </div>
+    {confirmingRemove && (
+      <div className="space-y-2 rounded-lg border p-3" style={{ borderColor: "#c06b5a", background: "var(--background)" }}>
+        <p className="text-xs" style={{ color: "#c06b5a" }}>
+          Remove {conn.label}? This also deletes every event synced from it — that can&apos;t be undone.
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setConfirmingRemove(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold transition-all hover:brightness-105"
+            style={{ background: "var(--surface)", color: "var(--muted)" }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              remove.mutate(conn.id);
+              setConfirmingRemove(false);
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all hover:brightness-105"
+            style={{ background: "#a13f2e" }}
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    )}
     </div>
   );
 }
