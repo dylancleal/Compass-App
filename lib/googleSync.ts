@@ -111,7 +111,17 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
     }
   } while (pageToken);
 
-  if (toUpsert.length > 0) {
+  // Google's API forbids combining timeMin/timeMax with syncToken, so once a
+  // connection has a stored sync_token every later sync call omits the date
+  // range entirely — Google then returns *any* event that's changed since
+  // last sync, anywhere on the calendar, regardless of date. Without this
+  // filter that pulls years-old and far-future events back into a "today
+  // onward" app on every incremental sync after the first. Applied to every
+  // sync (not just incremental ones) so the two code paths can't drift.
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const upcomingOnly = toUpsert.filter((b) => new Date(b.end_at).getTime() >= cutoff);
+
+  if (upcomingOnly.length > 0) {
     // Dedup across connections: skip events that already exist from a different
     // connection with the exact same title + start + end (e.g. shared meetings
     // that appear in both of a user's Google accounts).
@@ -129,7 +139,7 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
       ),
     );
 
-    const dedupedUpsert = toUpsert.filter(
+    const dedupedUpsert = upcomingOnly.filter(
       (b) => !existingKeys.has(`${b.title.trim().toLowerCase()}::${b.start_at}::${b.end_at}`),
     );
 
@@ -159,5 +169,5 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
     .update({ last_synced_at: new Date().toISOString(), needs_reauth: false })
     .eq("id", connectionId);
 
-  return { synced: toUpsert.length, deleted: toDelete.length };
+  return { synced: upcomingOnly.length, deleted: toDelete.length };
 }
