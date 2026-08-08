@@ -282,6 +282,19 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
   const upcomingOnly = toUpsert.filter((b) => new Date(b.end_at).getTime() >= cutoff);
 
+  // A sync is server-side and takes seconds (more now that it walks every
+  // selected calendar), and the user can remove the connection while it's
+  // still in flight. Their removal deletes whatever blocks exist at that
+  // instant — but this sync then writes its results tagged to a connection
+  // that no longer exists, leaving events stranded on the calendar with no
+  // connection left to ever clean them up. Re-check before writing.
+  const { data: stillConnected } = await sb
+    .from("calendar_connections")
+    .select("id")
+    .eq("id", connectionId)
+    .maybeSingle();
+  if (!stillConnected) return { synced: 0, deleted: toDelete.length + secondaryDeleted };
+
   if (upcomingOnly.length > 0) {
     // Dedup across connections: skip events that already exist from a different
     // connection with the exact same title + start + end (e.g. shared meetings
@@ -326,9 +339,24 @@ export async function runGoogleSync(connectionId: string): Promise<{ synced: num
       .eq("connection_id", connectionId);
   }
 
-  await sb.from("calendar_connections")
+  const { data: connAfterWrite } = await sb
+    .from("calendar_connections")
     .update({ last_synced_at: new Date().toISOString(), needs_reauth: false })
-    .eq("id", connectionId);
+    .eq("id", connectionId)
+    .select("id")
+    .maybeSingle();
+
+  // Closes the remaining window: the connection could have been removed
+  // between the pre-write check and the write landing. The update above
+  // matching nothing is the tell — sweep whatever this run just wrote so it
+  // can't strand events on the calendar. (Once the calendar-blocks foreign
+  // key in supabase/calendar.sql is applied this is belt-and-braces: the
+  // database rejects the write outright. It's kept for databases that
+  // haven't had that migration run yet.)
+  if (!connAfterWrite) {
+    await sb.from("calendar_blocks").delete().eq("external_calendar_id", connectionId);
+    return { synced: 0, deleted: toDelete.length + secondaryDeleted };
+  }
 
   return { synced: upcomingOnly.length, deleted: toDelete.length + secondaryDeleted };
 }
